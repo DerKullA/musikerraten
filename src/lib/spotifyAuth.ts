@@ -19,10 +19,26 @@ const SCOPES = [
   'user-modify-playback-state',
   'user-read-playback-state',
   'user-read-private',
+  'user-read-email',
 ].join(' ')
+
+const SCOPE_HINT =
+  'Bitte abmelden und erneut anmelden, damit neue Berechtigungen erteilt werden.'
 
 export function getSpotifyClientId(): string {
   return import.meta.env.VITE_SPOTIFY_CLIENT_ID?.trim() ?? ''
+}
+
+export function formatSpotifyUserError(cause: unknown): string {
+  const message = cause instanceof Error && cause.message ? cause.message : 'Etwas ist schiefgelaufen.'
+  if (mentionsMissingScopes(message)) {
+    return `${message} ${SCOPE_HINT}`
+  }
+  return message
+}
+
+function mentionsMissingScopes(message: string): boolean {
+  return /scope|403|insufficient client|forbidden/i.test(message)
 }
 
 export function readStoredTokens(): TokenSet | null {

@@ -9,6 +9,7 @@ import {
   clearAuthCallbackFromUrl,
   clearTokens,
   exchangeAuthorizationCode,
+  formatSpotifyUserError,
   getSpotifyClientId,
   getValidAccessToken,
   readAuthCallback,
@@ -67,7 +68,7 @@ export default function App() {
         clearAuthCallbackFromUrl()
         await openPlaylistScreen(false)
       } catch (cause) {
-        setError(toErrorMessage(cause))
+        setError(formatSpotifyUserError(cause))
       } finally {
         setBusy(false)
       }
@@ -97,7 +98,7 @@ export default function App() {
       const items = await fetchUserPlaylists()
       setPlaylists(items)
     } catch (cause) {
-      setError(toErrorMessage(cause))
+      setError(formatSpotifyUserError(cause))
     } finally {
       setLoadingPlaylists(false)
     }
@@ -110,7 +111,7 @@ export default function App() {
       await startSpotifyLogin()
     } catch (cause) {
       setBusy(false)
-      setError(toErrorMessage(cause))
+      setError(formatSpotifyUserError(cause))
     }
   }
 
@@ -165,7 +166,7 @@ export default function App() {
       setPhase('idle')
       setScreen('game')
     } catch (cause) {
-      setError(toErrorMessage(cause))
+      setError(formatSpotifyUserError(cause))
     } finally {
       setLoadingTracks(false)
     }
@@ -240,7 +241,7 @@ export default function App() {
       try {
         await playCurrentTrack()
       } catch (cause) {
-        setError(toErrorMessage(cause))
+        setError(formatSpotifyUserError(cause))
       }
     }
     scheduleFollowingPhase(next)
@@ -261,7 +262,7 @@ export default function App() {
       }
       await playCurrentTrack()
     } catch (cause) {
-      setError(toErrorMessage(cause))
+      setError(formatSpotifyUserError(cause))
     }
     scheduleFollowingPhase('playing')
   }
@@ -332,9 +333,3 @@ export default function App() {
   )
 }
 
-function toErrorMessage(cause: unknown): string {
-  if (cause instanceof Error && cause.message) {
-    return cause.message
-  }
-  return 'Etwas ist schiefgelaufen.'
-}

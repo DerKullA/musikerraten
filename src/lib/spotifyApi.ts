@@ -135,11 +135,11 @@ async function fetchPlaylistItemPage(
 ): Promise<PlaylistItemPage> {
   try {
     return await spotifyRequest<PlaylistItemPage>(
-      `/playlists/${playlistId}/items?limit=${limit}&offset=${offset}`,
+      `/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}`,
     )
   } catch {
     return await spotifyRequest<PlaylistItemPage>(
-      `/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}`,
+      `/playlists/${playlistId}/items?limit=${limit}&offset=${offset}`,
     )
   }
 }
