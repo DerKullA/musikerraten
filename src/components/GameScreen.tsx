@@ -1,5 +1,6 @@
 import { isTitleHidden, phaseDuration, phaseLabel } from '../lib/gameLoop.ts'
 import type { GamePhase, Track } from '../types.ts'
+import { SessionExitButton } from './SessionExitButton.tsx'
 
 interface GameScreenProps {
   track: Track | null
@@ -12,6 +13,7 @@ interface GameScreenProps {
   onPlay: () => void
   onStop: () => void
   onBack: () => void
+  onLogout: () => void
 }
 
 export function GameScreen({
@@ -25,6 +27,7 @@ export function GameScreen({
   onPlay,
   onStop,
   onBack,
+  onLogout,
 }: GameScreenProps) {
   const hidden = isTitleHidden(phase)
   const duration = phaseDuration(phase)
@@ -36,9 +39,17 @@ export function GameScreen({
           <p className="eyebrow">{demo ? 'Demo ohne Ton' : 'Spotify-Wiedergabe'}</p>
           <h1>Musikerraten</h1>
         </div>
-        <p className="counter">
-          {total === 0 ? '0 / 0' : `${index + 1} / ${total}`}
-        </p>
+        <div className="panel-head-meta">
+          <p className="counter">
+            {total === 0 ? '0 / 0' : `${index + 1} / ${total}`}
+          </p>
+          {!demo ? (
+            <SessionExitButton
+              label={running ? 'Beenden & Abmelden' : 'Abmelden'}
+              onClick={onLogout}
+            />
+          ) : null}
+        </div>
       </header>
       {error ? <p className="banner error">{error}</p> : null}
       <div className={`vinyl ${phase === 'playing' ? 'spin' : ''}`} aria-hidden="true">

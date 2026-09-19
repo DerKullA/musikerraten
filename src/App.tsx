@@ -128,9 +128,16 @@ export default function App() {
     if (!demo) {
       clearTokens()
     }
+    tracksRef.current = []
+    indexRef.current = 0
+    setTracks([])
+    setIndex(0)
     setPlaylists([])
     setSelectedIds([])
-    setTracks([])
+    setDemo(false)
+    setLoadingPlaylists(false)
+    setLoadingTracks(false)
+    setBusy(false)
     setScreen('login')
     setError(null)
   }
@@ -327,6 +334,7 @@ export default function App() {
           }}
           onStop={handleStop}
           onBack={handleStop}
+          onLogout={handleLogout}
         />
       ) : null}
     </main>

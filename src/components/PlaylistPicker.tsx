@@ -1,4 +1,5 @@
 import type { Playlist } from '../types.ts'
+import { SessionExitButton } from './SessionExitButton.tsx'
 
 interface PlaylistPickerProps {
   playlists: Playlist[]
@@ -35,9 +36,7 @@ export function PlaylistPicker({
           <p className="eyebrow">{demo ? 'Demo' : 'Spotify'}</p>
           <h1>Playlists wählen</h1>
         </div>
-        <button type="button" className="btn text" onClick={onLogout}>
-          {demo ? 'Zurück' : 'Abmelden'}
-        </button>
+        <SessionExitButton label={demo ? 'Zurück' : 'Abmelden'} onClick={onLogout} />
       </header>
       <p className="lede">
         {demo
