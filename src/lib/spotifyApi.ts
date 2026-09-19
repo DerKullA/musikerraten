@@ -1,0 +1,167 @@
+import { getValidAccessToken } from './spotifyAuth.ts'
+import type { Playlist, Track } from '../types.ts'
+
+const API = 'https://api.spotify.com/v1'
+
+interface PlaylistPage {
+  items: Array<{
+    id: string
+    name: string
+    owner?: { display_name?: string }
+    tracks?: { total?: number }
+    items?: { total?: number }
+  }>
+  total: number
+}
+
+interface PlaylistItemPage {
+  items: Array<{
+    is_local?: boolean
+    item?: SpotifyItem | null
+    track?: SpotifyItem | null
+  }>
+  total: number
+}
+
+interface SpotifyItem {
+  type?: string
+  uri?: string
+  id?: string | null
+  name?: string
+  artists?: Array<{ name?: string }>
+}
+
+export async function spotifyRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const token = await getValidAccessToken()
+  const response = await fetch(`${API}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      ...init.headers,
+    },
+  })
+  if (response.status === 204) {
+    return undefined as T
+  }
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(text || `Spotify-Fehler ${response.status}`)
+  }
+  return (await response.json()) as T
+}
+
+export async function fetchUserPlaylists(): Promise<Playlist[]> {
+  const playlists: Playlist[] = []
+  let offset = 0
+  const limit = 50
+  while (true) {
+    const page = await spotifyRequest<PlaylistPage>(
+      `/me/playlists?limit=${limit}&offset=${offset}`,
+    )
+    for (const item of page.items) {
+      playlists.push({
+        id: item.id,
+        name: item.name,
+        trackCount: item.items?.total ?? item.tracks?.total ?? 0,
+        ownerName: item.owner?.display_name ?? '',
+      })
+    }
+    offset += page.items.length
+    if (page.items.length === 0 || offset >= page.total) {
+      break
+    }
+  }
+  return playlists
+}
+
+export async function fetchPlaylistTracks(playlistId: string): Promise<Track[]> {
+  const tracks: Track[] = []
+  let offset = 0
+  const limit = 50
+  while (true) {
+    const page = await fetchPlaylistItemPage(playlistId, offset, limit)
+    for (const row of page.items) {
+      const track = toPlayableTrack(row)
+      if (track) {
+        tracks.push(track)
+      }
+    }
+    offset += page.items.length
+    if (page.items.length === 0 || offset >= page.total) {
+      break
+    }
+  }
+  return tracks
+}
+
+export async function fetchTracksForPlaylists(playlistIds: string[]): Promise<Track[]> {
+  const seen = new Set<string>()
+  const tracks: Track[] = []
+  for (const id of playlistIds) {
+    try {
+      const items = await fetchPlaylistTracks(id)
+      for (const track of items) {
+        if (seen.has(track.uri)) {
+          continue
+        }
+        seen.add(track.uri)
+        tracks.push(track)
+      }
+    } catch {
+      continue
+    }
+  }
+  return tracks
+}
+
+export async function startPlayback(deviceId: string, uri: string): Promise<void> {
+  await spotifyRequest<void>(`/me/player/play?device_id=${encodeURIComponent(deviceId)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ uris: [uri], position_ms: 0 }),
+  })
+}
+
+export async function pausePlayback(deviceId: string): Promise<void> {
+  await spotifyRequest<void>(`/me/player/pause?device_id=${encodeURIComponent(deviceId)}`, {
+    method: 'PUT',
+  })
+}
+
+async function fetchPlaylistItemPage(
+  playlistId: string,
+  offset: number,
+  limit: number,
+): Promise<PlaylistItemPage> {
+  try {
+    return await spotifyRequest<PlaylistItemPage>(
+      `/playlists/${playlistId}/items?limit=${limit}&offset=${offset}`,
+    )
+  } catch {
+    return await spotifyRequest<PlaylistItemPage>(
+      `/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}`,
+    )
+  }
+}
+
+function toPlayableTrack(row: PlaylistItemPage['items'][number]): Track | null {
+  if (row.is_local) {
+    return null
+  }
+  const payload = row.item ?? row.track
+  if (!payload || payload.type === 'episode' || !payload.id) {
+    return null
+  }
+  if (!payload.uri?.startsWith('spotify:track:')) {
+    return null
+  }
+  const title = payload.name?.trim()
+  const artist = (payload.artists ?? [])
+    .map((entry) => entry.name?.trim())
+    .filter((name): name is string => Boolean(name))
+    .join(', ')
+  if (!title || !artist) {
+    return null
+  }
+  return { uri: payload.uri, title, artist }
+}
