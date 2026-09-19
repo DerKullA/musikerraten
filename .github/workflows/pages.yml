@@ -4,6 +4,11 @@ on:
   push:
     branches: ['main']
   workflow_dispatch:
+    inputs:
+      client_id:
+        description: Spotify Client ID für diesen Build
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -34,7 +39,7 @@ jobs:
         run: npm run build
         env:
           VITE_BASE: /musikerraten/
-          VITE_SPOTIFY_CLIENT_ID: ${{ secrets.VITE_SPOTIFY_CLIENT_ID }}
+          VITE_SPOTIFY_CLIENT_ID: ${{ inputs.client_id || secrets.VITE_SPOTIFY_CLIENT_ID || vars.VITE_SPOTIFY_CLIENT_ID }}
       - name: SPA fallback
         run: cp dist/index.html dist/404.html
       - name: Setup Pages

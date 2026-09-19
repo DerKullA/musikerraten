@@ -37,7 +37,8 @@ export function LoginScreen({
       <aside className="notes">
         <p>
           Die Wiedergabe über das Spotify Web Playback SDK braucht ein <strong>Spotify-Premium</strong>
-          -Konto. Im Demo-Modus laufen dieselben Phasen ohne Ton.
+          -Konto und funktioniert zuverlässig in <strong>Chrome</strong> (Chromium, Desktop). Im
+          Demo-Modus laufen dieselben Phasen ohne Ton.
         </p>
         <p>
           Redirect-URI für das Spotify-Dashboard:{' '}

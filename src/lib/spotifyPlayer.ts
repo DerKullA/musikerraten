@@ -13,22 +13,40 @@ export function loadSpotifySdk(): Promise<void> {
     return sdkPromise
   }
   sdkPromise = new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[src="${SDK_SRC}"]`)
+    const timeout = window.setTimeout(() => {
+      sdkPromise = null
+      reject(new Error('Spotify Web Playback SDK konnte nicht geladen werden.'))
+    }, READY_TIMEOUT_MS)
+
     const finish = () => {
+      window.clearTimeout(timeout)
       if (window.Spotify?.Player) {
         resolve()
         return
       }
+      sdkPromise = null
       reject(new Error('Spotify Web Playback SDK konnte nicht geladen werden.'))
     }
+
     window.onSpotifyWebPlaybackSDKReady = finish
+    if (window.Spotify?.Player) {
+      finish()
+      return
+    }
+
+    const existing = document.querySelector(`script[src="${SDK_SRC}"]`)
     if (existing) {
       return
     }
+
     const script = document.createElement('script')
     script.src = SDK_SRC
     script.async = true
-    script.onerror = () => reject(new Error('Spotify SDK-Skript blockiert oder nicht erreichbar.'))
+    script.onerror = () => {
+      window.clearTimeout(timeout)
+      sdkPromise = null
+      reject(new Error('Spotify SDK-Skript blockiert oder nicht erreichbar.'))
+    }
     document.body.appendChild(script)
   })
   return sdkPromise
