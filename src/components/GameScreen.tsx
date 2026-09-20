@@ -55,7 +55,9 @@ export function GameScreen({
       <div className={`vinyl ${phase === 'playing' ? 'spin' : ''}`} aria-hidden="true">
         <span />
       </div>
-      <p className={`phase-pill ${phase}`}>{phaseLabel(phase)}</p>
+      <p className={`phase-pill ${phase}`} aria-live="polite">
+        {phaseLabel(phase)}
+      </p>
       {duration > 0 ? (
         <div className="meter" key={`${phase}-${index}`}>
           <span style={{ animationDuration: `${duration}ms` }} />

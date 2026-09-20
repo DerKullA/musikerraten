@@ -98,6 +98,7 @@ export async function fetchPlaylistTracks(playlistId: string): Promise<Track[]> 
 export async function fetchTracksForPlaylists(playlistIds: string[]): Promise<Track[]> {
   const seen = new Set<string>()
   const tracks: Track[] = []
+  let skipped = 0
   for (const id of playlistIds) {
     try {
       const items = await fetchPlaylistTracks(id)
@@ -109,8 +110,13 @@ export async function fetchTracksForPlaylists(playlistIds: string[]): Promise<Tr
         tracks.push(track)
       }
     } catch {
-      continue
+      skipped += 1
     }
+  }
+  if (tracks.length === 0 && skipped > 0) {
+    throw new Error(
+      'Playlists konnten nicht geladen werden. Im Spotify-Entwicklungsmodus sind oft nur eigene oder geteilte Playlists lesbar.',
+    )
   }
   return tracks
 }

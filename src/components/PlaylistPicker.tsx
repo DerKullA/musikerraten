@@ -53,6 +53,9 @@ export function PlaylistPicker({
           <span className="muted">{selectedCount} ausgewählt</span>
         </div>
       ) : null}
+      {!loading && !demo && playlists.length === 0 ? (
+        <p className="muted">Keine Playlists gefunden. Lege in Spotify eine eigene Playlist an.</p>
+      ) : null}
       {!demo ? (
         <ul className="playlist-list">
           {playlists.map((playlist) => {
