@@ -32,6 +32,7 @@ export const MAX_CONSECUTIVE_SAME_PLAYLIST = 3
 /**
  * Fisher–Yates shuffle, then caps consecutive tracks from one playlist.
  * The cap applies only when at least two playlistIds are present.
+ * Demo tracks, a single playlist, or missing playlistIds stay a plain shuffle.
  */
 export function shuffleTracks(tracks: Track[]): Track[] {
   return limitConsecutivePlaylistRuns(fisherYatesShuffle(tracks))
@@ -53,8 +54,9 @@ function fisherYatesShuffle(tracks: Track[]): Track[] {
 
 /**
  * Walks a shuffled list and takes the next remaining track from another
- * playlist whenever the last `maxRun` songs share a playlistId. Longer
- * runs stay only when every remaining track is from that playlist.
+ * playlist whenever the last `maxRun` songs share a playlistId.
+ * Always emits every input track: if no alternate remains, the run may
+ * grow past `maxRun` instead of stalling or dropping songs.
  */
 export function limitConsecutivePlaylistRuns(
   tracks: Track[],
@@ -68,18 +70,25 @@ export function limitConsecutivePlaylistRuns(
   const ordered: Track[] = []
 
   while (remaining.length > 0) {
-    const forbiddenId = playlistIdToAvoid(ordered, maxRun)
-    const pickIndex = forbiddenId
-      ? remaining.findIndex((track) => track.playlistId !== forbiddenId)
-      : 0
-    const chosen = remaining.splice(pickIndex === -1 ? 0 : pickIndex, 1)[0]
-    if (!chosen) {
-      break
+    const chosen = takeAllowedTrack(remaining, playlistIdToAvoid(ordered, maxRun))
+    if (chosen) {
+      ordered.push(chosen)
     }
-    ordered.push(chosen)
   }
 
   return ordered
+}
+
+function takeAllowedTrack(remaining: Track[], forbiddenId: string | undefined): Track | undefined {
+  let pickIndex = 0
+  if (forbiddenId) {
+    const alternate = remaining.findIndex((track) => track.playlistId !== forbiddenId)
+    if (alternate !== -1) {
+      pickIndex = alternate
+    }
+  }
+  const [chosen] = remaining.splice(pickIndex, 1)
+  return chosen
 }
 
 function hasMultiplePlaylistSources(tracks: Track[]): boolean {

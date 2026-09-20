@@ -104,7 +104,7 @@ export async function fetchTracksForPlaylists(playlistIds: string[]): Promise<Tr
     try {
       const items = await fetchPlaylistTracks(id)
       for (const track of items) {
-        if (seen.has(track.uri)) {
+        if (!track.uri || seen.has(track.uri)) {
           continue
         }
         seen.add(track.uri)
