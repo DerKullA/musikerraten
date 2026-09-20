@@ -3,7 +3,7 @@ import { GameScreen } from './components/GameScreen.tsx'
 import { LoginScreen } from './components/LoginScreen.tsx'
 import { PlaylistPicker } from './components/PlaylistPicker.tsx'
 import { DEMO_TRACKS } from './lib/demoTracks.ts'
-import { nextPhase, phaseDuration, shuffleTracks } from './lib/gameLoop.ts'
+import { nextPhase, phaseDuration, phasePlaysAudio, shuffleTracks } from './lib/gameLoop.ts'
 import {
   fetchTracksForPlaylists,
   fetchUserPlaylists,
@@ -287,14 +287,24 @@ export default function App() {
     }
     phaseRef.current = next
     setPhase(next)
-    if (next === 'playing') {
-      try {
-        await playCurrentTrack()
-      } catch (cause) {
-        setError(formatSpotifyUserError(cause))
-      }
+    try {
+      await applyPhaseAudio(next)
+    } catch (cause) {
+      setError(formatSpotifyUserError(cause))
     }
     scheduleFollowingPhase(next)
+  }
+
+  async function applyPhaseAudio(next: GamePhase): Promise<void> {
+    if (pausedRef.current || next === 'idle' || next === 'thinking') {
+      await pauseCurrentTrack()
+      return
+    }
+    if (next === 'playing') {
+      await playCurrentTrack()
+      return
+    }
+    await resumeCurrentTrack()
   }
 
   async function handlePlay(): Promise<void> {
@@ -353,16 +363,16 @@ export default function App() {
     setPaused(false)
     const current = phaseRef.current
     const remaining = remainingMsRef.current
-    if (current !== 'idle') {
+    if (remaining <= 0) {
+      await enterPhase(nextPhase(current))
+      return
+    }
+    if (phasePlaysAudio(current)) {
       try {
         await resumeCurrentTrack()
       } catch (cause) {
         setError(formatSpotifyUserError(cause))
       }
-    }
-    if (remaining <= 0) {
-      await enterPhase(nextPhase(current))
-      return
     }
     armPhaseTimer(current, remaining)
   }

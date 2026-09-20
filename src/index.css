@@ -138,7 +138,6 @@ h1 {
 }
 
 .actions-center,
-.game-controls,
 .game-abort {
   display: flex;
   justify-content: center;
@@ -146,23 +145,8 @@ h1 {
   gap: 12px;
 }
 
-.game-session-bar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-}
-
-.game-controls {
-  margin-top: 28px;
-}
-
-.game-controls .btn {
-  min-width: 200px;
-}
-
 .game-abort {
-  margin-top: 12px;
+  margin-top: 28px;
 }
 
 .game-abort .btn {
@@ -288,10 +272,36 @@ code {
   font-weight: 700;
 }
 
-.vinyl {
+.game-center-control {
+  display: grid;
+  place-items: center;
   width: 148px;
   height: 148px;
   margin: 28px auto 18px;
+}
+
+.center-transport {
+  width: 148px;
+  height: 148px;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  background: var(--lime);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.center-transport.is-paused {
+  background: var(--paper);
+}
+
+.vinyl {
+  width: 148px;
+  height: 148px;
   border-radius: 50%;
   background:
     radial-gradient(circle at 50% 50%, #f3ead8 0 8px, #111 8px 18px, #d4e157 18px 22px, #151515 22px 100%);
@@ -306,11 +316,6 @@ code {
   background: repeating-radial-gradient(circle, transparent 0 8px, rgba(255, 255, 255, 0.04) 8px 9px);
 }
 
-.vinyl.spin {
-  animation: spin 1.8s linear infinite;
-}
-
-.vinyl.spin.paused,
 .meter.paused span {
   animation-play-state: paused;
 }
@@ -402,12 +407,6 @@ code {
   color: var(--muted);
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @keyframes fill {
   to {
     width: 100%;
@@ -434,28 +433,19 @@ code {
     min-height: 44px;
   }
 
-  .game-session-bar {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    grid-template-areas:
-      '. pause .'
-      '. abort .';
-    justify-items: center;
-    width: 100%;
+  .game-center-control,
+  .center-transport,
+  .vinyl {
+    width: min(176px, 46vw);
+    height: min(176px, 46vw);
   }
 
-  .game-controls {
-    grid-area: pause;
-    width: 100%;
-    justify-content: center;
+  .center-transport {
+    font-size: 1.28rem;
   }
 
-  .game-abort {
-    grid-area: abort;
-  }
-
-  .game-controls .btn {
-    min-width: min(240px, 72vw);
-    min-height: 52px;
+  .game-abort .btn {
+    min-width: min(200px, 64vw);
+    min-height: 44px;
   }
 }
