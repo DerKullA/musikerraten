@@ -27,7 +27,17 @@ export function gameHint(phase: GamePhase, paused: boolean): string {
   return 'Startet die Runde. Danach läuft alles automatisch, bis du pausierst oder abbrichst.'
 }
 
+export const MAX_CONSECUTIVE_SAME_PLAYLIST = 3
+
+/**
+ * Fisher–Yates shuffle, then caps consecutive tracks from one playlist.
+ * The cap applies only when at least two playlistIds are present.
+ */
 export function shuffleTracks(tracks: Track[]): Track[] {
+  return limitConsecutivePlaylistRuns(fisherYatesShuffle(tracks))
+}
+
+function fisherYatesShuffle(tracks: Track[]): Track[] {
   const copy = [...tracks]
   for (let index = copy.length - 1; index > 0; index -= 1) {
     const swap = Math.floor(Math.random() * (index + 1))
@@ -39,6 +49,63 @@ export function shuffleTracks(tracks: Track[]): Track[] {
     }
   }
   return copy
+}
+
+/**
+ * Walks a shuffled list and takes the next remaining track from another
+ * playlist whenever the last `maxRun` songs share a playlistId. Longer
+ * runs stay only when every remaining track is from that playlist.
+ */
+export function limitConsecutivePlaylistRuns(
+  tracks: Track[],
+  maxRun = MAX_CONSECUTIVE_SAME_PLAYLIST,
+): Track[] {
+  if (maxRun < 1 || tracks.length <= maxRun || !hasMultiplePlaylistSources(tracks)) {
+    return [...tracks]
+  }
+
+  const remaining = [...tracks]
+  const ordered: Track[] = []
+
+  while (remaining.length > 0) {
+    const forbiddenId = playlistIdToAvoid(ordered, maxRun)
+    const pickIndex = forbiddenId
+      ? remaining.findIndex((track) => track.playlistId !== forbiddenId)
+      : 0
+    const chosen = remaining.splice(pickIndex === -1 ? 0 : pickIndex, 1)[0]
+    if (!chosen) {
+      break
+    }
+    ordered.push(chosen)
+  }
+
+  return ordered
+}
+
+function hasMultiplePlaylistSources(tracks: Track[]): boolean {
+  const playlistIds = new Set<string>()
+  for (const track of tracks) {
+    if (track.playlistId) {
+      playlistIds.add(track.playlistId)
+    }
+  }
+  return playlistIds.size >= 2
+}
+
+function playlistIdToAvoid(ordered: Track[], maxRun: number): string | undefined {
+  if (ordered.length < maxRun) {
+    return undefined
+  }
+  const playlistId = ordered[ordered.length - 1]?.playlistId
+  if (!playlistId) {
+    return undefined
+  }
+  for (let offset = 1; offset < maxRun; offset += 1) {
+    if (ordered[ordered.length - 1 - offset]?.playlistId !== playlistId) {
+      return undefined
+    }
+  }
+  return playlistId
 }
 
 export function phaseDuration(phase: GamePhase): number {
