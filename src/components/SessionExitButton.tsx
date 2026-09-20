@@ -5,8 +5,10 @@ interface SessionExitButtonProps {
 
 export function SessionExitButton({ label, onClick }: SessionExitButtonProps) {
   return (
-    <button type="button" className="btn outline compact" onClick={onClick}>
-      {label}
-    </button>
+    <div className="session-exit">
+      <button type="button" className="btn danger" onClick={onClick}>
+        {label}
+      </button>
+    </div>
   )
 }
