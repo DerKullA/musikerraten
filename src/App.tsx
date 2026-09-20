@@ -4,7 +4,13 @@ import { LoginScreen } from './components/LoginScreen.tsx'
 import { PlaylistPicker } from './components/PlaylistPicker.tsx'
 import { DEMO_TRACKS } from './lib/demoTracks.ts'
 import { nextPhase, phaseDuration, shuffleTracks } from './lib/gameLoop.ts'
-import { fetchTracksForPlaylists, fetchUserPlaylists, pausePlayback, startPlayback } from './lib/spotifyApi.ts'
+import {
+  fetchTracksForPlaylists,
+  fetchUserPlaylists,
+  pausePlayback,
+  resumePlayback,
+  startPlayback,
+} from './lib/spotifyApi.ts'
 import {
   clearAuthCallbackFromUrl,
   clearTokens,
@@ -32,12 +38,16 @@ export default function App() {
   const [index, setIndex] = useState(0)
   const [phase, setPhase] = useState<GamePhase>('idle')
   const [running, setRunning] = useState(false)
+  const [paused, setPaused] = useState(false)
 
   const bootstrapped = useRef(false)
   const playerRef = useRef<SpotifyPlayer | null>(null)
   const deviceIdRef = useRef<string | null>(null)
   const timerRef = useRef<number | null>(null)
   const runningRef = useRef(false)
+  const pausedRef = useRef(false)
+  const remainingMsRef = useRef(0)
+  const deadlineRef = useRef<number | null>(null)
   const indexRef = useRef(0)
   const tracksRef = useRef<Track[]>([])
   const phaseRef = useRef<GamePhase>('idle')
@@ -168,6 +178,7 @@ export default function App() {
       const shuffled = shuffleTracks(loaded)
       tracksRef.current = shuffled
       indexRef.current = 0
+      resetPauseState()
       setTracks(shuffled)
       setIndex(0)
       setPhase('idle')
@@ -197,9 +208,12 @@ export default function App() {
       return
     }
     await startPlayback(deviceId, track.uri)
+    if (pausedRef.current) {
+      await pauseCurrentTrack()
+    }
   }
 
-  async function stopCurrentTrack(): Promise<void> {
+  async function pauseCurrentTrack(): Promise<void> {
     const deviceId = deviceIdRef.current
     if (demo || !deviceId) {
       return
@@ -211,11 +225,37 @@ export default function App() {
     }
   }
 
+  async function resumeCurrentTrack(): Promise<void> {
+    const deviceId = deviceIdRef.current
+    if (demo || !deviceId) {
+      return
+    }
+    try {
+      await resumePlayback(deviceId)
+    } catch {
+      await playerRef.current?.resume()
+    }
+  }
+
   function clearGameTimer(): void {
     if (timerRef.current !== null) {
       window.clearTimeout(timerRef.current)
       timerRef.current = null
     }
+  }
+
+  function remainingFromDeadline(): number {
+    if (deadlineRef.current === null) {
+      return remainingMsRef.current
+    }
+    return Math.max(0, deadlineRef.current - Date.now())
+  }
+
+  function resetPauseState(): void {
+    pausedRef.current = false
+    remainingMsRef.current = 0
+    deadlineRef.current = null
+    setPaused(false)
   }
 
   function schedulePhase(next: GamePhase, delay: number): void {
@@ -225,12 +265,18 @@ export default function App() {
     }, delay)
   }
 
+  function armPhaseTimer(current: GamePhase, delayMs: number): void {
+    remainingMsRef.current = delayMs
+    deadlineRef.current = Date.now() + delayMs
+    schedulePhase(nextPhase(current), delayMs)
+  }
+
   function scheduleFollowingPhase(current: GamePhase): void {
-    schedulePhase(nextPhase(current), phaseDuration(current))
+    armPhaseTimer(current, phaseDuration(current))
   }
 
   async function enterPhase(next: GamePhase): Promise<void> {
-    if (!runningRef.current) {
+    if (!runningRef.current || pausedRef.current) {
       return
     }
     if (next === 'playing') {
@@ -240,7 +286,7 @@ export default function App() {
       setIndex(upcoming)
     }
     if (next === 'thinking') {
-      await stopCurrentTrack()
+      await pauseCurrentTrack()
     }
     phaseRef.current = next
     setPhase(next)
@@ -260,6 +306,7 @@ export default function App() {
     }
     setError(null)
     runningRef.current = true
+    resetPauseState()
     setRunning(true)
     phaseRef.current = 'playing'
     setPhase('playing')
@@ -277,15 +324,50 @@ export default function App() {
   function stopRound(): void {
     runningRef.current = false
     setRunning(false)
+    resetPauseState()
     clearGameTimer()
     phaseRef.current = 'idle'
     setPhase('idle')
-    void stopCurrentTrack()
+    void pauseCurrentTrack()
   }
 
-  function handleStop(): void {
+  function handleAbort(): void {
     stopRound()
     setScreen('playlists')
+  }
+
+  function handlePause(): void {
+    if (!runningRef.current || pausedRef.current || phaseRef.current === 'idle') {
+      return
+    }
+    remainingMsRef.current = remainingFromDeadline()
+    deadlineRef.current = null
+    clearGameTimer()
+    pausedRef.current = true
+    setPaused(true)
+    void pauseCurrentTrack()
+  }
+
+  async function handleResume(): Promise<void> {
+    if (!runningRef.current || !pausedRef.current) {
+      return
+    }
+    pausedRef.current = false
+    setPaused(false)
+    const current = phaseRef.current
+    const remaining = remainingMsRef.current
+    if (current === 'playing') {
+      try {
+        await resumeCurrentTrack()
+      } catch (cause) {
+        setError(formatSpotifyUserError(cause))
+      }
+    }
+    if (remaining <= 0) {
+      await enterPhase(nextPhase(current))
+      return
+    }
+    armPhaseTimer(current, remaining)
   }
 
   const currentTrack = tracks[index] ?? null
@@ -328,12 +410,17 @@ export default function App() {
           total={tracks.length}
           demo={demo}
           running={running}
+          paused={paused}
           error={error}
           onPlay={() => {
             void handlePlay()
           }}
-          onStop={handleStop}
-          onBack={handleStop}
+          onPause={handlePause}
+          onResume={() => {
+            void handleResume()
+          }}
+          onAbort={handleAbort}
+          onBack={handleAbort}
           onLogout={handleLogout}
         />
       ) : null}

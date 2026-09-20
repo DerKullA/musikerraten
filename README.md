@@ -4,10 +4,10 @@ Spotify-Playlist-Quiz als Vite + React + TypeScript-SPA. Nach dem Login wählst 
 
 ## Ablauf
 
-1. **Abspielen** (~5 Sekunden): Ton läuft, Interpret und Titel bleiben verborgen.
+1. **Abspielen** (10 Sekunden): Ton läuft, Interpret und Titel bleiben verborgen.
 2. **Nachdenken** (3 Sekunden): weiterhin verborgen, Wiedergabe pausiert.
-3. **Auflösung** (5 Sekunden): Interpret und Titel erscheinen.
-4. Automatisch der nächste Titel, bis du **Stopp** wählst.
+3. **Auflösung** (6 Sekunden): Interpret, Titel und Gesamtlänge (`m:ss`) erscheinen.
+4. Automatisch der nächste Titel. **Pause** hält Ton und Timer an, **Weiter** macht genau dort weiter. **Abbrechen** beendet die Runde und geht zur Playlist-Auswahl.
 
 ## Voraussetzungen
 

@@ -1,4 +1,4 @@
-import { isTitleHidden, phaseDuration, phaseLabel } from '../lib/gameLoop.ts'
+import { formatTrackDuration, gameHint, isTitleHidden, phaseDuration, phaseLabel } from '../lib/gameLoop.ts'
 import type { GamePhase, Track } from '../types.ts'
 import { SessionExitButton } from './SessionExitButton.tsx'
 
@@ -9,9 +9,12 @@ interface GameScreenProps {
   total: number
   demo: boolean
   running: boolean
+  paused: boolean
   error: string | null
   onPlay: () => void
-  onStop: () => void
+  onPause: () => void
+  onResume: () => void
+  onAbort: () => void
   onBack: () => void
   onLogout: () => void
 }
@@ -23,14 +26,18 @@ export function GameScreen({
   total,
   demo,
   running,
+  paused,
   error,
   onPlay,
-  onStop,
+  onPause,
+  onResume,
+  onAbort,
   onBack,
   onLogout,
 }: GameScreenProps) {
   const hidden = isTitleHidden(phase)
   const duration = phaseDuration(phase)
+  const showLength = phase === 'reveal' && !hidden && track !== null && track.durationMs > 0
 
   return (
     <section className="panel game">
@@ -52,14 +59,17 @@ export function GameScreen({
         </div>
       </header>
       {error ? <p className="banner error">{error}</p> : null}
-      <div className={`vinyl ${phase === 'playing' ? 'spin' : ''}`} aria-hidden="true">
+      <div
+        className={`vinyl ${phase === 'playing' ? 'spin' : ''} ${paused ? 'paused' : ''}`}
+        aria-hidden="true"
+      >
         <span />
       </div>
-      <p className={`phase-pill ${phase}`} aria-live="polite">
-        {phaseLabel(phase)}
+      <p className={`phase-pill ${paused ? 'paused' : phase}`} aria-live="polite">
+        {phaseLabel(phase, paused)}
       </p>
       {duration > 0 ? (
-        <div className="meter" key={`${phase}-${index}`}>
+        <div className={`meter ${paused ? 'paused' : ''}`} key={`${phase}-${index}`}>
           <span style={{ animationDuration: `${duration}ms` }} />
         </div>
       ) : (
@@ -68,33 +78,40 @@ export function GameScreen({
       <div className="reveal-card">
         <p className="artist">{hidden || !track ? '???' : track.artist}</p>
         <h2 className="title">{hidden || !track ? 'Titel verborgen' : track.title}</h2>
-        <p className="hint">
-          {phase === 'playing'
-            ? 'Etwa 5 Sekunden hören – Interpret und Titel bleiben verborgen.'
-            : null}
-          {phase === 'thinking'
-            ? '3 Sekunden nachdenken. Noch keine Auflösung.'
-            : null}
-          {phase === 'reveal' ? '5 Sekunden Auflösung, dann kommt der nächste Titel.' : null}
-          {phase === 'idle' ? 'Startet die Runde. Danach läuft alles automatisch bis zum Stopp.' : null}
-        </p>
+        {showLength && track ? (
+          <p className="track-duration">Gesamtlänge {formatTrackDuration(track.durationMs)}</p>
+        ) : null}
+        <p className="hint">{gameHint(phase, paused)}</p>
       </div>
-      <div className="actions">
-        {running ? (
-          <button type="button" className="btn danger" onClick={onStop}>
-            Stopp
+      {running ? (
+        <>
+          <div className="game-controls">
+            {paused ? (
+              <button type="button" className="btn primary" onClick={onResume}>
+                Weiter
+              </button>
+            ) : (
+              <button type="button" className="btn primary" onClick={onPause}>
+                Pause
+              </button>
+            )}
+          </div>
+          <div className="game-abort">
+            <button type="button" className="btn ghost" onClick={onAbort}>
+              Abbrechen
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="actions actions-center">
+          <button type="button" className="btn primary" onClick={onPlay} disabled={!track}>
+            Abspielen
           </button>
-        ) : (
-          <>
-            <button type="button" className="btn primary" onClick={onPlay} disabled={!track}>
-              Abspielen
-            </button>
-            <button type="button" className="btn ghost" onClick={onBack}>
-              Zurück
-            </button>
-          </>
-        )}
-      </div>
+          <button type="button" className="btn ghost" onClick={onBack}>
+            Zurück
+          </button>
+        </div>
+      )}
     </section>
   )
 }

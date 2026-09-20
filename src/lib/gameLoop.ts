@@ -1,8 +1,31 @@
 import type { GamePhase, Track } from '../types.ts'
 
-export const PLAY_MS = 5000
+export const PLAY_MS = 10_000
 export const THINK_MS = 3000
-export const REVEAL_MS = 5000
+export const REVEAL_MS = 6000
+
+export function formatTrackDuration(durationMs: number): string {
+  const totalSeconds = Math.max(0, Math.floor(durationMs / 1000))
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
+export function gameHint(phase: GamePhase, paused: boolean): string {
+  if (paused) {
+    return 'Pausiert. Timer und Ton stehen. Weiter macht genau hier weiter.'
+  }
+  if (phase === 'playing') {
+    return '10 Sekunden hören – Interpret und Titel bleiben verborgen.'
+  }
+  if (phase === 'thinking') {
+    return '3 Sekunden nachdenken. Noch keine Auflösung.'
+  }
+  if (phase === 'reveal') {
+    return '6 Sekunden Auflösung mit Gesamtlänge, dann kommt der nächste Titel.'
+  }
+  return 'Startet die Runde. Danach läuft alles automatisch, bis du pausierst oder abbrichst.'
+}
 
 export function shuffleTracks(tracks: Track[]): Track[] {
   const copy = [...tracks]
@@ -41,7 +64,10 @@ export function nextPhase(phase: GamePhase): GamePhase {
   return 'playing'
 }
 
-export function phaseLabel(phase: GamePhase): string {
+export function phaseLabel(phase: GamePhase, paused = false): string {
+  if (paused) {
+    return 'Pausiert'
+  }
   if (phase === 'playing') {
     return 'Abspielen'
   }

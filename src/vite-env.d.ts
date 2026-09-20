@@ -20,6 +20,7 @@ interface SpotifyPlayer {
   addListener: (event: string, callback: (payload: SpotifyPlayerEvent) => void) => void
   activateElement: () => Promise<void>
   pause: () => Promise<void>
+  resume: () => Promise<void>
 }
 
 interface SpotifyPlayerEvent {
