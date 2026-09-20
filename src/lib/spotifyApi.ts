@@ -29,6 +29,7 @@ interface SpotifyItem {
   id?: string | null
   name?: string
   artists?: Array<{ name?: string }>
+  duration_ms?: number
 }
 
 export async function spotifyRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -134,6 +135,12 @@ export async function pausePlayback(deviceId: string): Promise<void> {
   })
 }
 
+export async function resumePlayback(deviceId: string): Promise<void> {
+  await spotifyRequest<void>(`/me/player/play?device_id=${encodeURIComponent(deviceId)}`, {
+    method: 'PUT',
+  })
+}
+
 async function fetchPlaylistItemPage(
   playlistId: string,
   offset: number,
@@ -169,5 +176,9 @@ function toPlayableTrack(row: PlaylistItemPage['items'][number]): Track | null {
   if (!title || !artist) {
     return null
   }
-  return { uri: payload.uri, title, artist }
+  const durationMs =
+    typeof payload.duration_ms === 'number' && Number.isFinite(payload.duration_ms)
+      ? Math.max(0, Math.round(payload.duration_ms))
+      : 0
+  return { uri: payload.uri, title, artist, durationMs }
 }
