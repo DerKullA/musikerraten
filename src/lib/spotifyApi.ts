@@ -83,7 +83,7 @@ export async function fetchPlaylistTracks(playlistId: string): Promise<Track[]> 
   while (true) {
     const page = await fetchPlaylistItemPage(playlistId, offset, limit)
     for (const row of page.items) {
-      const track = toPlayableTrack(row)
+      const track = toPlayableTrack(row, playlistId)
       if (track) {
         tracks.push(track)
       }
@@ -104,7 +104,7 @@ export async function fetchTracksForPlaylists(playlistIds: string[]): Promise<Tr
     try {
       const items = await fetchPlaylistTracks(id)
       for (const track of items) {
-        if (seen.has(track.uri)) {
+        if (!track.uri || seen.has(track.uri)) {
           continue
         }
         seen.add(track.uri)
@@ -157,7 +157,10 @@ async function fetchPlaylistItemPage(
   }
 }
 
-function toPlayableTrack(row: PlaylistItemPage['items'][number]): Track | null {
+function toPlayableTrack(
+  row: PlaylistItemPage['items'][number],
+  playlistId?: string,
+): Track | null {
   if (row.is_local) {
     return null
   }
@@ -180,5 +183,7 @@ function toPlayableTrack(row: PlaylistItemPage['items'][number]): Track | null {
     typeof payload.duration_ms === 'number' && Number.isFinite(payload.duration_ms)
       ? Math.max(0, Math.round(payload.duration_ms))
       : 0
-  return { uri: payload.uri, title, artist, durationMs }
+  return playlistId
+    ? { uri: payload.uri, title, artist, durationMs, playlistId }
+    : { uri: payload.uri, title, artist, durationMs }
 }

@@ -7,6 +7,7 @@ export interface Track {
   title: string
   artist: string
   durationMs: number
+  playlistId?: string
 }
 
 export interface Playlist {

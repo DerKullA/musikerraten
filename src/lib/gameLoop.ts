@@ -27,7 +27,18 @@ export function gameHint(phase: GamePhase, paused: boolean): string {
   return 'Startet die Runde. Danach läuft alles automatisch, bis du pausierst oder abbrichst.'
 }
 
+export const MAX_CONSECUTIVE_SAME_PLAYLIST = 3
+
+/**
+ * Fisher–Yates shuffle, then caps consecutive tracks from one playlist.
+ * The cap applies only when at least two playlistIds are present.
+ * Demo tracks, a single playlist, or missing playlistIds stay a plain shuffle.
+ */
 export function shuffleTracks(tracks: Track[]): Track[] {
+  return limitConsecutivePlaylistRuns(fisherYatesShuffle(tracks))
+}
+
+function fisherYatesShuffle(tracks: Track[]): Track[] {
   const copy = [...tracks]
   for (let index = copy.length - 1; index > 0; index -= 1) {
     const swap = Math.floor(Math.random() * (index + 1))
@@ -39,6 +50,71 @@ export function shuffleTracks(tracks: Track[]): Track[] {
     }
   }
   return copy
+}
+
+/**
+ * Walks a shuffled list and takes the next remaining track from another
+ * playlist whenever the last `maxRun` songs share a playlistId.
+ * Always emits every input track: if no alternate remains, the run may
+ * grow past `maxRun` instead of stalling or dropping songs.
+ */
+export function limitConsecutivePlaylistRuns(
+  tracks: Track[],
+  maxRun = MAX_CONSECUTIVE_SAME_PLAYLIST,
+): Track[] {
+  if (maxRun < 1 || tracks.length <= maxRun || !hasMultiplePlaylistSources(tracks)) {
+    return [...tracks]
+  }
+
+  const remaining = [...tracks]
+  const ordered: Track[] = []
+
+  while (remaining.length > 0) {
+    const chosen = takeAllowedTrack(remaining, playlistIdToAvoid(ordered, maxRun))
+    if (chosen) {
+      ordered.push(chosen)
+    }
+  }
+
+  return ordered
+}
+
+function takeAllowedTrack(remaining: Track[], forbiddenId: string | undefined): Track | undefined {
+  let pickIndex = 0
+  if (forbiddenId) {
+    const alternate = remaining.findIndex((track) => track.playlistId !== forbiddenId)
+    if (alternate !== -1) {
+      pickIndex = alternate
+    }
+  }
+  const [chosen] = remaining.splice(pickIndex, 1)
+  return chosen
+}
+
+function hasMultiplePlaylistSources(tracks: Track[]): boolean {
+  const playlistIds = new Set<string>()
+  for (const track of tracks) {
+    if (track.playlistId) {
+      playlistIds.add(track.playlistId)
+    }
+  }
+  return playlistIds.size >= 2
+}
+
+function playlistIdToAvoid(ordered: Track[], maxRun: number): string | undefined {
+  if (ordered.length < maxRun) {
+    return undefined
+  }
+  const playlistId = ordered[ordered.length - 1]?.playlistId
+  if (!playlistId) {
+    return undefined
+  }
+  for (let offset = 1; offset < maxRun; offset += 1) {
+    if (ordered[ordered.length - 1 - offset]?.playlistId !== playlistId) {
+      return undefined
+    }
+  }
+  return playlistId
 }
 
 export function phaseDuration(phase: GamePhase): number {
