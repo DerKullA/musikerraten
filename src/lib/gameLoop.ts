@@ -1,6 +1,6 @@
 import type { GamePhase, Track } from '../types.ts'
 
-export const PLAY_MS = 10_000
+export const PLAY_MS = 11_000
 export const THINK_MS = 3000
 export const REVEAL_MS = 6000
 
@@ -16,7 +16,7 @@ export function gameHint(phase: GamePhase, paused: boolean): string {
     return 'Pausiert. Timer und Ton stehen. Weiter macht genau hier weiter.'
   }
   if (phase === 'playing') {
-    return '10 Sekunden hören – Interpret und Titel bleiben verborgen.'
+    return '11 Sekunden hören – Interpret und Titel bleiben verborgen.'
   }
   if (phase === 'thinking') {
     return '3 Sekunden nachdenken. Noch keine Auflösung.'

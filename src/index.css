@@ -146,6 +146,13 @@ h1 {
   gap: 12px;
 }
 
+.game-session-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
 .game-controls {
   margin-top: 28px;
 }
@@ -373,6 +380,16 @@ code {
   font-weight: 500;
 }
 
+.reveal-card.is-reveal .artist {
+  font-size: clamp(1.25rem, 5.5vw, 1.7rem);
+  letter-spacing: 0.03em;
+}
+
+.reveal-card.is-reveal .title {
+  font-size: clamp(2.25rem, 9vw, 3.5rem);
+  line-height: 1.1;
+}
+
 .track-duration {
   margin: 0 0 12px;
   color: var(--lime);
@@ -415,5 +432,30 @@ code {
   .panel-head .btn.outline {
     width: 100%;
     min-height: 44px;
+  }
+
+  .game-session-bar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-areas:
+      '. pause .'
+      '. abort .';
+    justify-items: center;
+    width: 100%;
+  }
+
+  .game-controls {
+    grid-area: pause;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .game-abort {
+    grid-area: abort;
+  }
+
+  .game-controls .btn {
+    min-width: min(240px, 72vw);
+    min-height: 52px;
   }
 }

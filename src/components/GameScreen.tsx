@@ -75,7 +75,7 @@ export function GameScreen({
       ) : (
         <div className="meter idle" />
       )}
-      <div className="reveal-card">
+      <div className={`reveal-card${phase === 'reveal' && !hidden ? ' is-reveal' : ''}`}>
         <p className="artist">{hidden || !track ? '???' : track.artist}</p>
         <h2 className="title">{hidden || !track ? 'Titel verborgen' : track.title}</h2>
         {showLength && track ? (
@@ -84,7 +84,7 @@ export function GameScreen({
         <p className="hint">{gameHint(phase, paused)}</p>
       </div>
       {running ? (
-        <>
+        <div className="game-session-bar">
           <div className="game-controls">
             {paused ? (
               <button type="button" className="btn primary" onClick={onResume}>
@@ -101,7 +101,7 @@ export function GameScreen({
               Abbrechen
             </button>
           </div>
-        </>
+        </div>
       ) : (
         <div className="actions actions-center">
           <button type="button" className="btn primary" onClick={onPlay} disabled={!track}>

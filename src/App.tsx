@@ -285,9 +285,6 @@ export default function App() {
       indexRef.current = upcoming
       setIndex(upcoming)
     }
-    if (next === 'thinking') {
-      await pauseCurrentTrack()
-    }
     phaseRef.current = next
     setPhase(next)
     if (next === 'playing') {
@@ -356,7 +353,7 @@ export default function App() {
     setPaused(false)
     const current = phaseRef.current
     const remaining = remainingMsRef.current
-    if (current === 'playing') {
+    if (current !== 'idle') {
       try {
         await resumeCurrentTrack()
       } catch (cause) {
