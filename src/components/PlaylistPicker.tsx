@@ -36,7 +36,6 @@ export function PlaylistPicker({
           <p className="eyebrow">{demo ? 'Demo' : 'Spotify'}</p>
           <h1>Playlists wählen</h1>
         </div>
-        <SessionExitButton label={demo ? 'Zurück' : 'Abmelden'} onClick={onLogout} />
       </header>
       <p className="lede">
         {demo
@@ -91,6 +90,7 @@ export function PlaylistPicker({
           {loadingTracks ? 'Titel werden geladen …' : 'Spiel starten'}
         </button>
       </div>
+      <SessionExitButton label={demo ? 'Zurück' : 'Abmelden'} onClick={onLogout} />
     </section>
   )
 }

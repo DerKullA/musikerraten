@@ -50,12 +50,6 @@ export function GameScreen({
           <p className="counter">
             {total === 0 ? '0 / 0' : `${index + 1} / ${total}`}
           </p>
-          {!demo ? (
-            <SessionExitButton
-              label={running ? 'Beenden & Abmelden' : 'Abmelden'}
-              onClick={onLogout}
-            />
-          ) : null}
         </div>
       </header>
       {error ? <p className="banner error">{error}</p> : null}
@@ -109,6 +103,12 @@ export function GameScreen({
           </button>
         </div>
       )}
+      {!demo ? (
+        <SessionExitButton
+          label={running ? 'Beenden & Abmelden' : 'Abmelden'}
+          onClick={onLogout}
+        />
+      ) : null}
     </section>
   )
 }
