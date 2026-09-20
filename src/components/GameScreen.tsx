@@ -59,11 +59,21 @@ export function GameScreen({
         </div>
       </header>
       {error ? <p className="banner error">{error}</p> : null}
-      <div
-        className={`vinyl ${phase === 'playing' ? 'spin' : ''} ${paused ? 'paused' : ''}`}
-        aria-hidden="true"
-      >
-        <span />
+      <div className="game-center-control">
+        {running ? (
+          <button
+            type="button"
+            className={`center-transport ${paused ? 'is-paused' : 'is-live'}`}
+            aria-pressed={paused}
+            onClick={paused ? onResume : onPause}
+          >
+            {paused ? 'Weiter' : 'Pause'}
+          </button>
+        ) : (
+          <div className="vinyl" aria-hidden="true">
+            <span />
+          </div>
+        )}
       </div>
       <p className={`phase-pill ${paused ? 'paused' : phase}`} aria-live="polite">
         {phaseLabel(phase, paused)}
@@ -84,23 +94,10 @@ export function GameScreen({
         <p className="hint">{gameHint(phase, paused)}</p>
       </div>
       {running ? (
-        <div className="game-session-bar">
-          <div className="game-controls">
-            {paused ? (
-              <button type="button" className="btn primary" onClick={onResume}>
-                Weiter
-              </button>
-            ) : (
-              <button type="button" className="btn primary" onClick={onPause}>
-                Pause
-              </button>
-            )}
-          </div>
-          <div className="game-abort">
-            <button type="button" className="btn ghost" onClick={onAbort}>
-              Abbrechen
-            </button>
-          </div>
+        <div className="game-abort">
+          <button type="button" className="btn ghost" onClick={onAbort}>
+            Abbrechen
+          </button>
         </div>
       ) : (
         <div className="actions actions-center">

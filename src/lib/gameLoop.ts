@@ -19,7 +19,7 @@ export function gameHint(phase: GamePhase, paused: boolean): string {
     return '11 Sekunden hören – Interpret und Titel bleiben verborgen.'
   }
   if (phase === 'thinking') {
-    return '3 Sekunden nachdenken. Noch keine Auflösung.'
+    return '3 Sekunden nachdenken. Der Ton pausiert, noch keine Auflösung.'
   }
   if (phase === 'reveal') {
     return '6 Sekunden Auflösung mit Gesamtlänge, dann kommt der nächste Titel.'
@@ -82,4 +82,8 @@ export function phaseLabel(phase: GamePhase, paused = false): string {
 
 export function isTitleHidden(phase: GamePhase): boolean {
   return phase === 'playing' || phase === 'thinking' || phase === 'idle'
+}
+
+export function phasePlaysAudio(phase: GamePhase): boolean {
+  return phase === 'playing' || phase === 'reveal'
 }
