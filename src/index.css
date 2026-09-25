@@ -210,6 +210,11 @@ h1 {
   font-size: clamp(1.25rem, 0.5rem + 4.1vw, 1.85rem);
   font-weight: 700;
   line-height: 1.15;
+  white-space: nowrap;
+}
+
+.btn.cta.is-wrapping {
+  white-space: normal;
 }
 
 .banner {
