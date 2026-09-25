@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { GameScreen } from './components/GameScreen.tsx'
 import { LoginScreen } from './components/LoginScreen.tsx'
+import { MainMenu } from './components/MainMenu.tsx'
 import { PlaylistPicker } from './components/PlaylistPicker.tsx'
 import { nextPhase, phaseDuration, phasePlaysAudio, shuffleTracks } from './lib/gameLoop.ts'
+import { GUESS_SONG_ID, isPlayableMenuGame } from './lib/mainMenuGames.ts'
 import {
   clearSessionPhaseTimings,
   DEFAULT_PHASE_TIMINGS,
@@ -72,6 +74,7 @@ export default function App() {
   const phaseRef = useRef<GamePhase>('idle')
   const savedTimingsRef = useRef(savedTimings)
   const roundTimingsRef = useRef(roundTimings)
+  const navigationEpochRef = useRef(0)
 
   useEffect(() => {
     if (bootstrapped.current) {
@@ -102,7 +105,7 @@ export default function App() {
         await exchangeAuthorizationCode(callback.code, callback.state)
         clearAuthCallbackFromUrl()
         resetPhaseTimings()
-        await openPlaylistScreen()
+        showMainMenu()
       } catch (cause) {
         setError(formatSpotifyUserError(cause))
       } finally {
@@ -113,7 +116,7 @@ export default function App() {
     if (readStoredTokens()) {
       try {
         await getValidAccessToken()
-        await openPlaylistScreen()
+        showMainMenu()
       } catch {
         clearTokens()
         resetPhaseTimings()
@@ -121,17 +124,45 @@ export default function App() {
     }
   }
 
+  function showMainMenu(): void {
+    setError(null)
+    setScreen('menu')
+  }
+
+  function handleBackToMenu(): void {
+    navigationEpochRef.current += 1
+    setLoadingPlaylists(false)
+    setLoadingTracks(false)
+    showMainMenu()
+  }
+
+  function handleSelectGame(gameId: string): void {
+    if (!isPlayableMenuGame(gameId)) {
+      return
+    }
+    void openPlaylistScreen()
+  }
+
   async function openPlaylistScreen(): Promise<void> {
+    const epoch = navigationEpochRef.current
     setScreen('playlists')
     setError(null)
     setLoadingPlaylists(true)
     try {
       const items = await fetchUserPlaylists()
+      if (epoch !== navigationEpochRef.current) {
+        return
+      }
       setPlaylists(items)
     } catch (cause) {
+      if (epoch !== navigationEpochRef.current) {
+        return
+      }
       setError(formatSpotifyUserError(cause))
     } finally {
-      setLoadingPlaylists(false)
+      if (epoch === navigationEpochRef.current) {
+        setLoadingPlaylists(false)
+      }
     }
   }
 
@@ -180,14 +211,21 @@ export default function App() {
   }
 
   async function handleStartGame(): Promise<void> {
+    const epoch = navigationEpochRef.current
     setError(null)
     setLoadingTracks(true)
     try {
       const loaded = await fetchTracksForPlaylists(selectedIds)
+      if (epoch !== navigationEpochRef.current) {
+        return
+      }
       if (loaded.length === 0) {
         throw new Error('Keine abspielbaren Titel gefunden.')
       }
       await ensurePlayer()
+      if (epoch !== navigationEpochRef.current) {
+        return
+      }
       const shuffled = shuffleTracks(loaded)
       tracksRef.current = shuffled
       indexRef.current = 0
@@ -199,9 +237,14 @@ export default function App() {
       beginQuizMedia('idle')
       setScreen('game')
     } catch (cause) {
+      if (epoch !== navigationEpochRef.current) {
+        return
+      }
       setError(formatSpotifyUserError(cause))
     } finally {
-      setLoadingTracks(false)
+      if (epoch === navigationEpochRef.current) {
+        setLoadingTracks(false)
+      }
     }
   }
 
@@ -467,6 +510,16 @@ export default function App() {
           }}
         />
       ) : null}
+      {screen === 'menu' ? (
+        <MainMenu
+          savedTimings={savedTimings}
+          onSaveTimings={handleSaveTimings}
+          onLogout={handleLogout}
+          onGuessSong={() => {
+            handleSelectGame(GUESS_SONG_ID)
+          }}
+        />
+      ) : null}
       {screen === 'playlists' ? (
         <PlaylistPicker
           playlists={playlists}
@@ -481,6 +534,7 @@ export default function App() {
           onStart={() => {
             void handleStartGame()
           }}
+          onBack={handleBackToMenu}
           onLogout={handleLogout}
         />
       ) : null}
