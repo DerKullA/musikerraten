@@ -54,6 +54,17 @@ input {
   padding: 48px 0 72px;
 }
 
+.app-game {
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .glow {
   position: absolute;
   inset: 80px 8% auto;
@@ -339,6 +350,64 @@ code {
   text-align: center;
 }
 
+.panel.game {
+  flex: 1;
+  width: min(760px, 100%);
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.7rem, 2dvh, 1.2rem);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding:
+    calc(clamp(0.75rem, 2.2dvh, 1.4rem) + env(safe-area-inset-top, 0px))
+    calc(clamp(1rem, 4vw, 1.75rem) + env(safe-area-inset-right, 0px))
+    calc(clamp(0.7rem, 2dvh, 1.15rem) + env(safe-area-inset-bottom, 0px))
+    calc(clamp(1rem, 4vw, 1.75rem) + env(safe-area-inset-left, 0px));
+}
+
+.panel.game h1 {
+  font-size: clamp(1.7rem, 7vw, 2.8rem);
+}
+
+.panel.game .eyebrow {
+  margin-bottom: 0.25rem;
+}
+
+.panel.game .panel-head {
+  flex-direction: row;
+  align-items: flex-start;
+}
+
+.panel.game .panel-head-meta {
+  width: auto;
+  align-items: flex-end;
+}
+
+.panel.game .reveal-card,
+.panel.game .game-abort,
+.panel.game .actions,
+.panel.game .session-exit,
+.panel.game .game-center-control,
+.panel.game .banner {
+  margin-top: 0;
+}
+
+.game-stage {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.75rem, 2.4dvh, 1.35rem);
+  min-height: 0;
+  width: 100%;
+}
+
 .counter {
   margin: 6px 0 0;
   color: var(--amber);
@@ -346,30 +415,27 @@ code {
 }
 
 .game-center-control {
-  --transport-size: 220px;
   display: grid;
   place-items: center;
-  width: var(--transport-size);
-  height: var(--transport-size);
-  margin: 22px auto 16px;
+  width: clamp(8.75rem, min(68vw, 40dvh), 22.5rem);
+  height: clamp(8.75rem, min(68vw, 40dvh), 22.5rem);
 }
 
 .center-transport {
+  position: relative;
+  display: grid;
+  place-items: center;
   width: 100%;
   height: 100%;
+  padding: 0;
+  overflow: hidden;
   border: 0;
   border-radius: 50%;
   cursor: pointer;
-  font: inherit;
-  font-weight: 700;
-  font-size: clamp(1.15rem, 0.45rem + 5.4vw, 1.7rem);
-  line-height: 1;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  padding-inline: 12%;
   color: var(--ink);
   background: var(--lime);
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
+  touch-action: manipulation;
 }
 
 .center-transport.is-paused {
@@ -384,6 +450,57 @@ code {
 .center-transport:focus-visible {
   outline: 3px solid var(--paper);
   outline-offset: 4px;
+}
+
+.center-transport:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.center-transport.has-cover {
+  color: var(--paper);
+  background: #12170f;
+  box-shadow:
+    inset 0 0 0 2px rgba(243, 234, 216, 0.38),
+    0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.transport-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.transport-scrim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle,
+    rgba(8, 10, 6, 0.62) 0%,
+    rgba(8, 10, 6, 0.28) 52%,
+    rgba(8, 10, 6, 0.5) 100%
+  );
+  pointer-events: none;
+}
+
+.transport-icon {
+  position: relative;
+  z-index: 1;
+  width: 34%;
+  height: 34%;
+  display: block;
+}
+
+.transport-icon.is-play {
+  transform: translateX(7%);
+}
+
+.center-transport.has-cover .transport-icon {
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.75));
 }
 
 .meter.paused span {
@@ -418,12 +535,16 @@ code {
 }
 
 .meter {
-  width: min(320px, 100%);
-  height: 6px;
+  width: min(100%, 36rem);
+  height: clamp(0.4rem, 1.15dvh, 0.7rem);
   margin: 16px auto 0;
   border-radius: 999px;
   background: rgba(243, 234, 216, 0.08);
   overflow: hidden;
+}
+
+.panel.game .meter {
+  margin: 0;
 }
 
 .meter span {
@@ -699,9 +820,5 @@ code {
 
   .btn.cta {
     min-height: 84px;
-  }
-
-  .game-center-control {
-    --transport-size: min(252px, 68vw);
   }
 }

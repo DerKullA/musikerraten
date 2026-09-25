@@ -1,5 +1,6 @@
-import { getValidAccessToken } from './spotifyAuth.ts'
 import type { Playlist, Track } from '../types.ts'
+import { pickAlbumImageUrl, type AlbumImage } from './albumArt.ts'
+import { getValidAccessToken } from './spotifyAuth.ts'
 
 const API = 'https://api.spotify.com/v1'
 
@@ -30,6 +31,9 @@ interface SpotifyItem {
   name?: string
   artists?: Array<{ name?: string }>
   duration_ms?: number
+  album?: {
+    images?: AlbumImage[]
+  }
 }
 
 export async function spotifyRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -183,7 +187,13 @@ function toPlayableTrack(
     typeof payload.duration_ms === 'number' && Number.isFinite(payload.duration_ms)
       ? Math.max(0, Math.round(payload.duration_ms))
       : 0
-  return playlistId
-    ? { uri: payload.uri, title, artist, durationMs, playlistId }
-    : { uri: payload.uri, title, artist, durationMs }
+  const albumImageUrl = pickAlbumImageUrl(payload.album?.images)
+  return {
+    uri: payload.uri,
+    title,
+    artist,
+    durationMs,
+    ...(playlistId ? { playlistId } : {}),
+    ...(albumImageUrl ? { albumImageUrl } : {}),
+  }
 }

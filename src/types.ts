@@ -8,6 +8,7 @@ export interface Track {
   artist: string
   durationMs: number
   playlistId?: string
+  albumImageUrl?: string
 }
 
 export interface Playlist {
