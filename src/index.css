@@ -135,23 +135,6 @@ h1 {
   margin-top: 28px;
 }
 
-.actions-center,
-.game-abort {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.game-abort {
-  margin-top: 28px;
-}
-
-.game-abort .btn {
-  min-width: 140px;
-  color: var(--paper-dim);
-}
-
 .session-exit {
   display: flex;
   margin-top: 18px;
@@ -220,6 +203,14 @@ h1 {
   font-size: 0.9rem;
 }
 
+.btn.cta {
+  width: 100%;
+  min-height: 68px;
+  padding: 18px 28px;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
 .banner {
   margin: 18px 0 0;
   padding: 12px 14px;
@@ -286,47 +277,41 @@ code {
 }
 
 .game-center-control {
+  --transport-size: 220px;
   display: grid;
   place-items: center;
-  width: 148px;
-  height: 148px;
-  margin: 28px auto 18px;
+  width: var(--transport-size);
+  height: var(--transport-size);
+  margin: 22px auto 16px;
 }
 
 .center-transport {
-  width: 148px;
-  height: 148px;
+  width: 100%;
+  height: 100%;
   border: 0;
   border-radius: 50%;
   cursor: pointer;
   font: inherit;
   font-weight: 700;
-  font-size: 1.2rem;
-  letter-spacing: 0.04em;
+  font-size: 1.55rem;
+  letter-spacing: 0.03em;
   color: var(--ink);
   background: var(--lime);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
 }
 
 .center-transport.is-paused {
   background: var(--paper);
 }
 
-.vinyl {
-  width: 148px;
-  height: 148px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 50%, #f3ead8 0 8px, #111 8px 18px, #d4e157 18px 22px, #151515 22px 100%);
-  box-shadow: inset 0 0 0 10px #0a0a0a, 0 10px 30px rgba(0, 0, 0, 0.35);
+.center-transport:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
-.vinyl span {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: repeating-radial-gradient(circle, transparent 0 8px, rgba(255, 255, 255, 0.04) 8px 9px);
+.center-transport:focus-visible {
+  outline: 3px solid var(--paper);
+  outline-offset: 4px;
 }
 
 .meter.paused span {
@@ -522,6 +507,10 @@ code {
   background: rgba(243, 234, 216, 0.08);
 }
 
+.menu-item-leave {
+  font-weight: 700;
+}
+
 .menu-item-danger {
   color: #ffc8be;
 }
@@ -633,19 +622,16 @@ code {
     min-height: 48px;
   }
 
-  .game-center-control,
-  .center-transport,
-  .vinyl {
-    width: min(176px, 46vw);
-    height: min(176px, 46vw);
+  .btn.cta {
+    min-height: 84px;
+    font-size: 1.5rem;
+  }
+
+  .game-center-control {
+    --transport-size: min(252px, 68vw);
   }
 
   .center-transport {
-    font-size: 1.28rem;
-  }
-
-  .game-abort .btn {
-    min-width: min(200px, 64vw);
-    min-height: 44px;
+    font-size: 1.7rem;
   }
 }

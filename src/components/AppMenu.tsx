@@ -20,9 +20,10 @@ interface AppMenuProps {
   timings: PhaseTimings
   onSaveTimings: (timings: PhaseTimings) => void
   onLogout: () => void
+  onLeaveRound?: () => void
 }
 
-export function AppMenu({ timings, onSaveTimings, onLogout }: AppMenuProps) {
+export function AppMenu({ timings, onSaveTimings, onLogout, onLeaveRound }: AppMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -79,6 +80,11 @@ export function AppMenu({ timings, onSaveTimings, onLogout }: AppMenuProps) {
     onLogout()
   }
 
+  function leaveRound(): void {
+    setMenuOpen(false)
+    onLeaveRound?.()
+  }
+
   return (
     <div className="app-menu" ref={menuRef}>
       <button
@@ -114,6 +120,11 @@ export function AppMenu({ timings, onSaveTimings, onLogout }: AppMenuProps) {
         >
           Einstellungen
         </button>
+        {onLeaveRound ? (
+          <button type="button" role="menuitem" className="menu-item menu-item-leave" onClick={leaveRound}>
+            Zurück
+          </button>
+        ) : null}
         <button type="button" role="menuitem" className="menu-item menu-item-danger" onClick={logout}>
           Abmelden
         </button>
