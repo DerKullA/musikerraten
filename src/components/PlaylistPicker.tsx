@@ -1,4 +1,6 @@
+import type { PhaseTimings } from '../lib/phaseTimings.ts'
 import type { Playlist } from '../types.ts'
+import { AppMenu } from './AppMenu.tsx'
 import { SessionExitButton } from './SessionExitButton.tsx'
 
 interface PlaylistPickerProps {
@@ -8,6 +10,8 @@ interface PlaylistPickerProps {
   loadingTracks: boolean
   error: string | null
   demo: boolean
+  savedTimings: PhaseTimings
+  onSaveTimings: (timings: PhaseTimings) => void
   onToggle: (id: string) => void
   onToggleAll: () => void
   onStart: () => void
@@ -21,6 +25,8 @@ export function PlaylistPicker({
   loadingTracks,
   error,
   demo,
+  savedTimings,
+  onSaveTimings,
   onToggle,
   onToggleAll,
   onStart,
@@ -30,12 +36,17 @@ export function PlaylistPicker({
   const allSelected = playlists.length > 0 && selectedCount === playlists.length
 
   return (
-    <section className="panel">
+    <section className={demo ? 'panel' : 'panel with-menu'}>
       <header className="panel-head">
         <div>
           <p className="eyebrow">{demo ? 'Demo' : 'Spotify'}</p>
           <h1>Playlists wählen</h1>
         </div>
+        {demo ? null : (
+          <div className="panel-head-meta">
+            <AppMenu timings={savedTimings} onSaveTimings={onSaveTimings} onLogout={onLogout} />
+          </div>
+        )}
       </header>
       <p className="lede">
         {demo
@@ -90,7 +101,7 @@ export function PlaylistPicker({
           {loadingTracks ? 'Titel werden geladen …' : 'Spiel starten'}
         </button>
       </div>
-      <SessionExitButton label={demo ? 'Zurück' : 'Abmelden'} onClick={onLogout} />
+      {demo ? <SessionExitButton label="Zurück" onClick={onLogout} /> : null}
     </section>
   )
 }

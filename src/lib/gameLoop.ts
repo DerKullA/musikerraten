@@ -4,12 +4,13 @@ import {
   MAX_CONSECUTIVE_SAME_PLAYLIST,
   shuffleTracks,
 } from './mixTracks.ts'
+import { DEFAULT_PHASE_TIMINGS, type PhaseTimings } from './phaseTimings.ts'
 
 export { limitConsecutivePlaylistRuns, MAX_CONSECUTIVE_SAME_PLAYLIST, shuffleTracks }
 
-export const PLAY_MS = 11_000
-export const THINK_MS = 3000
-export const REVEAL_MS = 6000
+export const PLAY_MS = DEFAULT_PHASE_TIMINGS.playMs
+export const THINK_MS = DEFAULT_PHASE_TIMINGS.thinkMs
+export const REVEAL_MS = DEFAULT_PHASE_TIMINGS.revealMs
 
 export function formatTrackDuration(durationMs: number): string {
   const totalSeconds = Math.max(0, Math.floor(durationMs / 1000))
@@ -18,33 +19,42 @@ export function formatTrackDuration(durationMs: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
-export function gameHint(phase: GamePhase, paused: boolean): string {
+export function gameHint(
+  phase: GamePhase,
+  paused: boolean,
+  timings: PhaseTimings = DEFAULT_PHASE_TIMINGS,
+): string {
   if (paused) {
     return 'Pausiert. Timer und Ton stehen. Weiter macht genau hier weiter.'
   }
   if (phase === 'playing') {
-    return '11 Sekunden hören – Interpret und Titel bleiben verborgen.'
+    return `${formatSecondsPhrase(timings.playMs)} hören – Interpret und Titel bleiben verborgen.`
   }
   if (phase === 'thinking') {
-    return '3 Sekunden nachdenken. Der Ton pausiert, noch keine Auflösung.'
+    return `${formatSecondsPhrase(timings.thinkMs)} nachdenken. Der Ton pausiert, noch keine Auflösung.`
   }
   if (phase === 'reveal') {
-    return '6 Sekunden Auflösung mit Gesamtlänge, dann kommt der nächste Titel.'
+    return `${formatSecondsPhrase(timings.revealMs)} Auflösung mit Gesamtlänge, dann kommt der nächste Titel.`
   }
   return 'Startet die Runde. Danach läuft alles automatisch, bis du pausierst oder abbrichst.'
 }
 
-export function phaseDuration(phase: GamePhase): number {
+export function phaseDuration(phase: GamePhase, timings: PhaseTimings = DEFAULT_PHASE_TIMINGS): number {
   if (phase === 'playing') {
-    return PLAY_MS
+    return timings.playMs
   }
   if (phase === 'thinking') {
-    return THINK_MS
+    return timings.thinkMs
   }
   if (phase === 'reveal') {
-    return REVEAL_MS
+    return timings.revealMs
   }
   return 0
+}
+
+function formatSecondsPhrase(durationMs: number): string {
+  const seconds = Math.max(0, Math.round(durationMs / 1000))
+  return seconds === 1 ? '1 Sekunde' : `${seconds} Sekunden`
 }
 
 export function nextPhase(phase: GamePhase): GamePhase {
