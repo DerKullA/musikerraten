@@ -207,8 +207,9 @@ h1 {
   width: 100%;
   min-height: 68px;
   padding: 18px 28px;
-  font-size: 1.3rem;
+  font-size: clamp(1.25rem, 0.5rem + 4.1vw, 1.85rem);
   font-weight: 700;
+  line-height: 1.15;
 }
 
 .banner {
@@ -293,8 +294,11 @@ code {
   cursor: pointer;
   font: inherit;
   font-weight: 700;
-  font-size: 1.55rem;
-  letter-spacing: 0.03em;
+  font-size: clamp(1.15rem, 0.45rem + 5.4vw, 1.7rem);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  padding-inline: 12%;
   color: var(--ink);
   background: var(--lime);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
@@ -498,7 +502,10 @@ code {
   padding: 12px 14px;
   background: transparent;
   color: var(--paper);
+  font-size: clamp(1.05rem, 0.72rem + 2vw, 1.35rem);
+  line-height: 1.2;
   text-align: left;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -624,14 +631,9 @@ code {
 
   .btn.cta {
     min-height: 84px;
-    font-size: 1.5rem;
   }
 
   .game-center-control {
     --transport-size: min(252px, 68vw);
-  }
-
-  .center-transport {
-    font-size: 1.7rem;
   }
 }
