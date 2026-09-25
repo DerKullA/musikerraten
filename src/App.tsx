@@ -22,6 +22,15 @@ import {
   readStoredTokens,
   startSpotifyLogin,
 } from './lib/spotifyAuth.ts'
+import {
+  holdQuizMediaSession,
+  isQuizMediaSessionActive,
+  quizMediaToken,
+  startQuizMediaSession,
+  stopQuizMediaSession,
+  stopQuizMediaSessionIfCurrent,
+  syncQuizMediaPlayback,
+} from './lib/quizMediaSession.ts'
 import { connectSpotifyPlayer } from './lib/spotifyPlayer.ts'
 import { stopSpeakerKeepAlive, watchSpeakerKeepAliveGestures } from './lib/speakerKeepAlive.ts'
 import type { AppScreen, GamePhase, Playlist, Track } from './types.ts'
@@ -62,6 +71,7 @@ export default function App() {
     void bootstrapAuth()
     return () => {
       clearGameTimer()
+      stopQuizMediaSession()
       playerRef.current?.disconnect()
       unbindKeepAlive()
       stopSpeakerKeepAlive()
@@ -187,6 +197,8 @@ export default function App() {
       setTracks(shuffled)
       setIndex(0)
       setPhase('idle')
+      phaseRef.current = 'idle'
+      beginQuizMedia('idle')
       setScreen('game')
     } catch (cause) {
       setError(formatSpotifyUserError(cause))
@@ -212,6 +224,7 @@ export default function App() {
     if (!track || demo || !deviceId) {
       return
     }
+    holdQuizMediaSession()
     await startPlayback(deviceId, track.uri)
     if (pausedRef.current) {
       await pauseCurrentTrack()
@@ -223,6 +236,7 @@ export default function App() {
     if (demo || !deviceId) {
       return
     }
+    holdQuizMediaSession()
     try {
       await pausePlayback(deviceId)
     } catch {
@@ -235,6 +249,7 @@ export default function App() {
     if (demo || !deviceId) {
       return
     }
+    holdQuizMediaSession()
     try {
       await resumePlayback(deviceId)
     } catch {
@@ -302,6 +317,7 @@ export default function App() {
 
   async function applyPhaseAudio(next: GamePhase): Promise<void> {
     // Spotify pausiert hier; der Speaker-Wachhalter bleibt aktiv.
+    engageQuizMedia(next)
     if (pausedRef.current || next === 'idle' || next === 'thinking') {
       await pauseCurrentTrack()
       return
@@ -323,6 +339,7 @@ export default function App() {
     setRunning(true)
     phaseRef.current = 'playing'
     setPhase('playing')
+    engageQuizMedia('playing')
     try {
       if (!demo) {
         await playerRef.current?.activateElement()
@@ -341,7 +358,36 @@ export default function App() {
     clearGameTimer()
     phaseRef.current = 'idle'
     setPhase('idle')
-    void pauseCurrentTrack()
+    void endQuizPlayback()
+  }
+
+  async function endQuizPlayback(): Promise<void> {
+    const token = quizMediaToken()
+    try {
+      await pauseCurrentTrack()
+    } finally {
+      stopQuizMediaSessionIfCurrent(token)
+    }
+  }
+
+  function playbackForPhase(phase: GamePhase): 'playing' | 'paused' {
+    if (pausedRef.current || !phasePlaysAudio(phase)) {
+      return 'paused'
+    }
+    return 'playing'
+  }
+
+  function beginQuizMedia(phase: GamePhase): void {
+    startQuizMediaSession(playbackForPhase(phase))
+  }
+
+  function engageQuizMedia(phase: GamePhase): void {
+    const nextPlayback = playbackForPhase(phase)
+    if (!isQuizMediaSessionActive()) {
+      startQuizMediaSession(nextPlayback)
+      return
+    }
+    syncQuizMediaPlayback(nextPlayback)
   }
 
   function handleAbort(): void {
@@ -358,6 +404,7 @@ export default function App() {
     clearGameTimer()
     pausedRef.current = true
     setPaused(true)
+    engageQuizMedia(phaseRef.current)
     void pauseCurrentTrack()
   }
 
@@ -368,6 +415,7 @@ export default function App() {
     pausedRef.current = false
     setPaused(false)
     const current = phaseRef.current
+    engageQuizMedia(current)
     const remaining = remainingMsRef.current
     if (remaining <= 0) {
       await enterPhase(nextPhase(current))
