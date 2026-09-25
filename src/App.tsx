@@ -23,6 +23,7 @@ import {
   startSpotifyLogin,
 } from './lib/spotifyAuth.ts'
 import { connectSpotifyPlayer } from './lib/spotifyPlayer.ts'
+import { stopSpeakerKeepAlive, watchSpeakerKeepAliveGestures } from './lib/speakerKeepAlive.ts'
 import type { AppScreen, GamePhase, Playlist, Track } from './types.ts'
 
 export default function App() {
@@ -57,10 +58,13 @@ export default function App() {
       return
     }
     bootstrapped.current = true
+    const unbindKeepAlive = watchSpeakerKeepAliveGestures()
     void bootstrapAuth()
     return () => {
       clearGameTimer()
       playerRef.current?.disconnect()
+      unbindKeepAlive()
+      stopSpeakerKeepAlive()
     }
   }, [])
 
@@ -131,6 +135,7 @@ export default function App() {
   }
 
   function handleLogout(): void {
+    stopSpeakerKeepAlive()
     stopRound()
     playerRef.current?.disconnect()
     playerRef.current = null
@@ -296,6 +301,7 @@ export default function App() {
   }
 
   async function applyPhaseAudio(next: GamePhase): Promise<void> {
+    // Spotify pausiert hier; der Speaker-Wachhalter bleibt aktiv.
     if (pausedRef.current || next === 'idle' || next === 'thinking') {
       await pauseCurrentTrack()
       return
