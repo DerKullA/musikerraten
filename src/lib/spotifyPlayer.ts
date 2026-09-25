@@ -1,4 +1,5 @@
 import { getValidAccessToken } from './spotifyAuth.ts'
+import { watchQuizPlayback } from './quizMediaSession.ts'
 
 const SDK_SRC = 'https://sdk.scdn.co/spotify-player.js'
 const READY_TIMEOUT_MS = 15_000
@@ -52,6 +53,19 @@ export function loadSpotifySdk(): Promise<void> {
   return sdkPromise
 }
 
+export function spotifyPlayerOptions(name: string): SpotifyPlayerOptions {
+  return {
+    name,
+    getOAuthToken: (callback) => {
+      void getValidAccessToken()
+        .then(callback)
+        .catch(() => callback(''))
+    },
+    volume: 0.8,
+    enableMediaSession: false,
+  }
+}
+
 export async function connectSpotifyPlayer(
   name: string,
 ): Promise<{ player: SpotifyPlayer; deviceId: string }> {
@@ -61,15 +75,8 @@ export async function connectSpotifyPlayer(
     throw new Error('Spotify Player ist nicht verfügbar.')
   }
 
-  const player = new PlayerCtor({
-    name,
-    getOAuthToken: (callback) => {
-      void getValidAccessToken()
-        .then(callback)
-        .catch(() => callback(''))
-    },
-    volume: 0.8,
-  })
+  const player = new PlayerCtor(spotifyPlayerOptions(name))
+  watchQuizPlayback(player)
 
   return await new Promise((resolve, reject) => {
     const timer = window.setTimeout(() => {

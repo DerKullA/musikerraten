@@ -12,12 +12,14 @@ interface SpotifyPlayerOptions {
   name: string
   getOAuthToken: (callback: (token: string) => void) => void
   volume?: number
+  enableMediaSession?: boolean
 }
 
 interface SpotifyPlayer {
   connect: () => Promise<boolean>
   disconnect: () => void
   addListener: (event: string, callback: (payload: SpotifyPlayerEvent) => void) => void
+  removeListener: (event: string, callback: (payload: SpotifyPlayerEvent) => void) => void
   activateElement: () => Promise<void>
   pause: () => Promise<void>
   resume: () => Promise<void>
