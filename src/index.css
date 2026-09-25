@@ -104,7 +104,6 @@ h1 {
 
 .lede,
 .notes,
-.hint,
 .muted,
 .banner {
   line-height: 1.55;
@@ -125,7 +124,6 @@ h1 {
 }
 
 .notes p,
-.hint,
 .muted {
   margin: 0;
 }
@@ -390,36 +388,39 @@ code {
   color: var(--amber);
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  font-size: 0.86rem;
+  font-size: clamp(1.2rem, 5vw, 1.65rem);
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: break-word;
 }
 
 .title {
-  margin: 8px 0 12px;
+  margin: 10px 0 0;
   font-family: var(--display);
-  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  font-size: clamp(2.35rem, 10vw, 3.6rem);
   font-weight: 500;
+  line-height: 1.08;
+  overflow-wrap: break-word;
 }
 
 .reveal-card.is-reveal .artist {
-  font-size: clamp(1.25rem, 5.5vw, 1.7rem);
+  font-size: clamp(1.85rem, 7.5vw, 2.6rem);
   letter-spacing: 0.03em;
+  line-height: 1.15;
 }
 
 .reveal-card.is-reveal .title {
-  font-size: clamp(2.25rem, 9vw, 3.5rem);
-  line-height: 1.1;
+  font-size: clamp(3.15rem, 13vw, 5rem);
+  line-height: 1.05;
 }
 
 .track-duration {
-  margin: 0 0 12px;
+  margin: 14px 0 0;
   color: var(--lime);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.08em;
   font-weight: 700;
-}
-
-.hint {
-  color: var(--muted);
+  font-size: clamp(1rem, 3.4vw, 1.2rem);
 }
 
 @keyframes fill {
