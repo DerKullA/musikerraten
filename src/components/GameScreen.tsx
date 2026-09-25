@@ -1,4 +1,4 @@
-import { formatTrackDuration, gameHint, isTitleHidden, phaseDuration, phaseLabel } from '../lib/gameLoop.ts'
+import { formatTrackDuration, isTitleHidden, phaseDuration, phaseLabel } from '../lib/gameLoop.ts'
 import type { GamePhase, Track } from '../types.ts'
 import { SessionExitButton } from './SessionExitButton.tsx'
 
@@ -7,7 +7,6 @@ interface GameScreenProps {
   phase: GamePhase
   index: number
   total: number
-  demo: boolean
   running: boolean
   paused: boolean
   error: string | null
@@ -24,7 +23,6 @@ export function GameScreen({
   phase,
   index,
   total,
-  demo,
   running,
   paused,
   error,
@@ -43,7 +41,7 @@ export function GameScreen({
     <section className="panel game">
       <header className="panel-head">
         <div>
-          <p className="eyebrow">{demo ? 'Demo ohne Ton' : 'Spotify-Wiedergabe'}</p>
+          <p className="eyebrow">Spotify-Wiedergabe</p>
           <h1>Musikerraten</h1>
         </div>
         <div className="panel-head-meta">
@@ -85,7 +83,6 @@ export function GameScreen({
         {showLength && track ? (
           <p className="track-duration">Gesamtlänge {formatTrackDuration(track.durationMs)}</p>
         ) : null}
-        <p className="hint">{gameHint(phase, paused)}</p>
       </div>
       {running ? (
         <div className="game-abort">
@@ -103,12 +100,10 @@ export function GameScreen({
           </button>
         </div>
       )}
-      {!demo ? (
-        <SessionExitButton
-          label={running ? 'Beenden & Abmelden' : 'Abmelden'}
-          onClick={onLogout}
-        />
-      ) : null}
+      <SessionExitButton
+        label={running ? 'Beenden & Abmelden' : 'Abmelden'}
+        onClick={onLogout}
+      />
     </section>
   )
 }

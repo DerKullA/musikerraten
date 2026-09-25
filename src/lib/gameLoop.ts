@@ -18,22 +18,6 @@ export function formatTrackDuration(durationMs: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
-export function gameHint(phase: GamePhase, paused: boolean): string {
-  if (paused) {
-    return 'Pausiert. Timer und Ton stehen. Weiter macht genau hier weiter.'
-  }
-  if (phase === 'playing') {
-    return '11 Sekunden hören – Interpret und Titel bleiben verborgen.'
-  }
-  if (phase === 'thinking') {
-    return '3 Sekunden nachdenken. Der Ton pausiert, noch keine Auflösung.'
-  }
-  if (phase === 'reveal') {
-    return '6 Sekunden Auflösung mit Gesamtlänge, dann kommt der nächste Titel.'
-  }
-  return 'Startet die Runde. Danach läuft alles automatisch, bis du pausierst oder abbrichst.'
-}
-
 export function phaseDuration(phase: GamePhase): number {
   if (phase === 'playing') {
     return PLAY_MS

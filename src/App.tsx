@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { GameScreen } from './components/GameScreen.tsx'
 import { LoginScreen } from './components/LoginScreen.tsx'
 import { PlaylistPicker } from './components/PlaylistPicker.tsx'
-import { DEMO_TRACKS } from './lib/demoTracks.ts'
 import { nextPhase, phaseDuration, phasePlaysAudio, shuffleTracks } from './lib/gameLoop.ts'
 import {
   fetchTracksForPlaylists,
@@ -37,7 +36,6 @@ import type { AppScreen, GamePhase, Playlist, Track } from './types.ts'
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('login')
-  const [demo, setDemo] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [playlists, setPlaylists] = useState<Playlist[]>([])
@@ -90,7 +88,7 @@ export default function App() {
       try {
         await exchangeAuthorizationCode(callback.code, callback.state)
         clearAuthCallbackFromUrl()
-        await openPlaylistScreen(false)
+        await openPlaylistScreen()
       } catch (cause) {
         setError(formatSpotifyUserError(cause))
       } finally {
@@ -101,22 +99,16 @@ export default function App() {
     if (readStoredTokens()) {
       try {
         await getValidAccessToken()
-        await openPlaylistScreen(false)
+        await openPlaylistScreen()
       } catch {
         clearTokens()
       }
     }
   }
 
-  async function openPlaylistScreen(useDemo: boolean): Promise<void> {
-    setDemo(useDemo)
+  async function openPlaylistScreen(): Promise<void> {
     setScreen('playlists')
     setError(null)
-    if (useDemo) {
-      setPlaylists([])
-      setSelectedIds([])
-      return
-    }
     setLoadingPlaylists(true)
     try {
       const items = await fetchUserPlaylists()
@@ -139,27 +131,19 @@ export default function App() {
     }
   }
 
-  function handleDemo(): void {
-    setTracks([])
-    void openPlaylistScreen(true)
-  }
-
   function handleLogout(): void {
     stopSpeakerKeepAlive()
     stopRound()
     playerRef.current?.disconnect()
     playerRef.current = null
     deviceIdRef.current = null
-    if (!demo) {
-      clearTokens()
-    }
+    clearTokens()
     tracksRef.current = []
     indexRef.current = 0
     setTracks([])
     setIndex(0)
     setPlaylists([])
     setSelectedIds([])
-    setDemo(false)
     setLoadingPlaylists(false)
     setLoadingTracks(false)
     setBusy(false)
@@ -183,13 +167,11 @@ export default function App() {
     setError(null)
     setLoadingTracks(true)
     try {
-      const loaded = demo ? DEMO_TRACKS : await fetchTracksForPlaylists(selectedIds)
+      const loaded = await fetchTracksForPlaylists(selectedIds)
       if (loaded.length === 0) {
         throw new Error('Keine abspielbaren Titel gefunden.')
       }
-      if (!demo) {
-        await ensurePlayer()
-      }
+      await ensurePlayer()
       const shuffled = shuffleTracks(loaded)
       tracksRef.current = shuffled
       indexRef.current = 0
@@ -221,7 +203,7 @@ export default function App() {
   async function playCurrentTrack(): Promise<void> {
     const track = tracksRef.current[indexRef.current]
     const deviceId = deviceIdRef.current
-    if (!track || demo || !deviceId) {
+    if (!track || !deviceId) {
       return
     }
     holdQuizMediaSession()
@@ -233,7 +215,7 @@ export default function App() {
 
   async function pauseCurrentTrack(): Promise<void> {
     const deviceId = deviceIdRef.current
-    if (demo || !deviceId) {
+    if (!deviceId) {
       return
     }
     holdQuizMediaSession()
@@ -246,7 +228,7 @@ export default function App() {
 
   async function resumeCurrentTrack(): Promise<void> {
     const deviceId = deviceIdRef.current
-    if (demo || !deviceId) {
+    if (!deviceId) {
       return
     }
     holdQuizMediaSession()
@@ -341,9 +323,7 @@ export default function App() {
     setPhase('playing')
     engageQuizMedia('playing')
     try {
-      if (!demo) {
-        await playerRef.current?.activateElement()
-      }
+      await playerRef.current?.activateElement()
       await playCurrentTrack()
     } catch (cause) {
       setError(formatSpotifyUserError(cause))
@@ -444,7 +424,6 @@ export default function App() {
           onSpotifyLogin={() => {
             void handleSpotifyLogin()
           }}
-          onDemo={handleDemo}
         />
       ) : null}
       {screen === 'playlists' ? (
@@ -454,7 +433,6 @@ export default function App() {
           loading={loadingPlaylists}
           loadingTracks={loadingTracks}
           error={error}
-          demo={demo}
           onToggle={handleTogglePlaylist}
           onToggleAll={handleToggleAll}
           onStart={() => {
@@ -469,7 +447,6 @@ export default function App() {
           phase={phase}
           index={index}
           total={tracks.length}
-          demo={demo}
           running={running}
           paused={paused}
           error={error}

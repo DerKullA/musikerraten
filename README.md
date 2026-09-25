@@ -15,7 +15,7 @@ Spotify-Playlist-Quiz als Vite + React + TypeScript-SPA. Nach dem Login wählst 
 - Für echte Wiedergabe: **Spotify Premium** und ein aktueller **Chrome**- bzw. Chromium-Browser (Web Playback SDK)
 - Eine Spotify-App im [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 
-Ohne Spotify gibt es einen **Demo-Modus** mit denselben Phasen, aber ohne Audio. Safari und Firefox können den Player unzuverlässig starten; Chrome auf dem Desktop ist der unterstützte Weg.
+Safari und Firefox können den Player unzuverlässig starten; Chrome auf dem Desktop ist der unterstützte Weg.
 
 ## Lokal starten
 

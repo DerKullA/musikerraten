@@ -5,7 +5,6 @@ interface LoginScreenProps {
   busy: boolean
   error: string | null
   onSpotifyLogin: () => void
-  onDemo: () => void
 }
 
 export function LoginScreen({
@@ -13,7 +12,6 @@ export function LoginScreen({
   busy,
   error,
   onSpotifyLogin,
-  onDemo,
 }: LoginScreenProps) {
   const redirectUri = getRedirectUri()
 
@@ -30,15 +28,11 @@ export function LoginScreen({
         <button type="button" className="btn primary" onClick={onSpotifyLogin} disabled={busy || !clientIdPresent}>
           {busy ? 'Verbinde …' : 'Mit Spotify anmelden'}
         </button>
-        <button type="button" className="btn ghost" onClick={onDemo} disabled={busy}>
-          Demo ohne Spotify
-        </button>
       </div>
       <aside className="notes">
         <p>
           Die Wiedergabe über das Spotify Web Playback SDK braucht ein <strong>Spotify-Premium</strong>
-          -Konto und funktioniert zuverlässig in <strong>Chrome</strong> (Chromium, Desktop). Im
-          Demo-Modus laufen dieselben Phasen ohne Ton.
+          -Konto und funktioniert zuverlässig in <strong>Chrome</strong> (Chromium, Desktop).
         </p>
         <p>
           Redirect-URI für das Spotify-Dashboard:{' '}
