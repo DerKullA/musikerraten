@@ -4,12 +4,13 @@ import {
   MAX_CONSECUTIVE_SAME_PLAYLIST,
   shuffleTracks,
 } from './mixTracks.ts'
+import { DEFAULT_PHASE_TIMINGS, type PhaseTimings } from './phaseTimings.ts'
 
 export { limitConsecutivePlaylistRuns, MAX_CONSECUTIVE_SAME_PLAYLIST, shuffleTracks }
 
-export const PLAY_MS = 11_000
-export const THINK_MS = 3000
-export const REVEAL_MS = 6000
+export const PLAY_MS = DEFAULT_PHASE_TIMINGS.playMs
+export const THINK_MS = DEFAULT_PHASE_TIMINGS.thinkMs
+export const REVEAL_MS = DEFAULT_PHASE_TIMINGS.revealMs
 
 export function formatTrackDuration(durationMs: number): string {
   const totalSeconds = Math.max(0, Math.floor(durationMs / 1000))
@@ -18,15 +19,15 @@ export function formatTrackDuration(durationMs: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
-export function phaseDuration(phase: GamePhase): number {
+export function phaseDuration(phase: GamePhase, timings: PhaseTimings = DEFAULT_PHASE_TIMINGS): number {
   if (phase === 'playing') {
-    return PLAY_MS
+    return timings.playMs
   }
   if (phase === 'thinking') {
-    return THINK_MS
+    return timings.thinkMs
   }
   if (phase === 'reveal') {
-    return REVEAL_MS
+    return timings.revealMs
   }
   return 0
 }

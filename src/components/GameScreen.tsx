@@ -1,6 +1,7 @@
 import { formatTrackDuration, isTitleHidden, phaseDuration, phaseLabel } from '../lib/gameLoop.ts'
+import type { PhaseTimings } from '../lib/phaseTimings.ts'
 import type { GamePhase, Track } from '../types.ts'
-import { SessionExitButton } from './SessionExitButton.tsx'
+import { AppMenu } from './AppMenu.tsx'
 
 interface GameScreenProps {
   track: Track | null
@@ -10,6 +11,9 @@ interface GameScreenProps {
   running: boolean
   paused: boolean
   error: string | null
+  roundTimings: PhaseTimings
+  savedTimings: PhaseTimings
+  onSaveTimings: (timings: PhaseTimings) => void
   onPlay: () => void
   onPause: () => void
   onResume: () => void
@@ -26,6 +30,9 @@ export function GameScreen({
   running,
   paused,
   error,
+  roundTimings,
+  savedTimings,
+  onSaveTimings,
   onPlay,
   onPause,
   onResume,
@@ -34,17 +41,18 @@ export function GameScreen({
   onLogout,
 }: GameScreenProps) {
   const hidden = isTitleHidden(phase)
-  const duration = phaseDuration(phase)
+  const duration = phaseDuration(phase, roundTimings)
   const showLength = phase === 'reveal' && !hidden && track !== null && track.durationMs > 0
 
   return (
-    <section className="panel game">
+    <section className="panel game with-menu">
       <header className="panel-head">
         <div>
           <p className="eyebrow">Spotify-Wiedergabe</p>
           <h1>Musikerraten</h1>
         </div>
         <div className="panel-head-meta">
+          <AppMenu timings={savedTimings} onSaveTimings={onSaveTimings} onLogout={onLogout} />
           <p className="counter">
             {total === 0 ? '0 / 0' : `${index + 1} / ${total}`}
           </p>
@@ -100,10 +108,6 @@ export function GameScreen({
           </button>
         </div>
       )}
-      <SessionExitButton
-        label={running ? 'Beenden & Abmelden' : 'Abmelden'}
-        onClick={onLogout}
-      />
     </section>
   )
 }

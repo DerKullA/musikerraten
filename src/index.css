@@ -429,6 +429,180 @@ code {
   }
 }
 
+.app-menu,
+.burger-button,
+.burger-button span,
+.menu-popover,
+.menu-item,
+.settings-backdrop,
+.settings-dialog {
+  transition: none;
+  animation: none;
+}
+
+.app-menu {
+  position: relative;
+  z-index: 5;
+}
+
+.burger-button {
+  position: relative;
+  z-index: 6;
+  display: grid;
+  gap: 5px;
+  place-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(16, 22, 14, 0.72);
+  color: var(--paper);
+  cursor: pointer;
+}
+
+.burger-button span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.burger-button:hover,
+.burger-button.is-open {
+  background: rgba(212, 225, 87, 0.16);
+  color: var(--lime);
+}
+
+.burger-button:focus-visible,
+.menu-item:focus-visible,
+.settings-dialog :focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 2px;
+}
+
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+}
+
+.menu-popover[hidden] {
+  display: none !important;
+}
+
+.menu-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 6;
+  min-width: 220px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--ink-soft) 94%, black);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  text-align: left;
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: transparent;
+  color: var(--paper);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: rgba(243, 234, 216, 0.08);
+}
+
+.menu-item-danger {
+  color: #ffc8be;
+}
+
+.settings-backdrop {
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(8, 12, 7, 0.72);
+}
+
+.settings-dialog {
+  width: min(440px, 100%);
+  max-height: min(640px, calc(100vh - 32px));
+  overflow: auto;
+  padding: 28px 24px 22px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--ink-soft) 94%, black);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  text-align: left;
+}
+
+.settings-dialog h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.timing-field {
+  margin-top: 18px;
+}
+
+.timing-field label {
+  display: block;
+  font-weight: 700;
+}
+
+.timing-field p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.timing-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.timing-input input {
+  width: 5.5rem;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(243, 234, 216, 0.06);
+  color: var(--paper);
+  color-scheme: dark;
+  font-variant-numeric: tabular-nums;
+}
+
+.timing-input span {
+  color: var(--paper-dim);
+}
+
+.settings-note {
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.panel.with-menu .counter {
+  text-align: right;
+}
+
 @media (max-width: 640px) {
   .panel {
     padding: 28px 18px 22px;
@@ -442,6 +616,16 @@ code {
   .panel-head-meta {
     align-items: stretch;
     width: 100%;
+  }
+
+  .panel.with-menu .panel-head {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .panel.with-menu .panel-head-meta {
+    width: auto;
+    align-items: flex-end;
   }
 
   .session-exit .btn {

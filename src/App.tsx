@@ -4,6 +4,15 @@ import { LoginScreen } from './components/LoginScreen.tsx'
 import { PlaylistPicker } from './components/PlaylistPicker.tsx'
 import { nextPhase, phaseDuration, phasePlaysAudio, shuffleTracks } from './lib/gameLoop.ts'
 import {
+  clearSessionPhaseTimings,
+  DEFAULT_PHASE_TIMINGS,
+  readSessionPhaseTimings,
+  samePhaseTimings,
+  timingsAtTrackStart,
+  writeSessionPhaseTimings,
+  type PhaseTimings,
+} from './lib/phaseTimings.ts'
+import {
   fetchTracksForPlaylists,
   fetchUserPlaylists,
   pausePlayback,
@@ -47,6 +56,8 @@ export default function App() {
   const [phase, setPhase] = useState<GamePhase>('idle')
   const [running, setRunning] = useState(false)
   const [paused, setPaused] = useState(false)
+  const [savedTimings, setSavedTimings] = useState<PhaseTimings>(() => readSessionPhaseTimings())
+  const [roundTimings, setRoundTimings] = useState<PhaseTimings>(() => readSessionPhaseTimings())
 
   const bootstrapped = useRef(false)
   const playerRef = useRef<SpotifyPlayer | null>(null)
@@ -59,6 +70,8 @@ export default function App() {
   const indexRef = useRef(0)
   const tracksRef = useRef<Track[]>([])
   const phaseRef = useRef<GamePhase>('idle')
+  const savedTimingsRef = useRef(savedTimings)
+  const roundTimingsRef = useRef(roundTimings)
 
   useEffect(() => {
     if (bootstrapped.current) {
@@ -88,6 +101,7 @@ export default function App() {
       try {
         await exchangeAuthorizationCode(callback.code, callback.state)
         clearAuthCallbackFromUrl()
+        resetPhaseTimings()
         await openPlaylistScreen()
       } catch (cause) {
         setError(formatSpotifyUserError(cause))
@@ -102,6 +116,7 @@ export default function App() {
         await openPlaylistScreen()
       } catch {
         clearTokens()
+        resetPhaseTimings()
       }
     }
   }
@@ -133,6 +148,7 @@ export default function App() {
 
   function handleLogout(): void {
     stopSpeakerKeepAlive()
+    resetPhaseTimings()
     stopRound()
     playerRef.current?.disconnect()
     playerRef.current = null
@@ -273,8 +289,31 @@ export default function App() {
     schedulePhase(nextPhase(current), delayMs)
   }
 
-  function scheduleFollowingPhase(current: GamePhase): void {
-    armPhaseTimer(current, phaseDuration(current))
+  function scheduleFollowingPhase(current: GamePhase, timings: PhaseTimings): void {
+    armPhaseTimer(current, phaseDuration(current, timings))
+  }
+
+  function capturePhaseTimings(phase: GamePhase): PhaseTimings {
+    const nextTimings = timingsAtTrackStart(phase, roundTimingsRef.current, savedTimingsRef.current)
+    if (!samePhaseTimings(roundTimingsRef.current, nextTimings)) {
+      setRoundTimings(nextTimings)
+    }
+    roundTimingsRef.current = nextTimings
+    return nextTimings
+  }
+
+  function handleSaveTimings(next: PhaseTimings): void {
+    const stored = writeSessionPhaseTimings(next)
+    savedTimingsRef.current = stored
+    setSavedTimings(stored)
+  }
+
+  function resetPhaseTimings(): void {
+    clearSessionPhaseTimings()
+    savedTimingsRef.current = DEFAULT_PHASE_TIMINGS
+    roundTimingsRef.current = DEFAULT_PHASE_TIMINGS
+    setSavedTimings(DEFAULT_PHASE_TIMINGS)
+    setRoundTimings(DEFAULT_PHASE_TIMINGS)
   }
 
   async function enterPhase(next: GamePhase): Promise<void> {
@@ -287,6 +326,7 @@ export default function App() {
       indexRef.current = upcoming
       setIndex(upcoming)
     }
+    const timings = capturePhaseTimings(next)
     phaseRef.current = next
     setPhase(next)
     try {
@@ -294,7 +334,7 @@ export default function App() {
     } catch (cause) {
       setError(formatSpotifyUserError(cause))
     }
-    scheduleFollowingPhase(next)
+    scheduleFollowingPhase(next, timings)
   }
 
   async function applyPhaseAudio(next: GamePhase): Promise<void> {
@@ -319,6 +359,7 @@ export default function App() {
     runningRef.current = true
     resetPauseState()
     setRunning(true)
+    const timings = capturePhaseTimings('playing')
     phaseRef.current = 'playing'
     setPhase('playing')
     engageQuizMedia('playing')
@@ -328,7 +369,7 @@ export default function App() {
     } catch (cause) {
       setError(formatSpotifyUserError(cause))
     }
-    scheduleFollowingPhase('playing')
+    scheduleFollowingPhase('playing', timings)
   }
 
   function stopRound(): void {
@@ -433,6 +474,8 @@ export default function App() {
           loading={loadingPlaylists}
           loadingTracks={loadingTracks}
           error={error}
+          savedTimings={savedTimings}
+          onSaveTimings={handleSaveTimings}
           onToggle={handleTogglePlaylist}
           onToggleAll={handleToggleAll}
           onStart={() => {
@@ -450,6 +493,9 @@ export default function App() {
           running={running}
           paused={paused}
           error={error}
+          roundTimings={roundTimings}
+          savedTimings={savedTimings}
+          onSaveTimings={handleSaveTimings}
           onPlay={() => {
             void handlePlay()
           }}
