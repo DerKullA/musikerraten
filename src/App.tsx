@@ -504,7 +504,6 @@ export default function App() {
             void handleResume()
           }}
           onAbort={handleAbort}
-          onBack={handleAbort}
           onLogout={handleLogout}
         />
       ) : null}

@@ -85,7 +85,7 @@ export function PlaylistPicker({
       <div className="actions">
         <button
           type="button"
-          className="btn primary"
+          className={`btn primary cta${loadingTracks ? ' is-wrapping' : ''}`}
           onClick={onStart}
           disabled={loadingTracks || selectedCount === 0}
         >

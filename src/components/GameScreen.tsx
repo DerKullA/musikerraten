@@ -18,7 +18,6 @@ interface GameScreenProps {
   onPause: () => void
   onResume: () => void
   onAbort: () => void
-  onBack: () => void
   onLogout: () => void
 }
 
@@ -37,7 +36,6 @@ export function GameScreen({
   onPause,
   onResume,
   onAbort,
-  onBack,
   onLogout,
 }: GameScreenProps) {
   const hidden = isTitleHidden(phase)
@@ -52,7 +50,12 @@ export function GameScreen({
           <h1>Musikerraten</h1>
         </div>
         <div className="panel-head-meta">
-          <AppMenu timings={savedTimings} onSaveTimings={onSaveTimings} onLogout={onLogout} />
+          <AppMenu
+            timings={savedTimings}
+            onSaveTimings={onSaveTimings}
+            onLogout={onLogout}
+            onLeaveRound={onAbort}
+          />
           <p className="counter">
             {total === 0 ? '0 / 0' : `${index + 1} / ${total}`}
           </p>
@@ -70,9 +73,14 @@ export function GameScreen({
             {paused ? 'Weiter' : 'Pause'}
           </button>
         ) : (
-          <div className="vinyl" aria-hidden="true">
-            <span />
-          </div>
+          <button
+            type="button"
+            className="center-transport"
+            onClick={onPlay}
+            disabled={!track}
+          >
+            Abspielen
+          </button>
         )}
       </div>
       <p className={`phase-pill ${paused ? 'paused' : phase}`} aria-live="polite">
@@ -92,22 +100,6 @@ export function GameScreen({
           <p className="track-duration">Gesamtlänge {formatTrackDuration(track.durationMs)}</p>
         ) : null}
       </div>
-      {running ? (
-        <div className="game-abort">
-          <button type="button" className="btn ghost" onClick={onAbort}>
-            Abbrechen
-          </button>
-        </div>
-      ) : (
-        <div className="actions actions-center">
-          <button type="button" className="btn primary" onClick={onPlay} disabled={!track}>
-            Abspielen
-          </button>
-          <button type="button" className="btn ghost" onClick={onBack}>
-            Zurück
-          </button>
-        </div>
-      )}
     </section>
   )
 }
