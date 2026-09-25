@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { DEMO_TRACKS } from './demoTracks.ts'
 import {
   limitConsecutivePlaylistRuns,
   MAX_CONSECUTIVE_SAME_PLAYLIST,
@@ -8,9 +7,10 @@ import {
 import type { Track } from '../types.ts'
 
 describe('shuffleTracks', () => {
-  it('permutes demo tracks without dropping or adding', () => {
-    const result = shuffleTracks(DEMO_TRACKS, mulberry32(7))
-    expectPermutation(result, DEMO_TRACKS)
+  it('permutes tracks without dropping or adding', () => {
+    const tracks = playlistTracks('fixture', 10)
+    const result = shuffleTracks(tracks, mulberry32(7))
+    expectPermutation(result, tracks)
   })
 
   it('keeps a single playlist as a shuffle without mixing rules', () => {

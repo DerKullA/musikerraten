@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { GameScreen } from './components/GameScreen.tsx'
 import { LoginScreen } from './components/LoginScreen.tsx'
 import { PlaylistPicker } from './components/PlaylistPicker.tsx'
-import { DEMO_TRACKS } from './lib/demoTracks.ts'
 import { nextPhase, phaseDuration, phasePlaysAudio, shuffleTracks } from './lib/gameLoop.ts'
 import {
   clearSessionPhaseTimings,
@@ -31,13 +30,21 @@ import {
   readStoredTokens,
   startSpotifyLogin,
 } from './lib/spotifyAuth.ts'
+import {
+  holdQuizMediaSession,
+  isQuizMediaSessionActive,
+  quizMediaToken,
+  startQuizMediaSession,
+  stopQuizMediaSession,
+  stopQuizMediaSessionIfCurrent,
+  syncQuizMediaPlayback,
+} from './lib/quizMediaSession.ts'
 import { connectSpotifyPlayer } from './lib/spotifyPlayer.ts'
 import { stopSpeakerKeepAlive, watchSpeakerKeepAliveGestures } from './lib/speakerKeepAlive.ts'
 import type { AppScreen, GamePhase, Playlist, Track } from './types.ts'
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('login')
-  const [demo, setDemo] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [playlists, setPlaylists] = useState<Playlist[]>([])
@@ -75,6 +82,7 @@ export default function App() {
     void bootstrapAuth()
     return () => {
       clearGameTimer()
+      stopQuizMediaSession()
       playerRef.current?.disconnect()
       unbindKeepAlive()
       stopSpeakerKeepAlive()
@@ -94,7 +102,7 @@ export default function App() {
         await exchangeAuthorizationCode(callback.code, callback.state)
         clearAuthCallbackFromUrl()
         resetPhaseTimings()
-        await openPlaylistScreen(false)
+        await openPlaylistScreen()
       } catch (cause) {
         setError(formatSpotifyUserError(cause))
       } finally {
@@ -105,7 +113,7 @@ export default function App() {
     if (readStoredTokens()) {
       try {
         await getValidAccessToken()
-        await openPlaylistScreen(false)
+        await openPlaylistScreen()
       } catch {
         clearTokens()
         resetPhaseTimings()
@@ -113,15 +121,9 @@ export default function App() {
     }
   }
 
-  async function openPlaylistScreen(useDemo: boolean): Promise<void> {
-    setDemo(useDemo)
+  async function openPlaylistScreen(): Promise<void> {
     setScreen('playlists')
     setError(null)
-    if (useDemo) {
-      setPlaylists([])
-      setSelectedIds([])
-      return
-    }
     setLoadingPlaylists(true)
     try {
       const items = await fetchUserPlaylists()
@@ -144,11 +146,6 @@ export default function App() {
     }
   }
 
-  function handleDemo(): void {
-    setTracks([])
-    void openPlaylistScreen(true)
-  }
-
   function handleLogout(): void {
     stopSpeakerKeepAlive()
     resetPhaseTimings()
@@ -156,16 +153,13 @@ export default function App() {
     playerRef.current?.disconnect()
     playerRef.current = null
     deviceIdRef.current = null
-    if (!demo) {
-      clearTokens()
-    }
+    clearTokens()
     tracksRef.current = []
     indexRef.current = 0
     setTracks([])
     setIndex(0)
     setPlaylists([])
     setSelectedIds([])
-    setDemo(false)
     setLoadingPlaylists(false)
     setLoadingTracks(false)
     setBusy(false)
@@ -189,13 +183,11 @@ export default function App() {
     setError(null)
     setLoadingTracks(true)
     try {
-      const loaded = demo ? DEMO_TRACKS : await fetchTracksForPlaylists(selectedIds)
+      const loaded = await fetchTracksForPlaylists(selectedIds)
       if (loaded.length === 0) {
         throw new Error('Keine abspielbaren Titel gefunden.')
       }
-      if (!demo) {
-        await ensurePlayer()
-      }
+      await ensurePlayer()
       const shuffled = shuffleTracks(loaded)
       tracksRef.current = shuffled
       indexRef.current = 0
@@ -203,6 +195,8 @@ export default function App() {
       setTracks(shuffled)
       setIndex(0)
       setPhase('idle')
+      phaseRef.current = 'idle'
+      beginQuizMedia('idle')
       setScreen('game')
     } catch (cause) {
       setError(formatSpotifyUserError(cause))
@@ -225,9 +219,10 @@ export default function App() {
   async function playCurrentTrack(): Promise<void> {
     const track = tracksRef.current[indexRef.current]
     const deviceId = deviceIdRef.current
-    if (!track || demo || !deviceId) {
+    if (!track || !deviceId) {
       return
     }
+    holdQuizMediaSession()
     await startPlayback(deviceId, track.uri)
     if (pausedRef.current) {
       await pauseCurrentTrack()
@@ -236,9 +231,10 @@ export default function App() {
 
   async function pauseCurrentTrack(): Promise<void> {
     const deviceId = deviceIdRef.current
-    if (demo || !deviceId) {
+    if (!deviceId) {
       return
     }
+    holdQuizMediaSession()
     try {
       await pausePlayback(deviceId)
     } catch {
@@ -248,9 +244,10 @@ export default function App() {
 
   async function resumeCurrentTrack(): Promise<void> {
     const deviceId = deviceIdRef.current
-    if (demo || !deviceId) {
+    if (!deviceId) {
       return
     }
+    holdQuizMediaSession()
     try {
       await resumePlayback(deviceId)
     } catch {
@@ -342,6 +339,7 @@ export default function App() {
 
   async function applyPhaseAudio(next: GamePhase): Promise<void> {
     // Spotify pausiert hier; der Speaker-Wachhalter bleibt aktiv.
+    engageQuizMedia(next)
     if (pausedRef.current || next === 'idle' || next === 'thinking') {
       await pauseCurrentTrack()
       return
@@ -364,10 +362,9 @@ export default function App() {
     const timings = capturePhaseTimings('playing')
     phaseRef.current = 'playing'
     setPhase('playing')
+    engageQuizMedia('playing')
     try {
-      if (!demo) {
-        await playerRef.current?.activateElement()
-      }
+      await playerRef.current?.activateElement()
       await playCurrentTrack()
     } catch (cause) {
       setError(formatSpotifyUserError(cause))
@@ -382,7 +379,36 @@ export default function App() {
     clearGameTimer()
     phaseRef.current = 'idle'
     setPhase('idle')
-    void pauseCurrentTrack()
+    void endQuizPlayback()
+  }
+
+  async function endQuizPlayback(): Promise<void> {
+    const token = quizMediaToken()
+    try {
+      await pauseCurrentTrack()
+    } finally {
+      stopQuizMediaSessionIfCurrent(token)
+    }
+  }
+
+  function playbackForPhase(phase: GamePhase): 'playing' | 'paused' {
+    if (pausedRef.current || !phasePlaysAudio(phase)) {
+      return 'paused'
+    }
+    return 'playing'
+  }
+
+  function beginQuizMedia(phase: GamePhase): void {
+    startQuizMediaSession(playbackForPhase(phase))
+  }
+
+  function engageQuizMedia(phase: GamePhase): void {
+    const nextPlayback = playbackForPhase(phase)
+    if (!isQuizMediaSessionActive()) {
+      startQuizMediaSession(nextPlayback)
+      return
+    }
+    syncQuizMediaPlayback(nextPlayback)
   }
 
   function handleAbort(): void {
@@ -399,6 +425,7 @@ export default function App() {
     clearGameTimer()
     pausedRef.current = true
     setPaused(true)
+    engageQuizMedia(phaseRef.current)
     void pauseCurrentTrack()
   }
 
@@ -409,6 +436,7 @@ export default function App() {
     pausedRef.current = false
     setPaused(false)
     const current = phaseRef.current
+    engageQuizMedia(current)
     const remaining = remainingMsRef.current
     if (remaining <= 0) {
       await enterPhase(nextPhase(current))
@@ -437,7 +465,6 @@ export default function App() {
           onSpotifyLogin={() => {
             void handleSpotifyLogin()
           }}
-          onDemo={handleDemo}
         />
       ) : null}
       {screen === 'playlists' ? (
@@ -447,7 +474,6 @@ export default function App() {
           loading={loadingPlaylists}
           loadingTracks={loadingTracks}
           error={error}
-          demo={demo}
           savedTimings={savedTimings}
           onSaveTimings={handleSaveTimings}
           onToggle={handleTogglePlaylist}
@@ -464,7 +490,6 @@ export default function App() {
           phase={phase}
           index={index}
           total={tracks.length}
-          demo={demo}
           running={running}
           paused={paused}
           error={error}

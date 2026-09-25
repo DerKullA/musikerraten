@@ -19,26 +19,6 @@ export function formatTrackDuration(durationMs: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
-export function gameHint(
-  phase: GamePhase,
-  paused: boolean,
-  timings: PhaseTimings = DEFAULT_PHASE_TIMINGS,
-): string {
-  if (paused) {
-    return 'Pausiert. Timer und Ton stehen. Weiter macht genau hier weiter.'
-  }
-  if (phase === 'playing') {
-    return `${formatSecondsPhrase(timings.playMs)} hören – Interpret und Titel bleiben verborgen.`
-  }
-  if (phase === 'thinking') {
-    return `${formatSecondsPhrase(timings.thinkMs)} nachdenken. Der Ton pausiert, noch keine Auflösung.`
-  }
-  if (phase === 'reveal') {
-    return `${formatSecondsPhrase(timings.revealMs)} Auflösung mit Gesamtlänge, dann kommt der nächste Titel.`
-  }
-  return 'Startet die Runde. Danach läuft alles automatisch, bis du pausierst oder abbrichst.'
-}
-
 export function phaseDuration(phase: GamePhase, timings: PhaseTimings = DEFAULT_PHASE_TIMINGS): number {
   if (phase === 'playing') {
     return timings.playMs
@@ -50,11 +30,6 @@ export function phaseDuration(phase: GamePhase, timings: PhaseTimings = DEFAULT_
     return timings.revealMs
   }
   return 0
-}
-
-function formatSecondsPhrase(durationMs: number): string {
-  const seconds = Math.max(0, Math.round(durationMs / 1000))
-  return seconds === 1 ? '1 Sekunde' : `${seconds} Sekunden`
 }
 
 export function nextPhase(phase: GamePhase): GamePhase {

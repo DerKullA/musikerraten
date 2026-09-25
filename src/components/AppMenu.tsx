@@ -25,39 +25,44 @@ interface AppMenuProps {
 export function AppMenu({ timings, onSaveTimings, onLogout }: AppMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
   const burgerRef = useRef<HTMLButtonElement>(null)
   const firstItemRef = useRef<HTMLButtonElement>(null)
 
-  const closeMenu = useCallback(() => {
-    setMenuOpen(false)
-    burgerRef.current?.focus()
-  }, [])
-
   const closeSettings = useCallback(() => {
     setSettingsOpen(false)
-    burgerRef.current?.focus()
+    burgerRef.current?.focus({ preventScroll: true })
   }, [])
 
   useEffect(() => {
     if (!menuOpen) {
       return
+    }
+    const frame = window.requestAnimationFrame(() => {
+      firstItemRef.current?.focus({ preventScroll: true })
+    })
+    function handlePointerDown(event: PointerEvent): void {
+      const target = event.target
+      if (!(target instanceof Node) || menuRef.current?.contains(target)) {
+        return
+      }
+      setMenuOpen(false)
     }
     function handleEscape(event: globalThis.KeyboardEvent): void {
       if (event.key !== 'Escape') {
         return
       }
       event.preventDefault()
-      closeMenu()
+      setMenuOpen(false)
+      burgerRef.current?.focus({ preventScroll: true })
     }
+    document.addEventListener('pointerdown', handlePointerDown)
     document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [menuOpen, closeMenu])
-
-  useEffect(() => {
-    if (!menuOpen) {
-      return
+    return () => {
+      window.cancelAnimationFrame(frame)
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleEscape)
     }
-    firstItemRef.current?.focus()
   }, [menuOpen])
 
   function toggleMenu(): void {
@@ -75,8 +80,7 @@ export function AppMenu({ timings, onSaveTimings, onLogout }: AppMenuProps) {
   }
 
   return (
-    <div className="app-menu">
-      {menuOpen ? <div className="menu-backdrop" onClick={closeMenu} /> : null}
+    <div className="app-menu" ref={menuRef}>
       <button
         ref={burgerRef}
         type="button"
@@ -91,28 +95,29 @@ export function AppMenu({ timings, onSaveTimings, onLogout }: AppMenuProps) {
         <span aria-hidden="true" />
         <span aria-hidden="true" />
       </button>
-      {menuOpen ? (
-        <div
-          id="app-menu-panel"
-          className="menu-popover"
-          role="menu"
-          aria-label="Spielmenü"
-          onKeyDown={moveMenuFocus}
+      <div
+        id="app-menu-panel"
+        className="menu-popover"
+        role="menu"
+        aria-label="Spielmenü"
+        hidden={!menuOpen}
+        aria-hidden={!menuOpen}
+        inert={!menuOpen}
+        onKeyDown={moveMenuFocus}
+      >
+        <button
+          ref={firstItemRef}
+          type="button"
+          role="menuitem"
+          className="menu-item"
+          onClick={openSettings}
         >
-          <button
-            ref={firstItemRef}
-            type="button"
-            role="menuitem"
-            className="menu-item"
-            onClick={openSettings}
-          >
-            Einstellungen
-          </button>
-          <button type="button" role="menuitem" className="menu-item menu-item-danger" onClick={logout}>
-            Abmelden
-          </button>
-        </div>
-      ) : null}
+          Einstellungen
+        </button>
+        <button type="button" role="menuitem" className="menu-item menu-item-danger" onClick={logout}>
+          Abmelden
+        </button>
+      </div>
       {settingsOpen ? (
         <SettingsDialog timings={timings} onSave={onSaveTimings} onClose={closeSettings} />
       ) : null}
