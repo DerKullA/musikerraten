@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createCancellableDelay, runBoundedClip, type DelayClock } from './clipPlayback.ts'
+import { createCancellableDelay, holdPlaybackThen, runBoundedClip, type DelayClock } from './clipPlayback.ts'
 
 class ManualClock implements DelayClock {
   private nextId = 1
@@ -146,5 +146,81 @@ describe('runBoundedClip', () => {
 
     expect(waited).toBe(false)
     expect(events).toEqual(['playing', 'paused', 'Player kaputt', 'pause'])
+  })
+})
+
+describe('holdPlaybackThen', () => {
+  it('spielt die Nachspielzeit und startet danach den nächsten Titel', async () => {
+    const events: string[] = []
+    let release: () => void = () => undefined
+    const done = holdPlaybackThen(
+      8_000,
+      {
+        play: async () => {
+          events.push('play')
+        },
+        pause: async () => {
+          events.push('pause')
+        },
+        isCancelled: () => false,
+        onPlayback: (state) => {
+          events.push(state)
+        },
+        onError: () => {
+          events.push('error')
+        },
+      },
+      () =>
+        new Promise((resolve) => {
+          release = resolve
+        }),
+      () => {
+        events.push('advance')
+      },
+    )
+
+    await flushMicrotasks()
+    expect(events).toEqual(['playing', 'play'])
+    release()
+    await done
+    expect(events).toEqual(['playing', 'play', 'paused', 'pause', 'advance'])
+  })
+
+  it('startet den nächsten Titel nicht, wenn die Nachspielzeit abgebrochen wird', async () => {
+    const events: string[] = []
+    let cancelled = false
+    let release: () => void = () => undefined
+    const done = holdPlaybackThen(
+      8_000,
+      {
+        play: async () => {
+          events.push('play')
+        },
+        pause: async () => {
+          events.push('pause')
+        },
+        isCancelled: () => cancelled,
+        onPlayback: (state) => {
+          events.push(state)
+        },
+        onError: () => {
+          events.push('error')
+        },
+      },
+      () =>
+        new Promise((resolve) => {
+          release = resolve
+        }),
+      () => {
+        events.push('advance')
+      },
+    )
+
+    await flushMicrotasks()
+    cancelled = true
+    release()
+    await done
+    expect(events).toEqual(['playing', 'play', 'pause'])
+    expect(events).not.toContain('advance')
   })
 })

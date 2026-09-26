@@ -444,6 +444,52 @@ export default function App() {
     scheduleFollowingPhase('playing', timings)
   }
 
+  async function restartCurrentSnippet(): Promise<void> {
+    if (!runningRef.current || tracksRef.current.length === 0) {
+      return
+    }
+    const current = phaseRef.current
+    if (current !== 'playing' && current !== 'thinking') {
+      return
+    }
+    setError(null)
+    pausedRef.current = false
+    setPaused(false)
+    const timings = roundTimingsRef.current
+    phaseRef.current = 'playing'
+    setPhase('playing')
+    engageQuizMedia('playing')
+    try {
+      await playerRef.current?.activateElement()
+      await playCurrentTrack()
+    } catch (cause) {
+      setError(formatSpotifyUserError(cause))
+    }
+    scheduleFollowingPhase('playing', timings)
+  }
+
+  async function skipToNextTrack(): Promise<void> {
+    if (!runningRef.current || phaseRef.current !== 'reveal') {
+      return
+    }
+    pausedRef.current = false
+    setPaused(false)
+    await enterPhase('playing')
+  }
+
+  async function revealCurrentTrack(): Promise<void> {
+    if (!runningRef.current) {
+      return
+    }
+    const current = phaseRef.current
+    if (current !== 'playing' && current !== 'thinking') {
+      return
+    }
+    pausedRef.current = false
+    setPaused(false)
+    await enterPhase('reveal')
+  }
+
   function stopRound(): void {
     runningRef.current = false
     setRunning(false)
@@ -617,6 +663,15 @@ export default function App() {
           onResume={() => {
             void handleResume()
           }}
+          onReplay={() => {
+            void restartCurrentSnippet()
+          }}
+          onReveal={() => {
+            void revealCurrentTrack()
+          }}
+          onSkipNext={() => {
+            void skipToNextTrack()
+          }}
           onAbort={handleAbort}
           onLogout={handleLogout}
         />
@@ -628,6 +683,7 @@ export default function App() {
           onLogout={handleLogout}
           onLeave={handleLeaveShotless}
           onPlayClip={playShotlessClip}
+          onResumeClip={resumeCurrentTrack}
           onPauseClip={pauseCurrentTrack}
           onPlayback={syncShotlessPlayback}
           onLiveChange={setShotlessLive}
