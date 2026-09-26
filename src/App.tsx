@@ -326,14 +326,14 @@ export default function App() {
     }, delay)
   }
 
-  function armPhaseTimer(current: GamePhase, delayMs: number): void {
+  function armPhaseTimer(current: GamePhase, delayMs: number, timings: PhaseTimings): void {
     remainingMsRef.current = delayMs
     deadlineRef.current = Date.now() + delayMs
-    schedulePhase(nextPhase(current), delayMs)
+    schedulePhase(nextPhase(current, timings), delayMs)
   }
 
   function scheduleFollowingPhase(current: GamePhase, timings: PhaseTimings): void {
-    armPhaseTimer(current, phaseDuration(current, timings))
+    armPhaseTimer(current, phaseDuration(current, timings), timings)
   }
 
   function capturePhaseTimings(phase: GamePhase): PhaseTimings {
@@ -490,7 +490,7 @@ export default function App() {
     engageQuizMedia(current)
     const remaining = remainingMsRef.current
     if (remaining <= 0) {
-      await enterPhase(nextPhase(current))
+      await enterPhase(nextPhase(current, roundTimingsRef.current))
       return
     }
     if (phasePlaysAudio(current)) {
@@ -500,7 +500,7 @@ export default function App() {
         setError(formatSpotifyUserError(cause))
       }
     }
-    armPhaseTimer(current, remaining)
+    armPhaseTimer(current, remaining, roundTimingsRef.current)
   }
 
   const currentTrack = tracks[index] ?? null

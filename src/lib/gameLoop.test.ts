@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { phaseDuration, PLAY_MS, REVEAL_MS, THINK_MS } from './gameLoop.ts'
+import { nextPhase, phaseDuration, PLAY_MS, REVEAL_MS, THINK_MS } from './gameLoop.ts'
 
 const customTimings = { playMs: 1_000, thinkMs: 4_000, revealMs: 12_000 }
 
@@ -18,5 +18,22 @@ describe('phaseDuration', () => {
     expect(phaseDuration('playing', customTimings)).toBe(1_000)
     expect(phaseDuration('thinking', customTimings)).toBe(4_000)
     expect(phaseDuration('reveal', customTimings)).toBe(12_000)
+  })
+})
+
+describe('nextPhase', () => {
+  const skippedThink = { playMs: 11_000, thinkMs: 0, revealMs: 6_000 }
+
+  it('keeps the default path through Denkzeit', () => {
+    expect(nextPhase('playing')).toBe('thinking')
+    expect(nextPhase('thinking')).toBe('reveal')
+    expect(nextPhase('reveal')).toBe('playing')
+  })
+
+  it('skips Denkzeit when that phase is set to zero', () => {
+    expect(nextPhase('playing', skippedThink)).toBe('reveal')
+    expect(nextPhase('thinking', skippedThink)).toBe('reveal')
+    expect(nextPhase('reveal', skippedThink)).toBe('playing')
+    expect(nextPhase('playing', customTimings)).toBe('thinking')
   })
 })
