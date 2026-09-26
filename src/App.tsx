@@ -459,6 +459,14 @@ export default function App() {
     setScreen('playlists')
   }
 
+  async function handleContinueToReveal(): Promise<void> {
+    if (!runningRef.current || pausedRef.current || phaseRef.current !== 'thinking') {
+      return
+    }
+    clearGameTimer()
+    await enterPhase('reveal')
+  }
+
   function handlePause(): void {
     if (!runningRef.current || pausedRef.current || phaseRef.current === 'idle') {
       return
@@ -498,7 +506,7 @@ export default function App() {
   const currentTrack = tracks[index] ?? null
 
   return (
-    <main className="app">
+    <main className={screen === 'game' ? 'app app-game' : 'app'}>
       <div className="glow" aria-hidden="true" />
       {screen === 'login' ? (
         <LoginScreen
@@ -556,6 +564,9 @@ export default function App() {
           onPause={handlePause}
           onResume={() => {
             void handleResume()
+          }}
+          onContinue={() => {
+            void handleContinueToReveal()
           }}
           onAbort={handleAbort}
           onLogout={handleLogout}
