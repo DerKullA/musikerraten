@@ -83,7 +83,7 @@ describe('ShotlessRoundView', () => {
   it('zeigt die Shot-Strafe der ersten Stufe und verbirgt den Titel', () => {
     const markup = roundView(createShotlessRound())
 
-    expect(markup).toContain('Stufe 1 von 4 · 0,1 s')
+    expect(markup).toContain('Stufe 1 von 4 · 0,5 s')
     expect(markup).toContain('Wenn jetzt erraten wird: Shot')
     expect(markup).toContain('class="shotless-penalty is-shot"')
     expect(markup).toContain('>Shot<')

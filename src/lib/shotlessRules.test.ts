@@ -40,14 +40,14 @@ function guessingAt(stageIndex: number, extras: Partial<ShotlessRound> = {}): Sh
 describe('Shotless-Stufen', () => {
   it('ordnet Clip-Längen den Trinkstrafen zu', () => {
     expect(SHOTLESS_STAGES.map((stage) => [stage.durationMs, stage.penalty])).toEqual([
-      [100, 'Shot'],
+      [500, 'Shot'],
       [1_000, '5 Schlücke'],
       [3_000, '3 Schlücke'],
       [8_000, '1 Schluck'],
     ])
     expect(SHOTLESS_STAGES.map((stage) => stage.penalty).join(' ')).not.toMatch(/wasser|saft|limo|softdrink/i)
-    expect(stageStatusLabel(stageByIndex(0))).toBe('Stufe 1 von 4 · 0,1 s')
-    expect(formatClipLength(100)).toBe('0,1 s')
+    expect(stageStatusLabel(stageByIndex(0))).toBe('Stufe 1 von 4 · 0,5 s')
+    expect(formatClipLength(500)).toBe('0,5 s')
     expect(formatClipLength(8_000)).toBe('8 s')
     expect(penaltyPrompt('Shot')).toBe('Wenn jetzt erraten wird: Shot')
     expect(skipControlLabel(0)).toBe('Länger hören')
