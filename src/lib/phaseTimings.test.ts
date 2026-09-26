@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_PHASE_TIMINGS,
+  MIN_THINK_SECONDS,
   clearSessionPhaseTimings,
   parsePhaseSeconds,
   phaseTimingDraftFromTimings,
@@ -25,6 +26,22 @@ describe('phase timing bounds', () => {
     expect(parsePhaseSeconds('1.5')).toBeNull()
     expect(parsePhaseSeconds('1,5')).toBeNull()
     expect(parsePhaseSeconds('abc')).toBeNull()
+  })
+
+  it('allows zero seconds only for Denkzeit', () => {
+    expect(MIN_THINK_SECONDS).toBe(0)
+    expect(parsePhaseSeconds('0', MIN_THINK_SECONDS)).toBe(0)
+    expect(parsePhaseSeconds('30', MIN_THINK_SECONDS)).toBe(30)
+    expect(parsePhaseSeconds('31', MIN_THINK_SECONDS)).toBeNull()
+    expect(
+      phaseTimingsFromDraft({
+        play: '11',
+        think: '0',
+        reveal: '6',
+      }),
+    ).toEqual({ playMs: 11_000, thinkMs: 0, revealMs: 6_000 })
+    expect(phaseTimingsFromDraft({ play: '0', think: '0', reveal: '6' })).toBeNull()
+    expect(phaseTimingsFromDraft({ play: '11', think: '0', reveal: '0' })).toBeNull()
   })
 
   it('builds timings only from a complete valid draft', () => {
@@ -91,6 +108,17 @@ describe('session phase timings', () => {
   it('does not persist timings outside 1 to 30 seconds', () => {
     const store = memoryStore()
     writeSessionPhaseTimings({ playMs: 500, thinkMs: 3_000, revealMs: 6_000 }, store)
+    expect(readSessionPhaseTimings(store)).toEqual(DEFAULT_PHASE_TIMINGS)
+  })
+
+  it('persists a Denkzeit of zero and rejects zero for the other phases', () => {
+    const store = memoryStore()
+    const skippedThink = { playMs: 11_000, thinkMs: 0, revealMs: 6_000 }
+    expect(writeSessionPhaseTimings(skippedThink, store)).toEqual(skippedThink)
+    expect(readSessionPhaseTimings(store)).toEqual(skippedThink)
+    writeSessionPhaseTimings({ playMs: 0, thinkMs: 0, revealMs: 6_000 }, store)
+    expect(readSessionPhaseTimings(store)).toEqual(DEFAULT_PHASE_TIMINGS)
+    writeSessionPhaseTimings({ playMs: 11_000, thinkMs: 0, revealMs: 0 }, store)
     expect(readSessionPhaseTimings(store)).toEqual(DEFAULT_PHASE_TIMINGS)
   })
 })

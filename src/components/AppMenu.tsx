@@ -10,6 +10,7 @@ import {
 import {
   MAX_PHASE_SECONDS,
   MIN_PHASE_SECONDS,
+  MIN_THINK_SECONDS,
   phaseTimingDraftFromTimings,
   phaseTimingsFromDraft,
   type PhaseTimingDraft,
@@ -170,7 +171,9 @@ function SettingsDialog({
     event.preventDefault()
     const parsed = phaseTimingsFromDraft(draft)
     if (!parsed) {
-      setFormError(`Bitte ganze Sekunden zwischen ${MIN_PHASE_SECONDS} und ${MAX_PHASE_SECONDS} eintragen.`)
+      setFormError(
+        `Bitte ganze Sekunden eintragen: Vorspiel und Auflösung von ${MIN_PHASE_SECONDS} bis ${MAX_PHASE_SECONDS}, Denkzeit von ${MIN_THINK_SECONDS} bis ${MAX_PHASE_SECONDS}.`,
+      )
       return
     }
     onSave(parsed)
@@ -196,8 +199,8 @@ function SettingsDialog({
         <p className="eyebrow">Spiel</p>
         <h2 id="phase-settings-title">Einstellungen</h2>
         <p id="phase-settings-note" className="lede">
-          Lege fest, wie lange jede Phase dauert. Erlaubt sind {MIN_PHASE_SECONDS} bis {MAX_PHASE_SECONDS}{' '}
-          Sekunden.
+          Lege fest, wie lange jede Phase dauert. Vorspiel und Auflösung: {MIN_PHASE_SECONDS} bis{' '}
+          {MAX_PHASE_SECONDS} Sekunden. Denkzeit: {MIN_THINK_SECONDS} bis {MAX_PHASE_SECONDS} Sekunden.
         </p>
         <form onSubmit={saveDraft}>
           <TimingField
@@ -211,8 +214,9 @@ function SettingsDialog({
           <TimingField
             id="phase-think"
             label="Erratezeit / Denkzeit"
-            description="Der Ton pausiert. Es gibt noch keine Auflösung."
+            description="0 überspringt die Denkzeit: nach dem Vorspiel folgt direkt die Auflösung. Sonst pausiert der Ton, ohne die Auflösung zu zeigen."
             value={draft.think}
+            minSeconds={MIN_THINK_SECONDS}
             onChange={(value) => updateDraft('think', value)}
           />
           <TimingField
@@ -250,6 +254,7 @@ function TimingField({
   label,
   description,
   value,
+  minSeconds = MIN_PHASE_SECONDS,
   inputRef,
   onChange,
 }: {
@@ -257,6 +262,7 @@ function TimingField({
   label: string
   description: string
   value: string
+  minSeconds?: number
   inputRef?: Ref<HTMLInputElement>
   onChange: (value: string) => void
 }) {
@@ -271,7 +277,7 @@ function TimingField({
           id={id}
           type="number"
           inputMode="numeric"
-          min={MIN_PHASE_SECONDS}
+          min={minSeconds}
           max={MAX_PHASE_SECONDS}
           step={1}
           value={value}

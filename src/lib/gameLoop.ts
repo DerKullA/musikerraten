@@ -32,9 +32,9 @@ export function phaseDuration(phase: GamePhase, timings: PhaseTimings = DEFAULT_
   return 0
 }
 
-export function nextPhase(phase: GamePhase): GamePhase {
+export function nextPhase(phase: GamePhase, timings: PhaseTimings = DEFAULT_PHASE_TIMINGS): GamePhase {
   if (phase === 'playing') {
-    return 'thinking'
+    return timings.thinkMs === 0 ? 'reveal' : 'thinking'
   }
   if (phase === 'thinking') {
     return 'reveal'

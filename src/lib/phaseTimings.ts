@@ -3,6 +3,7 @@ import type { GamePhase } from '../types.ts'
 const STORAGE_KEY = 'musikerraten_phase_timings'
 
 export const MIN_PHASE_SECONDS = 1
+export const MIN_THINK_SECONDS = 0
 export const MAX_PHASE_SECONDS = 30
 
 export const DEFAULT_PHASE_TIMINGS: PhaseTimings = {
@@ -44,13 +45,13 @@ export function timingsAtTrackStart(
   return roundTimings
 }
 
-export function parsePhaseSeconds(raw: string): number | null {
+export function parsePhaseSeconds(raw: string, minSeconds = MIN_PHASE_SECONDS): number | null {
   const trimmed = raw.trim()
   if (!/^\d+$/.test(trimmed)) {
     return null
   }
   const seconds = Number(trimmed)
-  if (!isAllowedPhaseSeconds(seconds)) {
+  if (!isAllowedPhaseSeconds(seconds, minSeconds)) {
     return null
   }
   return seconds
@@ -66,7 +67,7 @@ export function phaseTimingDraftFromTimings(timings: PhaseTimings): PhaseTimingD
 
 export function phaseTimingsFromDraft(draft: PhaseTimingDraft): PhaseTimings | null {
   const play = parsePhaseSeconds(draft.play)
-  const think = parsePhaseSeconds(draft.think)
+  const think = parsePhaseSeconds(draft.think, MIN_THINK_SECONDS)
   const reveal = parsePhaseSeconds(draft.reveal)
   if (play === null || think === null || reveal === null) {
     return null
@@ -102,16 +103,16 @@ export function clearSessionPhaseTimings(store: KeyValueStore | null = browserSe
   store?.removeItem(STORAGE_KEY)
 }
 
-function isAllowedPhaseSeconds(seconds: number): boolean {
-  return Number.isInteger(seconds) && seconds >= MIN_PHASE_SECONDS && seconds <= MAX_PHASE_SECONDS
+function isAllowedPhaseSeconds(seconds: number, minSeconds: number): boolean {
+  return Number.isInteger(seconds) && seconds >= minSeconds && seconds <= MAX_PHASE_SECONDS
 }
 
-function isValidPhaseMs(value: unknown): value is number {
+function isValidPhaseMs(value: unknown, minSeconds: number): value is number {
   return (
     typeof value === 'number' &&
     Number.isInteger(value) &&
     value % 1000 === 0 &&
-    value >= MIN_PHASE_SECONDS * 1000 &&
+    value >= minSeconds * 1000 &&
     value <= MAX_PHASE_SECONDS * 1000
   )
 }
@@ -121,7 +122,11 @@ function isPhaseTimings(value: unknown): value is PhaseTimings {
     return false
   }
   const record = value as Record<string, unknown>
-  return isValidPhaseMs(record.playMs) && isValidPhaseMs(record.thinkMs) && isValidPhaseMs(record.revealMs)
+  return (
+    isValidPhaseMs(record.playMs, MIN_PHASE_SECONDS) &&
+    isValidPhaseMs(record.thinkMs, MIN_THINK_SECONDS) &&
+    isValidPhaseMs(record.revealMs, MIN_PHASE_SECONDS)
+  )
 }
 
 function parseStoredPhaseTimings(raw: string): PhaseTimings | null {
