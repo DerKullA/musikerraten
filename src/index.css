@@ -408,6 +408,14 @@ code {
   width: 100%;
 }
 
+.game-readout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.55rem, 1.4dvh, 0.9rem);
+  width: min(100%, 36rem);
+}
+
 .counter {
   margin: 6px 0 0;
   color: var(--amber);
