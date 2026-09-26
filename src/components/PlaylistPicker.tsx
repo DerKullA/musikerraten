@@ -13,6 +13,7 @@ interface PlaylistPickerProps {
   onToggle: (id: string) => void
   onToggleAll: () => void
   onStart: () => void
+  onBack: () => void
   onLogout: () => void
 }
 
@@ -27,6 +28,7 @@ export function PlaylistPicker({
   onToggle,
   onToggleAll,
   onStart,
+  onBack,
   onLogout,
 }: PlaylistPickerProps) {
   const selectedCount = selectedIds.length
@@ -40,7 +42,12 @@ export function PlaylistPicker({
           <h1>Playlists wählen</h1>
         </div>
         <div className="panel-head-meta">
-          <AppMenu timings={savedTimings} onSaveTimings={onSaveTimings} onLogout={onLogout} />
+          <AppMenu
+            timings={savedTimings}
+            onSaveTimings={onSaveTimings}
+            onLogout={onLogout}
+            onLeaveRound={onBack}
+          />
         </div>
       </header>
       <p className="lede">
@@ -90,6 +97,9 @@ export function PlaylistPicker({
           disabled={loadingTracks || selectedCount === 0}
         >
           {loadingTracks ? 'Titel werden geladen …' : 'Spiel starten'}
+        </button>
+        <button type="button" className="btn ghost back" onClick={onBack} aria-label="Zurück zum Hauptmenü">
+          Zurück
         </button>
       </div>
     </section>
