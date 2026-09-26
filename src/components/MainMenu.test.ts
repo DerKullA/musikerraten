@@ -6,24 +6,28 @@ import { MainMenu } from './MainMenu.tsx'
 import { PlaylistPicker } from './PlaylistPicker.tsx'
 
 describe('MainMenu', () => {
-  it('zeigt Song erraten und zwei nicht bedienbare Platzhalter', () => {
+  it('zeigt Song erraten, Shotless und einen nicht bedienbaren Platzhalter', () => {
     const markup = renderToStaticMarkup(
       createElement(MainMenu, {
         savedTimings: DEFAULT_PHASE_TIMINGS,
         onSaveTimings: () => undefined,
         onLogout: () => undefined,
-        onGuessSong: () => undefined,
+        onSelectGame: () => undefined,
       }),
     )
 
     expect(markup).toContain('Hauptmenü')
     expect(markup).toContain('Song erraten')
+    expect(markup).toContain('Shotless')
+    expect(markup).toContain('data-game="guess-song"')
+    expect(markup).toContain('data-game="shotless"')
     expect(markup).toContain('Menü öffnen')
     expect(markup).toContain('Abmelden')
-    expect(markup.match(/Bald verfügbar/g)).toHaveLength(2)
+    expect(markup.match(/Bald verfügbar/g)).toHaveLength(1)
     expect(markup.match(/class="game-entry"/g)).toHaveLength(1)
-    expect(markup.match(/class="game-entry is-locked"/g)).toHaveLength(2)
-    expect(markup.match(/aria-disabled="true"/g)).toHaveLength(2)
+    expect(markup.match(/class="game-entry is-shotless"/g)).toHaveLength(1)
+    expect(markup.match(/class="game-entry is-locked"/g)).toHaveLength(1)
+    expect(markup.match(/aria-disabled="true"/g)).toHaveLength(1)
     expect(markup).not.toContain('href=')
   })
 })
