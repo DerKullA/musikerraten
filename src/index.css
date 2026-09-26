@@ -250,9 +250,16 @@ h1 {
   outline-offset: 3px;
 }
 
+.btn.stage-skip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 .skip-icon {
-  width: 1.25em;
-  height: 1.25em;
+  width: 0.9em;
+  height: 0.9em;
   flex: none;
 }
 

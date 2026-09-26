@@ -576,7 +576,12 @@ export function ShotlessRoundView({
                 Nochmal anhören
               </button>
             )}
-            <button type="button" className={lastStage ? 'btn aufgeben' : 'btn outline'} onClick={onSkip}>
+            <button
+              type="button"
+              className={lastStage ? 'btn aufgeben' : 'btn outline stage-skip'}
+              onClick={onSkip}
+            >
+              {lastStage ? null : <StageSkipIcon />}
               {skipControlLabel(round.stageIndex)}
             </button>
             {mode === 'party' && !lastStage ? (
@@ -749,5 +754,13 @@ function PlayerPick({
         Niemand
       </button>
     </div>
+  )
+}
+
+function StageSkipIcon() {
+  return (
+    <svg className="skip-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M4.2 5.1v13.8L13.2 12 4.2 5.1zm9.2 0v13.8L22.4 12 13.4 5.1z" />
+    </svg>
   )
 }

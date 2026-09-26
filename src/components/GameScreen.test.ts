@@ -63,7 +63,7 @@ describe('GameScreen', () => {
     expect(markup).toContain('class="meter ')
     expect(markup).toContain(`animation-duration:${POST_REVEAL_PLAY_MS}ms`)
     expect(markup).toContain('class="btn skip-next"')
-    expect(markup).toContain('class="skip-icon"')
+    expect(markup).not.toContain('skip-icon')
     expect(markup).toContain('Nächster Song')
     expect(markup).not.toContain('btn erraten')
     expect(markup).not.toContain('btn aufgeben')
