@@ -524,6 +524,11 @@ export function ShotlessRoundView({
             </li>
           ))}
         </ol>
+        {round.view === 'guessing' ? (
+          <div className="meter" key={`${round.trackIndex}-${round.stageIndex}-${round.replayNonce}`}>
+            <span style={{ animationDuration: `${stage.durationMs}ms` }} />
+          </div>
+        ) : null}
         {revealed ? (
           <RevealCard track={track} message={round.revealMessage} guessTarget={guessTarget} />
         ) : (

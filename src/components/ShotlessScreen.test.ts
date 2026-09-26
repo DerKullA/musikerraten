@@ -85,6 +85,8 @@ describe('ShotlessRoundView', () => {
     const markup = roundView(createShotlessRound())
 
     expect(markup).toContain('Stufe 1 von 4 · 0,5 s')
+    expect(markup).toContain('class="meter"')
+    expect(markup).toContain('animation-duration:500ms')
     expect(markup).toContain('Wenn jetzt erraten wird: Shot')
     expect(markup).toContain('class="shotless-penalty is-shot"')
     expect(markup).toContain('>Shot<')
@@ -110,6 +112,7 @@ describe('ShotlessRoundView', () => {
     const markup = roundView({ ...createShotlessRound(), stageIndex: 3 })
 
     expect(markup).toContain('Stufe 4 von 4 · 8 s')
+    expect(markup).toContain('animation-duration:8000ms')
     expect(markup).toContain('class="shotless-penalty is-light"')
     expect(markup).toContain('>1 Schluck<')
     expect(markup).toContain('class="btn aufgeben stage-skip"')
@@ -120,6 +123,13 @@ describe('ShotlessRoundView', () => {
     expect(markup).not.toContain('Länger hören')
   })
 
+  it('füllt den Zeitbalken über die drei Sekunden der dritten Stufe', () => {
+    const markup = roundView({ ...createShotlessRound(), stageIndex: 2 })
+
+    expect(markup).toContain('class="meter"')
+    expect(markup).toContain('animation-duration:3000ms')
+  })
+
   it('zeigt einen Fehlschuss ohne Auflösung', () => {
     const markup = roundView({
       ...createShotlessRound(),
@@ -128,6 +138,7 @@ describe('ShotlessRoundView', () => {
     })
 
     expect(markup).toContain('Falsch — du trinkst: 5 Schlücke')
+    expect(markup).toContain('animation-duration:1000ms')
     expect(markup).toContain('>5 Schlücke<')
     expect(markup).not.toContain('Geheimer Hit')
   })
@@ -171,6 +182,7 @@ describe('ShotlessRoundView', () => {
     expect(guessing).not.toContain('class="btn primary cta">Erraten!')
     expect(guessing).toContain('Niemand')
     expect(guessing).not.toContain('Geheimer Hit')
+    expect(picking).not.toContain('class="meter"')
     expect(picking).toContain('Wer hat es erraten?')
     expect(picking).toContain('Sam')
     expect(picking).toContain('Ada')
