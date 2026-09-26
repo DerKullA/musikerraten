@@ -23,6 +23,7 @@ interface SpotifyPlayer {
   activateElement: () => Promise<void>
   pause: () => Promise<void>
   resume: () => Promise<void>
+  getCurrentState: () => Promise<{ paused: boolean } | null>
 }
 
 interface SpotifyPlayerEvent {
