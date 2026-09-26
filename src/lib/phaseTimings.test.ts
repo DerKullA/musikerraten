@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_PHASE_TIMINGS,
+  POST_REVEAL_PLAY_MS,
   MIN_THINK_SECONDS,
   clearSessionPhaseTimings,
   parsePhaseSeconds,
@@ -55,11 +56,16 @@ describe('phase timing bounds', () => {
     expect(phaseTimingsFromDraft({ play: '5', think: '', reveal: '9' })).toBeNull()
   })
 
+  it('keeps the shipped reveal time at eight seconds', () => {
+    expect(POST_REVEAL_PLAY_MS).toBe(8_000)
+    expect(DEFAULT_PHASE_TIMINGS.revealMs).toBe(POST_REVEAL_PLAY_MS)
+  })
+
   it('round-trips the shipped defaults into the settings draft', () => {
     expect(phaseTimingDraftFromTimings(DEFAULT_PHASE_TIMINGS)).toEqual({
       play: '11',
       think: '3',
-      reveal: '6',
+      reveal: '8',
     })
   })
 })

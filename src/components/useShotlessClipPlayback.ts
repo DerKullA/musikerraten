@@ -1,11 +1,13 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import { createCancellableDelay, runBoundedClip } from '../lib/clipPlayback.ts'
+import { createCancellableDelay, holdPlaybackThen, runBoundedClip } from '../lib/clipPlayback.ts'
 
 interface ClipHandlers {
   onPlayClip: (uri: string, positionMs: number) => Promise<void>
+  onResumeClip: () => Promise<void>
   onPauseClip: () => Promise<void>
   onPlayback: (state: 'playing' | 'paused') => void
   onError: (message: string) => void
+  onComplete: () => void
 }
 
 interface ShotlessClipInput {
@@ -14,6 +16,7 @@ interface ShotlessClipInput {
   positionMs: number
   durationMs: number
   replayNonce: number
+  playback: 'clip' | 'continue'
   handlers: ClipHandlers
 }
 
@@ -23,7 +26,7 @@ export function useShotlessClipPlayback(input: ShotlessClipInput): void {
   const tokenRef = useRef(0)
   const cancelDelayRef = useRef<() => void>(() => undefined)
 
-  const { active, uri, positionMs, durationMs, replayNonce } = input
+  const { active, uri, positionMs, durationMs, replayNonce, playback } = input
 
   useLayoutEffect(() => {
     handlersRef.current = input.handlers
@@ -47,22 +50,32 @@ export function useShotlessClipPlayback(input: ShotlessClipInput): void {
       chainRef.current = chainRef.current.then(job).catch(() => undefined)
     }
 
+    const clipHandlers = {
+      play: () =>
+        playback === 'continue'
+          ? handlersRef.current.onResumeClip()
+          : handlersRef.current.onPlayClip(uri, positionMs),
+      pause: () => handlersRef.current.onPauseClip(),
+      isCancelled: () => tokenRef.current !== token,
+      onPlayback: (state: 'playing' | 'paused') => {
+        handlersRef.current.onPlayback(state)
+      },
+      onError: (message: string) => {
+        handlersRef.current.onError(message)
+      },
+    }
+
     enqueue(async () => {
-      await runBoundedClip(
-        durationMs,
-        {
-          play: () => handlersRef.current.onPlayClip(uri, positionMs),
-          pause: () => handlersRef.current.onPauseClip(),
-          isCancelled: () => tokenRef.current !== token,
-          onPlayback: (state) => {
-            handlersRef.current.onPlayback(state)
-          },
-          onError: (message) => {
-            handlersRef.current.onError(message)
-          },
-        },
-        (delayMs) => delay.wait(delayMs),
-      )
+      const wait = (delayMs: number) => delay.wait(delayMs)
+      if (playback === 'continue') {
+        await holdPlaybackThen(durationMs, clipHandlers, wait, () => {
+          if (tokenRef.current === token) {
+            handlersRef.current.onComplete()
+          }
+        })
+        return
+      }
+      await runBoundedClip(durationMs, clipHandlers, wait)
     })
 
     return () => {
@@ -74,5 +87,5 @@ export function useShotlessClipPlayback(input: ShotlessClipInput): void {
         await handlersRef.current.onPauseClip()
       })
     }
-  }, [active, uri, positionMs, durationMs, replayNonce])
+  }, [active, uri, positionMs, durationMs, replayNonce, playback])
 }

@@ -6,10 +6,12 @@ export const MIN_PHASE_SECONDS = 1
 export const MIN_THINK_SECONDS = 0
 export const MAX_PHASE_SECONDS = 30
 
+export const POST_REVEAL_PLAY_MS = 8_000
+
 export const DEFAULT_PHASE_TIMINGS: PhaseTimings = {
   playMs: 11_000,
   thinkMs: 3_000,
-  revealMs: 6_000,
+  revealMs: POST_REVEAL_PLAY_MS,
 }
 
 export interface PhaseTimings {

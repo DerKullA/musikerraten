@@ -248,7 +248,7 @@ function SettingsDialog({
           <TimingField
             id="phase-reveal"
             label="Auflösen"
-            description="Interpret, Titel und Gesamtlänge sind sichtbar."
+            description="Interpret und Titel sind sichtbar, der Song spielt weiter. Danach startet automatisch der nächste Titel."
             value={draft.reveal}
             onChange={(value) => updateDraft('reveal', value)}
           />

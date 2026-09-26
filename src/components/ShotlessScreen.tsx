@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { POST_REVEAL_PLAY_MS } from '../lib/phaseTimings.ts'
 import { startSpeakerKeepAlive } from '../lib/speakerKeepAlive.ts'
 import {
   addShotlessPlayer,
@@ -38,6 +39,7 @@ interface ShotlessScreenProps {
   onLogout: () => void
   onLeave: () => void
   onPlayClip: (uri: string, positionMs: number) => Promise<void>
+  onResumeClip: () => Promise<void>
   onPauseClip: () => Promise<void>
   onPlayback: (state: 'playing' | 'paused') => void
   onLiveChange?: (live: boolean) => void
@@ -49,6 +51,7 @@ export function ShotlessScreen({
   onLogout,
   onLeave,
   onPlayClip,
+  onResumeClip,
   onPauseClip,
   onPlayback,
   onLiveChange,
@@ -68,18 +71,38 @@ export function ShotlessScreen({
   const track = tracks[round.trackIndex] ?? null
   const stage = stageByIndex(round.stageIndex)
   const clipActive = started && round.view === 'guessing' && track !== null
+  const revealHold = started && round.view === 'reveal' && track !== null
+
+  function advanceAfterReveal(): void {
+    setPlaybackError(null)
+    setQuery('')
+    setArtistQuery('')
+    setRound((current) => {
+      if (current.view !== 'reveal') {
+        return current
+      }
+      return reduceShotlessRound(current, {
+        type: 'next',
+        trackCount: tracks.length,
+        origin: pickClipOrigin(),
+      })
+    })
+  }
 
   useShotlessClipPlayback({
-    active: clipActive,
+    active: clipActive || revealHold,
     uri: track?.uri ?? null,
     positionMs: track ? clipStartMs(track.durationMs, round.origin) : 0,
-    durationMs: stage.durationMs,
+    durationMs: revealHold ? POST_REVEAL_PLAY_MS : stage.durationMs,
     replayNonce: round.replayNonce,
+    playback: revealHold ? 'continue' : 'clip',
     handlers: {
       onPlayClip,
+      onResumeClip,
       onPauseClip,
       onPlayback,
       onError: setPlaybackError,
+      onComplete: advanceAfterReveal,
     },
   })
 
@@ -533,8 +556,8 @@ export function ShotlessRoundView({
         ) : null}
         {round.view === 'guessing' && mode === 'party' ? (
           <div className="shotless-actions">
-            <button type="button" className="btn primary cta" onClick={onClaim}>
-              Erraten!
+            <button type="button" className="btn primary cta" onClick={onReplay}>
+              Nochmal anhören
             </button>
           </div>
         ) : null}
@@ -543,9 +566,15 @@ export function ShotlessRoundView({
         ) : null}
         {round.view === 'guessing' ? (
           <div className="shotless-actions">
-            <button type="button" className="btn ghost" onClick={onReplay}>
-              Nochmal hören
-            </button>
+            {mode === 'party' ? (
+              <button type="button" className="btn erraten" onClick={onClaim}>
+                Erraten!
+              </button>
+            ) : (
+              <button type="button" className="btn ghost" onClick={onReplay}>
+                Nochmal anhören
+              </button>
+            )}
             <button type="button" className="btn outline" onClick={onSkip}>
               {skipControlLabel(round.stageIndex)}
             </button>
@@ -563,6 +592,9 @@ export function ShotlessRoundView({
         ) : null}
         {revealed ? (
           <div className="shotless-actions">
+            <div className="meter" key={`${round.trackIndex}-${round.replayNonce}`}>
+              <span style={{ animationDuration: `${POST_REVEAL_PLAY_MS}ms` }} />
+            </div>
             <button type="button" className="btn primary cta" onClick={onNext}>
               Nächster Song
             </button>

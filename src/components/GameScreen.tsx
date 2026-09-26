@@ -20,6 +20,8 @@ interface GameScreenProps {
   onPlay: () => void
   onPause: () => void
   onResume: () => void
+  onReplay: () => void
+  onReveal: () => void
   onAbort: () => void
   onLogout: () => void
 }
@@ -38,12 +40,16 @@ export function GameScreen({
   onPlay,
   onPause,
   onResume,
+  onReplay,
+  onReveal,
   onAbort,
   onLogout,
 }: GameScreenProps) {
+  const [listenGeneration, setListenGeneration] = useState(0)
   const hidden = isTitleHidden(phase)
   const duration = phaseDuration(phase, roundTimings)
   const showLength = phase === 'reveal' && !hidden && track !== null && track.durationMs > 0
+  const showGuessControls = running && (phase === 'playing' || phase === 'thinking')
   const cue = centerTransportCue({ running, paused, phase })
   const coverSrc = useLoadedAlbumCover(revealAlbumArtUrl(phase, track?.albumImageUrl))
 
@@ -102,9 +108,23 @@ export function GameScreen({
             <TransportIcon icon={cue.icon} />
           </button>
         </div>
+        {showGuessControls ? (
+          <div className="round-actions">
+            <button
+              type="button"
+              className="btn primary cta"
+              onClick={() => {
+                setListenGeneration((generation) => generation + 1)
+                onReplay()
+              }}
+            >
+              Nochmal anhören
+            </button>
+          </div>
+        ) : null}
         <div className="game-readout">
           {duration > 0 ? (
-            <div className={`meter ${paused ? 'paused' : ''}`} key={`${phase}-${index}`}>
+            <div className={`meter ${paused ? 'paused' : ''}`} key={`${phase}-${index}-${listenGeneration}`}>
               <span style={{ animationDuration: `${duration}ms` }} />
             </div>
           ) : (
@@ -119,6 +139,13 @@ export function GameScreen({
           </div>
         </div>
       </div>
+      {showGuessControls ? (
+        <div className="game-lower">
+          <button type="button" className="btn erraten" onClick={onReveal}>
+            Erraten
+          </button>
+        </div>
+      ) : null}
     </section>
   )
 }

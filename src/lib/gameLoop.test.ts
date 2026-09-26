@@ -10,7 +10,7 @@ describe('phaseDuration', () => {
     expect(phaseDuration('reveal')).toBe(REVEAL_MS)
     expect(PLAY_MS).toBe(11_000)
     expect(THINK_MS).toBe(3_000)
-    expect(REVEAL_MS).toBe(6_000)
+    expect(REVEAL_MS).toBe(8_000)
     expect(phaseDuration('idle')).toBe(0)
   })
 

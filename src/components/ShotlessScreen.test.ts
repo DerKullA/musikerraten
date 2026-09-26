@@ -55,6 +55,7 @@ describe('ShotlessScreen', () => {
         onLogout: () => undefined,
         onLeave: () => undefined,
         onPlayClip: () => Promise.resolve(),
+        onResumeClip: () => Promise.resolve(),
         onPauseClip: () => Promise.resolve(),
         onPlayback: () => undefined,
       }),
@@ -90,6 +91,9 @@ describe('ShotlessRoundView', () => {
     expect(markup).toContain('Länger hören')
     expect(markup).toContain('Niemand oder Aufgeben: alle trinken einen Shot.')
     expect(markup).toContain('Tipp abgeben')
+    expect(markup).toContain('class="btn ghost">Nochmal anhören')
+    expect(markup).not.toContain('btn erraten')
+    expect(markup).not.toContain('class="btn primary cta"')
     expect(markup).toContain('Abmelden')
     expect(markup).toContain('Zurück zum Hauptmenü')
     expect(markup).not.toContain('Einstellungen')
@@ -135,13 +139,18 @@ describe('ShotlessRoundView', () => {
     expect(markup).toContain('Gesucht war der Titel')
     expect(markup).toContain('Alle außer Sam trinken: 3 Schlücke')
     expect(markup).toContain('Nächster Song')
+    expect(markup).toContain('class="meter"')
+    expect(markup).toContain('animation-duration:8000ms')
   })
 
   it('lässt in der Party Erraten rufen und danach die Person wählen', () => {
     const guessing = roundView(createShotlessRound(), 'party')
     const picking = roundView({ ...createShotlessRound(), view: 'pick-player' }, 'party')
 
-    expect(guessing).toContain('Erraten!')
+    expect(guessing).toContain('class="btn primary cta">Nochmal anhören')
+    expect(guessing).toContain('class="btn erraten">Erraten!')
+    expect(guessing.indexOf('Nochmal anhören')).toBeLessThan(guessing.indexOf('Erraten!'))
+    expect(guessing).not.toContain('class="btn primary cta">Erraten!')
     expect(guessing).toContain('Niemand')
     expect(guessing).not.toContain('Geheimer Hit')
     expect(picking).toContain('Wer hat es erraten?')

@@ -73,6 +73,36 @@ export async function runBoundedClip(
   await stopClip(handlers)
 }
 
+export async function holdPlaybackThen(
+  durationMs: number,
+  handlers: BoundedClipHandlers,
+  wait: (delayMs: number) => Promise<void>,
+  onAdvance: () => void,
+): Promise<void> {
+  if (durationMs <= 0 || handlers.isCancelled()) {
+    return
+  }
+  handlers.onPlayback('playing')
+  try {
+    await handlers.play()
+  } catch (cause) {
+    handlers.onPlayback('paused')
+    handlers.onError(clipFailureMessage(cause))
+  }
+  if (handlers.isCancelled()) {
+    await safePause(handlers.pause)
+    return
+  }
+  await wait(durationMs)
+  if (!handlers.isCancelled()) {
+    handlers.onPlayback('paused')
+  }
+  await safePause(handlers.pause)
+  if (!handlers.isCancelled()) {
+    onAdvance()
+  }
+}
+
 async function stopClip(handlers: BoundedClipHandlers, cause?: unknown): Promise<void> {
   if (!handlers.isCancelled()) {
     handlers.onPlayback('paused')
