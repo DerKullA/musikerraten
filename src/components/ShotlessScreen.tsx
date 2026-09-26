@@ -294,7 +294,7 @@ function ShotlessSetup({
           <h1>Shotless</h1>
         </div>
         <div className="panel-head-meta">
-          <AppMenu onLogout={onLogout} onLeaveRound={onLeave} />
+          <AppMenu onLogout={onLogout} onLeaveRound={onLeave} leaveLabel="Zurück zum Hauptmenü" />
         </div>
       </header>
       <p className="lede">
@@ -477,7 +477,7 @@ export function ShotlessRoundView({
           <h1>{mode === 'party' ? 'Party' : 'Tippen'}</h1>
         </div>
         <div className="panel-head-meta">
-          <AppMenu onLogout={onLogout} onLeaveRound={onLeave} />
+          <AppMenu onLogout={onLogout} onLeaveRound={onLeave} leaveLabel="Zurück zum Hauptmenü" />
           <p className="counter">
             {tracks.length === 0 ? '0 / 0' : `${round.trackIndex + 1} / ${tracks.length}`}
           </p>

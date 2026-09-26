@@ -511,9 +511,8 @@ export default function App() {
   }
 
   function handleLeaveShotless(): void {
-    setShotlessLive(false)
     void endQuizPlayback()
-    setScreen('playlists')
+    handleBackToMenu()
   }
 
   function handleAbort(): void {

@@ -22,9 +22,16 @@ interface AppMenuProps {
   onSaveTimings?: (timings: PhaseTimings) => void
   onLogout: () => void
   onLeaveRound?: () => void
+  leaveLabel?: string
 }
 
-export function AppMenu({ timings, onSaveTimings, onLogout, onLeaveRound }: AppMenuProps) {
+export function AppMenu({
+  timings,
+  onSaveTimings,
+  onLogout,
+  onLeaveRound,
+  leaveLabel = 'Zurück',
+}: AppMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -136,7 +143,7 @@ export function AppMenu({ timings, onSaveTimings, onLogout, onLeaveRound }: AppM
             className="menu-item menu-item-leave"
             onClick={leaveRound}
           >
-            Zurück
+            {leaveLabel}
           </button>
         ) : null}
         <button
