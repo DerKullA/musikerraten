@@ -1,7 +1,7 @@
 import type { GamePhase } from '../types.ts'
 
 export type TransportIconName = 'play' | 'pause'
-export type TransportAction = 'start' | 'pause' | 'resume' | 'reveal'
+export type TransportAction = 'start' | 'pause' | 'resume'
 export type TransportLabel = 'Abspielen' | 'Pause' | 'Weiter'
 
 export interface CenterTransportCue {
@@ -20,9 +20,6 @@ export function centerTransportCue(input: {
   }
   if (input.paused) {
     return { icon: 'play', label: 'Weiter', action: 'resume' }
-  }
-  if (input.phase === 'thinking') {
-    return { icon: 'play', label: 'Abspielen', action: 'reveal' }
   }
   return { icon: 'pause', label: 'Pause', action: 'pause' }
 }

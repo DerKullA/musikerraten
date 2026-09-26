@@ -20,7 +20,6 @@ interface GameScreenProps {
   onPlay: () => void
   onPause: () => void
   onResume: () => void
-  onContinue: () => void
   onAbort: () => void
   onLogout: () => void
 }
@@ -39,7 +38,6 @@ export function GameScreen({
   onPlay,
   onPause,
   onResume,
-  onContinue,
   onAbort,
   onLogout,
 }: GameScreenProps) {
@@ -56,10 +54,6 @@ export function GameScreen({
     }
     if (cue.action === 'resume') {
       onResume()
-      return
-    }
-    if (cue.action === 'reveal') {
-      onContinue()
       return
     }
     onPause()
