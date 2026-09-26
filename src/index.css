@@ -211,12 +211,24 @@ h1 {
 
 .btn.erraten {
   background: transparent;
+  color: var(--lime);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--lime);
+}
+
+.btn.erraten:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 3px;
+}
+
+.btn.aufgeben {
+  background: transparent;
   color: #ffc8be;
   font-weight: 700;
   box-shadow: inset 0 0 0 2px #c44536;
 }
 
-.btn.erraten:focus-visible {
+.btn.aufgeben:focus-visible {
   outline: 2px solid #ffc8be;
   outline-offset: 3px;
 }

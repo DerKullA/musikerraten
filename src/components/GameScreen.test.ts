@@ -37,7 +37,7 @@ function screen(phase: GamePhase, running: boolean, timings: PhaseTimings = DEFA
 }
 
 describe('GameScreen', () => {
-  it('macht Nochmal anhören zum großen Knopf und setzt Erraten nach unten mit rotem Rand', () => {
+  it('macht Nochmal anhören zum großen Knopf und setzt Erraten nach unten mit grünem Rand', () => {
     const markup = screen('playing', true)
 
     expect(markup).toContain('class="btn primary cta">Nochmal anhören')

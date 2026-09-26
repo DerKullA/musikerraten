@@ -92,6 +92,8 @@ describe('ShotlessRoundView', () => {
     expect(markup).toContain('Niemand oder Aufgeben: alle trinken einen Shot.')
     expect(markup).toContain('Tipp abgeben')
     expect(markup).toContain('class="btn ghost">Nochmal anhören')
+    expect(markup).toContain('class="btn aufgeben">Aufgeben')
+    expect(markup).toContain('class="btn outline">Länger hören')
     expect(markup).not.toContain('btn erraten')
     expect(markup).not.toContain('class="btn primary cta"')
     expect(markup).toContain('Abmelden')
@@ -108,7 +110,9 @@ describe('ShotlessRoundView', () => {
     expect(markup).toContain('Stufe 4 von 4 · 8 s')
     expect(markup).toContain('class="shotless-penalty is-light"')
     expect(markup).toContain('>1 Schluck<')
-    expect(markup).toContain('Aufgeben')
+    expect(markup).toContain('class="btn aufgeben">Aufgeben')
+    expect(markup).not.toContain('class="btn ghost">Aufgeben')
+    expect(markup).not.toContain('class="btn outline">Aufgeben')
     expect(markup).not.toContain('Länger hören')
   })
 
@@ -149,6 +153,8 @@ describe('ShotlessRoundView', () => {
 
     expect(guessing).toContain('class="btn primary cta">Nochmal anhören')
     expect(guessing).toContain('class="btn erraten">Erraten!')
+    expect(guessing).not.toContain('class="btn aufgeben">Erraten!')
+    expect(guessing).not.toContain('btn aufgeben')
     expect(guessing.indexOf('Nochmal anhören')).toBeLessThan(guessing.indexOf('Erraten!'))
     expect(guessing).not.toContain('class="btn primary cta">Erraten!')
     expect(guessing).toContain('Niemand')

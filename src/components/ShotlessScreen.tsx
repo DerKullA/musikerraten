@@ -575,7 +575,7 @@ export function ShotlessRoundView({
                 Nochmal anhören
               </button>
             )}
-            <button type="button" className="btn outline" onClick={onSkip}>
+            <button type="button" className={lastStage ? 'btn aufgeben' : 'btn outline'} onClick={onSkip}>
               {skipControlLabel(round.stageIndex)}
             </button>
             {mode === 'party' && !lastStage ? (
@@ -584,7 +584,7 @@ export function ShotlessRoundView({
               </button>
             ) : null}
             {mode === 'tippen' && !lastStage ? (
-              <button type="button" className="btn ghost" onClick={onNobody}>
+              <button type="button" className="btn aufgeben" onClick={onNobody}>
                 Aufgeben
               </button>
             ) : null}
