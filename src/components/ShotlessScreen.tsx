@@ -578,10 +578,10 @@ export function ShotlessRoundView({
             )}
             <button
               type="button"
-              className={lastStage ? 'btn aufgeben' : 'btn outline stage-skip'}
+              className={lastStage ? 'btn aufgeben stage-skip' : 'btn outline stage-skip'}
               onClick={onSkip}
             >
-              {lastStage ? null : <StageSkipIcon />}
+              <StageSkipIcon />
               {skipControlLabel(round.stageIndex)}
             </button>
             {mode === 'party' && !lastStage ? (
