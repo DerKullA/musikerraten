@@ -14,10 +14,15 @@ export type PenaltyTone = 'shot' | 'heavy' | 'mid' | 'light'
 export const TIPPEN_GUESSER = 'dir'
 export const EVERYONE_SHOT_MESSAGE = 'Alle trinken einen Shot'
 
-/** Anteil der Titellänge, an dem ein Clip bevorzugt einsetzt. */
-export const CLIP_START_RATIO = 0.3
-/** Intros sind oft still — mindestens so weit in den Titel springen, wenn er lang genug ist. */
-export const MIN_INTRO_SKIP_MS = 15_000
+export const CLIP_ORIGINS = ['anfang', 'mitte', 'drop'] as const
+export type ClipOrigin = (typeof CLIP_ORIGINS)[number]
+
+/** Kurzer Vorlauf, damit „Anfang“ nicht in reiner Stille landet. */
+export const CLIP_LEAD_IN_MS = 2_000
+/** Etwa die halbe Titellänge. */
+export const CLIP_MIDDLE_RATIO = 0.5
+/** Späterer Teil als Hook-Heuristik, ohne Audioanalyse (60–75 %). */
+export const CLIP_DROP_RATIO = 0.68
 /** Rest nach dem längsten Clip, damit die 8 Sekunden nicht ins Auslaufen laufen. */
 export const CLIP_TAIL_BUFFER_MS = 2_000
 
@@ -32,6 +37,7 @@ export interface ShotlessRound {
   feedback: string | null
   revealMessage: string | null
   replayNonce: number
+  origin: ClipOrigin
 }
 
 export type ShotlessCommand =
@@ -41,7 +47,7 @@ export type ShotlessCommand =
   | { type: 'assign'; name: string }
   | { type: 'nobody' }
   | { type: 'replay' }
-  | { type: 'next'; trackCount: number }
+  | { type: 'next'; trackCount: number; origin: ClipOrigin }
 
 export interface TitleSuggestion {
   title: string
@@ -93,20 +99,26 @@ export function penaltyTone(penalty: string): PenaltyTone {
   return 'light'
 }
 
-export function clipStartMs(
-  durationMs: number,
-  longestClipMs: number = SHOTLESS_STAGES[SHOTLESS_STAGES.length - 1].durationMs,
-): number {
+export function pickClipOrigin(random: () => number = Math.random): ClipOrigin {
+  const index = Math.floor(random() * CLIP_ORIGINS.length)
+  return CLIP_ORIGINS[Math.min(CLIP_ORIGINS.length - 1, Math.max(0, index))] ?? 'mitte'
+}
+
+export function clipStartMs(durationMs: number, origin: ClipOrigin): number {
   if (!Number.isFinite(durationMs) || durationMs <= 0) {
     return 0
   }
-  const needed = longestClipMs + CLIP_TAIL_BUFFER_MS
-  if (durationMs <= needed) {
-    return 0
+  const maxStart = maxClipStartMs(durationMs)
+  if (origin === 'anfang') {
+    return Math.min(CLIP_LEAD_IN_MS, maxStart)
   }
-  const preferred = Math.max(MIN_INTRO_SKIP_MS, Math.floor(durationMs * CLIP_START_RATIO))
-  const maxStart = durationMs - needed
-  return Math.min(preferred, maxStart)
+  const ratio = origin === 'mitte' ? CLIP_MIDDLE_RATIO : CLIP_DROP_RATIO
+  return Math.min(maxStart, Math.floor(durationMs * ratio))
+}
+
+function maxClipStartMs(durationMs: number): number {
+  const longest = SHOTLESS_STAGES[SHOTLESS_STAGES.length - 1].durationMs
+  return Math.max(0, durationMs - longest - CLIP_TAIL_BUFFER_MS)
 }
 
 export function normalizeSongTitle(value: string): string {
@@ -168,7 +180,7 @@ export function everyoneShotMessage(): string {
   return EVERYONE_SHOT_MESSAGE
 }
 
-export function createShotlessRound(): ShotlessRound {
+export function createShotlessRound(origin: ClipOrigin = 'mitte'): ShotlessRound {
   return {
     trackIndex: 0,
     stageIndex: 0,
@@ -176,12 +188,13 @@ export function createShotlessRound(): ShotlessRound {
     feedback: null,
     revealMessage: null,
     replayNonce: 0,
+    origin,
   }
 }
 
 export function reduceShotlessRound(round: ShotlessRound, command: ShotlessCommand): ShotlessRound {
   if (command.type === 'next') {
-    return advanceTrack(round, command.trackCount)
+    return advanceTrack(round, command.trackCount, command.origin)
   }
   if (round.view === 'reveal') {
     return round
@@ -207,7 +220,7 @@ export function reduceShotlessRound(round: ShotlessRound, command: ShotlessComma
   return round
 }
 
-function advanceTrack(round: ShotlessRound, trackCount: number): ShotlessRound {
+function advanceTrack(round: ShotlessRound, trackCount: number, origin: ClipOrigin): ShotlessRound {
   if (round.view !== 'reveal') {
     return round
   }
@@ -219,6 +232,7 @@ function advanceTrack(round: ShotlessRound, trackCount: number): ShotlessRound {
     feedback: null,
     revealMessage: null,
     replayNonce: round.replayNonce + 1,
+    origin,
   }
 }
 

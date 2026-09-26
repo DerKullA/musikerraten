@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
-  CLIP_START_RATIO,
-  MIN_INTRO_SKIP_MS,
+  CLIP_DROP_RATIO,
+  CLIP_LEAD_IN_MS,
+  CLIP_MIDDLE_RATIO,
   SHOTLESS_STAGES,
   clipStartMs,
+  pickClipOrigin,
   correctDrinkMessage,
   createShotlessRound,
   everyoneShotMessage,
@@ -51,15 +53,26 @@ describe('Shotless-Stufen', () => {
 })
 
 describe('clipStartMs', () => {
-  it('setzt mitten im Titel an und lässt das längste Clip noch passen', () => {
-    expect(CLIP_START_RATIO).toBe(0.3)
-    expect(MIN_INTRO_SKIP_MS).toBe(15_000)
-    expect(clipStartMs(0)).toBe(0)
-    expect(clipStartMs(5_000)).toBe(0)
-    expect(clipStartMs(Number.NaN)).toBe(0)
-    expect(clipStartMs(20_000)).toBe(10_000)
-    expect(clipStartMs(30_000)).toBe(15_000)
-    expect(clipStartMs(180_000)).toBe(54_000)
+  it('wechselt pro Runde zwischen Anfang, Mitte und Drop und lässt das längste Clip passen', () => {
+    expect(CLIP_LEAD_IN_MS).toBe(2_000)
+    expect(CLIP_MIDDLE_RATIO).toBe(0.5)
+    expect(CLIP_DROP_RATIO).toBe(0.68)
+    expect(pickClipOrigin(() => 0)).toBe('anfang')
+    expect(pickClipOrigin(() => 0.34)).toBe('mitte')
+    expect(pickClipOrigin(() => 0.67)).toBe('drop')
+    expect(pickClipOrigin(() => 0.999)).toBe('drop')
+
+    expect(clipStartMs(0, 'anfang')).toBe(0)
+    expect(clipStartMs(5_000, 'mitte')).toBe(0)
+    expect(clipStartMs(Number.NaN, 'drop')).toBe(0)
+
+    expect(clipStartMs(180_000, 'anfang')).toBe(2_000)
+    expect(clipStartMs(180_000, 'mitte')).toBe(90_000)
+    expect(clipStartMs(180_000, 'drop')).toBe(122_400)
+    expect(clipStartMs(30_000, 'mitte')).toBe(15_000)
+    expect(clipStartMs(30_000, 'drop')).toBe(20_000)
+    expect(clipStartMs(20_000, 'anfang')).toBe(2_000)
+    expect(clipStartMs(20_000, 'drop')).toBe(10_000)
   })
 })
 
@@ -98,12 +111,13 @@ describe('Trink-Ansagen', () => {
 
 describe('Rundenverlauf', () => {
   it('verlängert den Clip und gibt nach der letzten Stufe einen Shot für alle', () => {
-    const first = reduceShotlessRound(createShotlessRound(), { type: 'skip' })
+    const first = reduceShotlessRound(createShotlessRound('anfang'), { type: 'skip' })
     const second = reduceShotlessRound(first, { type: 'skip' })
     const third = reduceShotlessRound(second, { type: 'skip' })
     const giveUp = reduceShotlessRound(third, { type: 'skip' })
 
     expect(first.stageIndex).toBe(1)
+    expect(first.origin).toBe('anfang')
     expect(first.view).toBe('guessing')
     expect(stageByIndex(first.stageIndex).penalty).toBe('5 Schlücke')
     expect(second.stageIndex).toBe(2)
@@ -113,6 +127,7 @@ describe('Rundenverlauf', () => {
     expect(giveUp.view).toBe('reveal')
     expect(giveUp.revealMessage).toBe('Alle trinken einen Shot')
     expect(giveUp.stageIndex).toBe(3)
+    expect(giveUp.origin).toBe('anfang')
   })
 
   it('lässt bei einem richtigen Tipp die anderen die aktuelle Strafe trinken', () => {
@@ -166,12 +181,14 @@ describe('Rundenverlauf', () => {
   })
 
   it('startet nach der Auflösung den nächsten Titel wieder bei Stufe 0', () => {
-    const revealed = reduceShotlessRound(guessingAt(2, { trackIndex: 1 }), { type: 'nobody' })
-    const next = reduceShotlessRound(revealed, { type: 'next', trackCount: 2 })
-    const ignored = reduceShotlessRound(guessingAt(1), { type: 'next', trackCount: 4 })
+    const revealed = reduceShotlessRound(guessingAt(2, { trackIndex: 1, origin: 'anfang' }), { type: 'nobody' })
+    const next = reduceShotlessRound(revealed, { type: 'next', trackCount: 2, origin: 'drop' })
+    const ignored = reduceShotlessRound(guessingAt(1), { type: 'next', trackCount: 4, origin: 'mitte' })
 
+    expect(revealed.origin).toBe('anfang')
     expect(next.trackIndex).toBe(0)
     expect(next.stageIndex).toBe(0)
+    expect(next.origin).toBe('drop')
     expect(next.view).toBe('guessing')
     expect(next.revealMessage).toBeNull()
     expect(stageByIndex(next.stageIndex).penalty).toBe('Shot')

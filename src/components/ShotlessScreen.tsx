@@ -12,6 +12,7 @@ import {
   SHOTLESS_STAGES,
   clipStartMs,
   createShotlessRound,
+  pickClipOrigin,
   isLastShotlessStage,
   penaltyPrompt,
   penaltyTone,
@@ -69,7 +70,7 @@ export function ShotlessScreen({
   useShotlessClipPlayback({
     active: clipActive,
     uri: track?.uri ?? null,
-    positionMs: track ? clipStartMs(track.durationMs) : 0,
+    positionMs: track ? clipStartMs(track.durationMs, round.origin) : 0,
     durationMs: stage.durationMs,
     replayNonce: round.replayNonce,
     handlers: {
@@ -114,7 +115,7 @@ export function ShotlessScreen({
     writeShotlessSession({ mode, players })
     setPlaybackError(null)
     setQuery('')
-    setRound(createShotlessRound())
+    setRound(createShotlessRound(pickClipOrigin()))
     setStarted(true)
     onLiveChange?.(true)
   }
@@ -192,7 +193,13 @@ export function ShotlessScreen({
       }}
       onNext={() => {
         setPlaybackError(null)
-        applyRound(reduceShotlessRound(round, { type: 'next', trackCount: tracks.length }))
+        applyRound(
+          reduceShotlessRound(round, {
+            type: 'next',
+            trackCount: tracks.length,
+            origin: pickClipOrigin(),
+          }),
+        )
       }}
     />
   )
@@ -250,7 +257,7 @@ function ShotlessSetup({
         </div>
       </header>
       <p className="lede">
-        Kurze Schnipsel starten mitten im Song, nicht im Intro. Wer länger hören muss, trinkt weniger. Wer
+        Kurze Schnipsel, jedes Mal an einer anderen Stelle im Song. Wer länger hören muss, trinkt weniger. Wer
         richtig liegt, lässt die anderen trinken. Niemand oder Aufgeben: alle einen Shot. Nur Ansagen auf dem
         Bildschirm.
       </p>
@@ -424,6 +431,11 @@ export function ShotlessRoundView({
         <p className="phase-pill playing" aria-live="polite">
           {stageStatusLabel(stage)}
         </p>
+        {import.meta.env.DEV ? (
+          <p className="sr-only" data-clip-origin={round.origin} aria-hidden="true">
+            {round.origin}
+          </p>
+        ) : null}
         <ol className="stage-rail">
           {SHOTLESS_STAGES.map((entry) => (
             <li key={entry.index} className={entry.index === stage.index ? 'is-current' : undefined}>
