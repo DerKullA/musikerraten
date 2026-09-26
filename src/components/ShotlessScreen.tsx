@@ -9,18 +9,23 @@ import {
   writeShotlessSession,
 } from '../lib/shotlessSession.ts'
 import {
+  SHOTLESS_GUESS_TARGETS,
   SHOTLESS_STAGES,
   clipStartMs,
   createShotlessRound,
-  pickClipOrigin,
+  guessFieldLabel,
+  guessTargetRevealLine,
   isLastShotlessStage,
   penaltyPrompt,
   penaltyTone,
+  pickClipOrigin,
   reduceShotlessRound,
   skipControlLabel,
   stageByIndex,
   stageStatusLabel,
-  suggestSongTitles,
+  suggestGuesses,
+  type GuessSuggestion,
+  type ShotlessGuessTarget,
   type ShotlessMode,
   type ShotlessRound,
 } from '../lib/shotlessRules.ts'
@@ -55,12 +60,14 @@ export function ShotlessScreen({
 }: ShotlessScreenProps) {
   const stored = readShotlessSession()
   const [mode, setMode] = useState<ShotlessMode | null>(stored?.mode ?? null)
+  const [guessTarget, setGuessTarget] = useState<ShotlessGuessTarget>(stored?.guessTarget ?? 'title')
   const [players, setPlayers] = useState<string[]>(stored?.players ?? [])
   const [nameDraft, setNameDraft] = useState('')
   const [nameError, setNameError] = useState<string | null>(null)
   const [started, setStarted] = useState(false)
   const [round, setRound] = useState<ShotlessRound>(() => createShotlessRound())
   const [query, setQuery] = useState('')
+  const [artistQuery, setArtistQuery] = useState('')
   const [playbackError, setPlaybackError] = useState<string | null>(null)
 
   const track = tracks[round.trackIndex] ?? null
@@ -81,9 +88,25 @@ export function ShotlessScreen({
     },
   })
 
+  function rememberSession(
+    nextMode: ShotlessMode | null,
+    nextPlayers: readonly string[],
+    nextTarget: ShotlessGuessTarget,
+  ): void {
+    if (!nextMode) {
+      return
+    }
+    writeShotlessSession({ mode: nextMode, players: [...nextPlayers], guessTarget: nextTarget })
+  }
+
   function selectMode(next: ShotlessMode): void {
     setMode(next)
-    writeShotlessSession({ mode: next, players })
+    rememberSession(next, players, guessTarget)
+  }
+
+  function selectGuessTarget(next: ShotlessGuessTarget): void {
+    setGuessTarget(next)
+    rememberSession(mode, players, next)
   }
 
   function addName(): void {
@@ -94,17 +117,13 @@ export function ShotlessScreen({
     }
     setPlayers(result.players)
     setNameDraft('')
-    if (mode) {
-      writeShotlessSession({ mode, players: result.players })
-    }
+    rememberSession(mode, result.players, guessTarget)
   }
 
   function removeName(name: string): void {
     const next = removeShotlessPlayer(players, name)
     setPlayers(next)
-    if (mode) {
-      writeShotlessSession({ mode, players: next })
-    }
+    rememberSession(mode, next, guessTarget)
   }
 
   function startRound(): void {
@@ -112,22 +131,42 @@ export function ShotlessScreen({
       return
     }
     startSpeakerKeepAlive()
-    writeShotlessSession({ mode, players })
     setPlaybackError(null)
     setQuery('')
+    setArtistQuery('')
     setRound(createShotlessRound(pickClipOrigin()))
+    rememberSession(mode, players, guessTarget)
     setStarted(true)
     onLiveChange?.(true)
   }
 
+  function clearGuessDraft(): void {
+    setQuery('')
+    setArtistQuery('')
+  }
+
   function applyRound(next: ShotlessRound): void {
     if (next.trackIndex !== round.trackIndex || next.stageIndex !== round.stageIndex) {
-      setQuery('')
+      clearGuessDraft()
     }
     if (next.view === 'reveal' || next.feedback) {
-      setQuery('')
+      clearGuessDraft()
     }
     setRound(next)
+  }
+
+  function submitGuess(text: string, artistText: string): void {
+    clearGuessDraft()
+    applyRound(
+      reduceShotlessRound(round, {
+        type: 'submit-guess',
+        guess: text,
+        artistGuess: artistText,
+        title: track?.title ?? '',
+        artist: track?.artist ?? '',
+        target: guessTarget,
+      }),
+    )
   }
 
   if (!started || !mode || !track) {
@@ -142,7 +181,9 @@ export function ShotlessScreen({
         onSaveTimings={onSaveTimings}
         onLogout={onLogout}
         onLeave={onLeave}
+        guessTarget={guessTarget}
         onSelectMode={selectMode}
+        onSelectGuessTarget={selectGuessTarget}
         onNameDraft={setNameDraft}
         onAddName={addName}
         onRemoveName={removeName}
@@ -151,29 +192,43 @@ export function ShotlessScreen({
     )
   }
 
-  const suggestions = mode === 'tippen' ? suggestSongTitles(tracks, query) : []
+  const suggestionField = guessTarget === 'both' || guessTarget === 'title' ? 'title' : guessTarget
+  const suggestions = mode === 'tippen' ? suggestGuesses(tracks, query, suggestionField) : []
+  const artistSuggestions =
+    mode === 'tippen' && guessTarget === 'both' ? suggestGuesses(tracks, artistQuery, 'artist') : []
 
   return (
     <ShotlessRoundView
       mode={mode}
+      guessTarget={guessTarget}
       track={track}
       tracks={tracks}
       round={round}
       players={players}
       query={query}
+      artistQuery={artistQuery}
       suggestions={suggestions}
+      artistSuggestions={artistSuggestions}
       error={playbackError ?? error}
       savedTimings={savedTimings}
       onSaveTimings={onSaveTimings}
       onLogout={onLogout}
       onLeave={onLeave}
       onQuery={setQuery}
+      onArtistQuery={setArtistQuery}
       onSubmitGuess={() => {
-        applyRound(reduceShotlessRound(round, { type: 'submit-guess', guess: query, title: track.title }))
+        submitGuess(query, guessTarget === 'both' ? artistQuery : '')
       }}
-      onPickSuggestion={(title) => {
-        setQuery('')
-        applyRound(reduceShotlessRound(round, { type: 'submit-guess', guess: title, title: track.title }))
+      onPickSuggestion={(suggestion) => {
+        if (guessTarget === 'both') {
+          if (suggestion.field === 'artist') {
+            setArtistQuery(suggestion.label)
+            return
+          }
+          setQuery(suggestion.label)
+          return
+        }
+        submitGuess(suggestion.label, '')
       }}
       onSkip={() => {
         applyRound(reduceShotlessRound(round, { type: 'skip' }))
@@ -207,6 +262,7 @@ export function ShotlessScreen({
 
 interface ShotlessSetupProps {
   mode: ShotlessMode | null
+  guessTarget: ShotlessGuessTarget
   players: readonly string[]
   nameDraft: string
   nameError: string | null
@@ -216,6 +272,7 @@ interface ShotlessSetupProps {
   onLogout: () => void
   onLeave: () => void
   onSelectMode: (mode: ShotlessMode) => void
+  onSelectGuessTarget: (target: ShotlessGuessTarget) => void
   onNameDraft: (value: string) => void
   onAddName: () => void
   onRemoveName: (name: string) => void
@@ -224,6 +281,7 @@ interface ShotlessSetupProps {
 
 function ShotlessSetup({
   mode,
+  guessTarget,
   players,
   nameDraft,
   nameError,
@@ -233,6 +291,7 @@ function ShotlessSetup({
   onLogout,
   onLeave,
   onSelectMode,
+  onSelectGuessTarget,
   onNameDraft,
   onAddName,
   onRemoveName,
@@ -270,7 +329,7 @@ function ShotlessSetup({
           onClick={() => onSelectMode('tippen')}
         >
           <strong>Tippen</strong>
-          <span>Titel suchen und bestätigen. Ein Fehlschuss und du trinkst die aktuelle Strafe.</span>
+          <span>Eingabe prüfen. Ein Fehlschuss und du trinkst die aktuelle Strafe.</span>
         </button>
         <button
           type="button"
@@ -282,6 +341,23 @@ function ShotlessSetup({
           <span>Jemand ruft Erraten. Ihr wählt, wer es wusste — oder niemand.</span>
         </button>
       </div>
+      <p className="guess-target-legend" id="shotless-guess-target-label">
+        Was gilt als richtig?
+      </p>
+      <div className="guess-targets" role="group" aria-labelledby="shotless-guess-target-label">
+        {SHOTLESS_GUESS_TARGETS.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            className={guessTarget === option.id ? 'guess-target is-selected' : 'guess-target'}
+            aria-pressed={guessTarget === option.id}
+            onClick={() => onSelectGuessTarget(option.id)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      <p className="muted">Beim Tippen wird das geprüft. In der Party entscheidet ihr per Zuruf.</p>
       {mode === 'party' ? (
         <PlayerRoster
           players={players}
@@ -358,20 +434,24 @@ function PlayerRoster({
 
 interface ShotlessRoundViewProps {
   mode: ShotlessMode
+  guessTarget: ShotlessGuessTarget
   track: Track
   tracks: readonly Track[]
   round: ShotlessRound
   players: readonly string[]
   query: string
-  suggestions: readonly { title: string }[]
+  artistQuery: string
+  suggestions: readonly GuessSuggestion[]
+  artistSuggestions: readonly GuessSuggestion[]
   error: string | null
   savedTimings: PhaseTimings
   onSaveTimings: (timings: PhaseTimings) => void
   onLogout: () => void
   onLeave: () => void
   onQuery: (value: string) => void
+  onArtistQuery: (value: string) => void
   onSubmitGuess: () => void
-  onPickSuggestion: (title: string) => void
+  onPickSuggestion: (suggestion: GuessSuggestion) => void
   onSkip: () => void
   onReplay: () => void
   onClaim: () => void
@@ -382,18 +462,22 @@ interface ShotlessRoundViewProps {
 
 export function ShotlessRoundView({
   mode,
+  guessTarget,
   track,
   tracks,
   round,
   players,
   query,
+  artistQuery,
   suggestions,
+  artistSuggestions,
   error,
   savedTimings,
   onSaveTimings,
   onLogout,
   onLeave,
   onQuery,
+  onArtistQuery,
   onSubmitGuess,
   onPickSuggestion,
   onSkip,
@@ -444,7 +528,7 @@ export function ShotlessRoundView({
           ))}
         </ol>
         {revealed ? (
-          <RevealCard track={track} message={round.revealMessage} />
+          <RevealCard track={track} message={round.revealMessage} guessTarget={guessTarget} />
         ) : (
           <div className="shotless-stage">
             <p className="shotless-prompt">{penaltyPrompt(stage.penalty)}</p>
@@ -463,9 +547,13 @@ export function ShotlessRoundView({
         ) : null}
         {round.view === 'guessing' && mode === 'tippen' ? (
           <GuessComposer
+            target={guessTarget}
             query={query}
+            artistQuery={artistQuery}
             suggestions={suggestions}
+            artistSuggestions={artistSuggestions}
             onQuery={onQuery}
+            onArtistQuery={onArtistQuery}
             onSubmitGuess={onSubmitGuess}
             onPickSuggestion={onPickSuggestion}
           />
@@ -512,27 +600,53 @@ export function ShotlessRoundView({
   )
 }
 
-function RevealCard({ track, message }: { track: Track; message: string | null }) {
+function RevealCard({
+  track,
+  message,
+  guessTarget,
+}: {
+  track: Track
+  message: string | null
+  guessTarget: ShotlessGuessTarget
+}) {
+  const artistLead = guessTarget === 'artist'
   return (
     <div className="reveal-card is-reveal">
       {track.albumImageUrl ? <img className="shotless-cover" src={track.albumImageUrl} alt="" /> : null}
-      <p className="artist">{track.artist}</p>
-      <h2 className="title">{track.title}</h2>
+      <p className="artist">{artistLead ? track.title : track.artist}</p>
+      <h2 className="title">{artistLead ? track.artist : track.title}</h2>
+      <p className="shotless-rule">{guessTargetRevealLine(guessTarget)}</p>
       {message ? <p className="shotless-reveal-message">{message}</p> : null}
     </div>
   )
 }
 
 interface GuessComposerProps {
+  target: ShotlessGuessTarget
   query: string
-  suggestions: readonly { title: string }[]
+  artistQuery: string
+  suggestions: readonly GuessSuggestion[]
+  artistSuggestions: readonly GuessSuggestion[]
   onQuery: (value: string) => void
+  onArtistQuery: (value: string) => void
   onSubmitGuess: () => void
-  onPickSuggestion: (title: string) => void
+  onPickSuggestion: (suggestion: GuessSuggestion) => void
 }
 
-function GuessComposer({ query, suggestions, onQuery, onSubmitGuess, onPickSuggestion }: GuessComposerProps) {
-  const ready = query.trim().length > 0
+function GuessComposer({
+  target,
+  query,
+  artistQuery,
+  suggestions,
+  artistSuggestions,
+  onQuery,
+  onArtistQuery,
+  onSubmitGuess,
+  onPickSuggestion,
+}: GuessComposerProps) {
+  const both = target === 'both'
+  const ready = both ? query.trim().length > 0 && artistQuery.trim().length > 0 : query.trim().length > 0
+  const fieldLabel = guessFieldLabel(target)
 
   return (
     <form
@@ -545,32 +659,68 @@ function GuessComposer({ query, suggestions, onQuery, onSubmitGuess, onPickSugge
       }}
     >
       <label className="sr-only" htmlFor="shotless-guess">
-        Songtitel
+        {both ? 'Songtitel' : fieldLabel}
       </label>
       <input
         id="shotless-guess"
         value={query}
-        placeholder="Songtitel"
+        placeholder={both ? 'Songtitel' : fieldLabel}
         autoComplete="off"
         autoCorrect="off"
         spellCheck={false}
         onChange={(event) => onQuery(event.target.value)}
       />
-      {suggestions.length > 0 ? (
-        <ul className="suggestions" role="listbox" aria-label="Titelvorschläge">
-          {suggestions.map((entry) => (
-            <li key={entry.title}>
-              <button type="button" role="option" onClick={() => onPickSuggestion(entry.title)}>
-                {entry.title}
-              </button>
-            </li>
-          ))}
-        </ul>
+      <GuessSuggestions label="Vorschläge" suggestions={suggestions} onPickSuggestion={onPickSuggestion} />
+      {both ? (
+        <>
+          <label className="sr-only" htmlFor="shotless-artist">
+            Interpret
+          </label>
+          <input
+            id="shotless-artist"
+            value={artistQuery}
+            placeholder="Interpret"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            onChange={(event) => onArtistQuery(event.target.value)}
+          />
+          <GuessSuggestions
+            label="Interpretenvorschläge"
+            suggestions={artistSuggestions}
+            onPickSuggestion={onPickSuggestion}
+          />
+        </>
       ) : null}
       <button type="submit" className="btn primary" disabled={!ready}>
         Tipp abgeben
       </button>
     </form>
+  )
+}
+
+function GuessSuggestions({
+  label,
+  suggestions,
+  onPickSuggestion,
+}: {
+  label: string
+  suggestions: readonly GuessSuggestion[]
+  onPickSuggestion: (suggestion: GuessSuggestion) => void
+}) {
+  if (suggestions.length === 0) {
+    return null
+  }
+  return (
+    <ul className="suggestions" role="listbox" aria-label={label}>
+      {suggestions.map((entry) => (
+        <li key={`${entry.field}:${entry.label}`}>
+          <button type="button" role="option" onClick={() => onPickSuggestion(entry)}>
+            {entry.label}
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }
 

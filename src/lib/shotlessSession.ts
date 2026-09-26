@@ -1,5 +1,5 @@
 import type { KeyValueStore } from './phaseTimings.ts'
-import type { ShotlessMode } from './shotlessRules.ts'
+import type { ShotlessGuessTarget, ShotlessMode } from './shotlessRules.ts'
 
 const STORAGE_KEY = 'musikerraten_shotless'
 
@@ -10,6 +10,7 @@ export const MAX_PLAYER_NAME_LENGTH = 24
 export interface ShotlessSessionSettings {
   mode: ShotlessMode
   players: string[]
+  guessTarget: ShotlessGuessTarget
 }
 
 export interface PlayerAddResult {
@@ -36,7 +37,8 @@ export function writeShotlessSession(
 ): void {
   const mode = settings.mode
   const players = collectPlayers(settings.players)
-  store?.setItem(STORAGE_KEY, JSON.stringify({ mode, players }))
+  const guessTarget = readGuessTarget(settings.guessTarget)
+  store?.setItem(STORAGE_KEY, JSON.stringify({ mode, players, guessTarget }))
 }
 
 export function clearShotlessSession(store: KeyValueStore | null = browserSessionStore()): void {
@@ -99,7 +101,7 @@ function parseShotlessSession(raw: string): ShotlessSessionSettings | null {
       return null
     }
     const players = Array.isArray(record.players) ? collectPlayers(record.players.filter(isString)) : []
-    return { mode: record.mode, players }
+    return { mode: record.mode, players, guessTarget: readGuessTarget(record.guessTarget) }
   } catch {
     return null
   }
@@ -107,6 +109,13 @@ function parseShotlessSession(raw: string): ShotlessSessionSettings | null {
 
 function isShotlessMode(value: unknown): value is ShotlessMode {
   return value === 'tippen' || value === 'party'
+}
+
+function readGuessTarget(value: unknown): ShotlessGuessTarget {
+  if (value === 'title' || value === 'artist' || value === 'either' || value === 'both') {
+    return value
+  }
+  return 'title'
 }
 
 function isString(value: unknown): value is string {

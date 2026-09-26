@@ -18,22 +18,27 @@ const timings = DEFAULT_PHASE_TIMINGS
 function roundView(
   round: ReturnType<typeof createShotlessRound>,
   mode: 'tippen' | 'party' = 'tippen',
+  guessTarget: 'title' | 'artist' | 'either' | 'both' = 'title',
 ) {
   return renderToStaticMarkup(
     createElement(ShotlessRoundView, {
       mode,
+      guessTarget,
       track: secret,
       tracks: [secret],
       round,
       players: ['Sam', 'Ada'],
       query: '',
+      artistQuery: '',
       suggestions: [],
+      artistSuggestions: [],
       error: null,
       savedTimings: timings,
       onSaveTimings: () => undefined,
       onLogout: () => undefined,
       onLeave: () => undefined,
       onQuery: () => undefined,
+      onArtistQuery: () => undefined,
       onSubmitGuess: () => undefined,
       onPickSuggestion: () => undefined,
       onSkip: () => undefined,
@@ -65,7 +70,12 @@ describe('ShotlessScreen', () => {
     expect(markup).toContain('Shotless')
     expect(markup).toContain('Tippen')
     expect(markup).toContain('Party')
+    expect(markup).toContain('Nur Titel')
+    expect(markup).toContain('Nur Interpret')
+    expect(markup).toContain('Titel oder Interpret')
+    expect(markup).toContain('Titel und Interpret')
     expect(markup).toContain('Runde starten')
+    expect(markup).not.toMatch(/wasser|saft|limo/i)
     expect(markup).not.toContain('Geheimer Hit')
     expect(markup).not.toContain('Geheimkünstler')
   })
@@ -120,6 +130,7 @@ describe('ShotlessRoundView', () => {
 
     expect(markup).toContain('Geheimer Hit')
     expect(markup).toContain('Geheimkünstler')
+    expect(markup).toContain('Gesucht war der Titel')
     expect(markup).toContain('Alle außer Sam trinken: 3 Schlücke')
     expect(markup).toContain('Nächster Song')
   })
@@ -136,5 +147,17 @@ describe('ShotlessRoundView', () => {
     expect(picking).toContain('Ada')
     expect(picking).toContain('Niemand')
     expect(picking).not.toContain('Geheimer Hit')
+  })
+
+  it('hebt bei Nur Interpret den Interpreten hervor', () => {
+    const markup = roundView(
+      { ...createShotlessRound(), view: 'reveal', revealMessage: 'Alle außer dir trinken: Shot' },
+      'tippen',
+      'artist',
+    )
+
+    expect(markup).toContain('<h2 class="title">Geheimkünstler</h2>')
+    expect(markup).toContain('Gesucht war der Interpret')
+    expect(markup).toContain('Alle außer dir trinken: Shot')
   })
 })

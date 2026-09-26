@@ -357,6 +357,37 @@ h1 {
   color: var(--ink-soft);
 }
 
+.guess-target-legend {
+  margin: 22px 0 0;
+  color: var(--paper-dim);
+  font-weight: 700;
+}
+
+.guess-targets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.guess-target {
+  min-height: 52px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(243, 234, 216, 0.04);
+  color: var(--paper);
+  text-align: left;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.guess-target.is-selected {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: transparent;
+}
+
 .player-roster {
   margin-top: 18px;
 }

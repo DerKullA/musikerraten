@@ -4,8 +4,12 @@ import {
   CLIP_LEAD_IN_MS,
   CLIP_MIDDLE_RATIO,
   SHOTLESS_STAGES,
+  artistsMatch,
   clipStartMs,
+  guessTargetRevealLine,
+  isCorrectGuess,
   pickClipOrigin,
+  suggestGuesses,
   correctDrinkMessage,
   createShotlessRound,
   everyoneShotMessage,
@@ -41,6 +45,7 @@ describe('Shotless-Stufen', () => {
       [3_000, '3 Schlücke'],
       [8_000, '1 Schluck'],
     ])
+    expect(SHOTLESS_STAGES.map((stage) => stage.penalty).join(' ')).not.toMatch(/wasser|saft|limo|softdrink/i)
     expect(stageStatusLabel(stageByIndex(0))).toBe('Stufe 1 von 4 · 0,1 s')
     expect(formatClipLength(100)).toBe('0,1 s')
     expect(formatClipLength(8_000)).toBe('8 s')
@@ -89,14 +94,41 @@ describe('Titelabgleich', () => {
 
   it('schlägt Titel aus dem geladenen Pool vor, ohne bei einem Buchstaben zu spoilern', () => {
     const tracks = [
-      { title: 'Blinding Lights' },
-      { title: 'Blinding Lights (feat. Someone)' },
-      { title: 'Yesterday' },
-      { title: 'Blue Monday' },
+      { title: 'Blinding Lights', artist: 'The Weeknd, Daft Punk' },
+      { title: 'Blinding Lights (feat. Someone)', artist: 'The Weeknd' },
+      { title: 'Yesterday', artist: 'The Beatles' },
+      { title: 'Blue Monday', artist: 'New Order' },
     ]
     expect(suggestSongTitles(tracks, 'b')).toEqual([])
     expect(suggestSongTitles(tracks, 'bli').map((entry) => entry.title)).toEqual(['Blinding Lights'])
     expect(suggestSongTitles(tracks, 'ye')).toEqual([{ title: 'Yesterday' }])
+    expect(suggestGuesses(tracks, 'da', 'artist')).toEqual([{ label: 'Daft Punk', field: 'artist' }])
+    expect(suggestGuesses(tracks, 'bli', 'either').map((entry) => entry.label)).toEqual(['Blinding Lights'])
+    expect(suggestGuesses(tracks, 'bea', 'either')).toEqual([{ label: 'The Beatles', field: 'artist' }])
+  })
+})
+
+describe('Tipp-Ziel', () => {
+  const track = { title: 'Blinding Lights (feat. X)', artist: 'The Weeknd, Daft Punk' }
+
+  it('prüft Titel, Interpret, eins von beiden oder beides', () => {
+    expect(artistsMatch('daft punk', track.artist)).toBe(true)
+    expect(artistsMatch('the weeknd, daft punk', track.artist)).toBe(true)
+    expect(isCorrectGuess({ text: 'blinding lights', artistText: '' }, track, 'title')).toBe(true)
+    expect(isCorrectGuess({ text: 'daft punk', artistText: '' }, track, 'title')).toBe(false)
+    expect(isCorrectGuess({ text: 'The Weeknd', artistText: '' }, track, 'artist')).toBe(true)
+    expect(isCorrectGuess({ text: 'blinding lights', artistText: '' }, track, 'artist')).toBe(false)
+    expect(isCorrectGuess({ text: 'daft punk', artistText: '' }, track, 'either')).toBe(true)
+    expect(isCorrectGuess({ text: 'blinding lights', artistText: '' }, track, 'either')).toBe(true)
+    expect(isCorrectGuess({ text: 'yesterday', artistText: '' }, track, 'either')).toBe(false)
+    expect(isCorrectGuess({ text: 'blinding lights', artistText: 'Daft Punk' }, track, 'both')).toBe(true)
+    expect(isCorrectGuess({ text: 'blinding lights', artistText: 'Beatles' }, track, 'both')).toBe(false)
+    expect(isCorrectGuess({ text: 'blinding lights', artistText: '  ' }, track, 'both')).toBeNull()
+    expect(isCorrectGuess({ text: '   ', artistText: '' }, track, 'title')).toBeNull()
+    expect(guessTargetRevealLine('title')).toBe('Gesucht war der Titel')
+    expect(guessTargetRevealLine('artist')).toBe('Gesucht war der Interpret')
+    expect(guessTargetRevealLine('either')).toBe('Titel oder Interpret hat gereicht')
+    expect(guessTargetRevealLine('both')).toBe('Titel und Interpret waren nötig')
   })
 })
 
@@ -134,12 +166,18 @@ describe('Rundenverlauf', () => {
     const early = reduceShotlessRound(guessingAt(0), {
       type: 'submit-guess',
       guess: 'blinding lights',
+      artistGuess: '',
       title: 'Blinding Lights (feat. X)',
+      artist: 'The Weeknd',
+      target: 'title',
     })
     const later = reduceShotlessRound(guessingAt(2), {
       type: 'submit-guess',
       guess: secret,
+      artistGuess: '',
       title: secret,
+      artist: 'Jemand',
+      target: 'title',
     })
 
     expect(early.view).toBe('reveal')
@@ -150,7 +188,16 @@ describe('Rundenverlauf', () => {
 
   it('bestraft leere Tipps nicht', () => {
     const round = guessingAt(0)
-    expect(reduceShotlessRound(round, { type: 'submit-guess', guess: '   ', title: secret })).toBe(round)
+    expect(
+      reduceShotlessRound(round, {
+        type: 'submit-guess',
+        guess: '   ',
+        artistGuess: '',
+        title: secret,
+        artist: 'Jemand',
+        target: 'title',
+      }),
+    ).toBe(round)
   })
 
   it('bestraft nur den Tippenden und verrät den Titel nicht', () => {
@@ -158,7 +205,26 @@ describe('Rundenverlauf', () => {
     const wrong = reduceShotlessRound(round, {
       type: 'submit-guess',
       guess: 'Yesterday',
+      artistGuess: '',
       title: secret,
+      artist: 'Jemand',
+      target: 'title',
+    })
+    const artistHit = reduceShotlessRound(round, {
+      type: 'submit-guess',
+      guess: 'Jemand',
+      artistGuess: '',
+      title: secret,
+      artist: 'Jemand',
+      target: 'artist',
+    })
+    const bothMiss = reduceShotlessRound(round, {
+      type: 'submit-guess',
+      guess: secret,
+      artistGuess: 'Falsch',
+      title: secret,
+      artist: 'Jemand',
+      target: 'both',
     })
 
     expect(wrong.view).toBe('guessing')
@@ -166,6 +232,11 @@ describe('Rundenverlauf', () => {
     expect(wrong.revealMessage).toBeNull()
     expect(wrong.feedback).toBe('Falsch — du trinkst: 5 Schlücke')
     expect(wrong.replayNonce).toBe(4)
+    expect(artistHit.view).toBe('reveal')
+    expect(artistHit.revealMessage).toBe('Alle außer dir trinken: 5 Schlücke')
+    expect(bothMiss.view).toBe('guessing')
+    expect(bothMiss.revealMessage).toBeNull()
+    expect(bothMiss.feedback).toBe('Falsch — du trinkst: 5 Schlücke')
   })
 
   it('löst in der Party die aktuelle Strafe für alle außer dem Errater aus', () => {

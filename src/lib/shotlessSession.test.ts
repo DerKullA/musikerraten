@@ -28,8 +28,12 @@ describe('Shotless-Session', () => {
   it('merkt sich Modus und Namen nur für die Sitzung', () => {
     const store = memoryStore()
     expect(readShotlessSession(store)).toBeNull()
-    writeShotlessSession({ mode: 'party', players: ['Ada', 'Bea'] }, store)
-    expect(readShotlessSession(store)).toEqual({ mode: 'party', players: ['Ada', 'Bea'] })
+    writeShotlessSession({ mode: 'party', players: ['Ada', 'Bea'], guessTarget: 'either' }, store)
+    expect(readShotlessSession(store)).toEqual({
+      mode: 'party',
+      players: ['Ada', 'Bea'],
+      guessTarget: 'either',
+    })
     clearShotlessSession(store)
     expect(readShotlessSession(store)).toBeNull()
   })
@@ -64,5 +68,7 @@ describe('Shotless-Session', () => {
     expect(readShotlessSession(store)).toBeNull()
     store.setItem('musikerraten_shotless', JSON.stringify({ mode: 'karaoke', players: [] }))
     expect(readShotlessSession(store)).toBeNull()
+    store.setItem('musikerraten_shotless', JSON.stringify({ mode: 'tippen', players: ['Ada'], guessTarget: 'wasser' }))
+    expect(readShotlessSession(store)).toEqual({ mode: 'tippen', players: ['Ada'], guessTarget: 'title' })
   })
 })

@@ -9,6 +9,14 @@ export const SHOTLESS_STAGES = [
 
 export type ShotlessStage = (typeof SHOTLESS_STAGES)[number]
 export type ShotlessMode = 'tippen' | 'party'
+export type ShotlessGuessTarget = 'title' | 'artist' | 'either' | 'both'
+
+export const SHOTLESS_GUESS_TARGETS = [
+  { id: 'title', label: 'Nur Titel' },
+  { id: 'artist', label: 'Nur Interpret' },
+  { id: 'either', label: 'Titel oder Interpret' },
+  { id: 'both', label: 'Titel und Interpret' },
+] as const satisfies readonly { id: ShotlessGuessTarget; label: string }[]
 export type PenaltyTone = 'shot' | 'heavy' | 'mid' | 'light'
 
 export const TIPPEN_GUESSER = 'dir'
@@ -42,7 +50,14 @@ export interface ShotlessRound {
 
 export type ShotlessCommand =
   | { type: 'skip' }
-  | { type: 'submit-guess'; guess: string; title: string }
+  | {
+      type: 'submit-guess'
+      guess: string
+      artistGuess: string
+      title: string
+      artist: string
+      target: ShotlessGuessTarget
+    }
   | { type: 'claim' }
   | { type: 'assign'; name: string }
   | { type: 'nobody' }
@@ -51,6 +66,16 @@ export type ShotlessCommand =
 
 export interface TitleSuggestion {
   title: string
+}
+
+export interface GuessSuggestion {
+  label: string
+  field: 'title' | 'artist'
+}
+
+export interface GuessAttempt {
+  text: string
+  artistText: string
 }
 
 export function stageByIndex(index: number): ShotlessStage {
@@ -143,29 +168,124 @@ export function titlesMatch(guess: string, title: string): boolean {
   return left.length > 0 && left === right
 }
 
+export function artistsMatch(guess: string, artist: string): boolean {
+  const left = normalizeSongTitle(guess)
+  if (!left) {
+    return false
+  }
+  if (left === normalizeSongTitle(artist)) {
+    return true
+  }
+  return artist
+    .split(',')
+    .some((part) => normalizeSongTitle(part) === left)
+}
+
+export function isCorrectGuess(
+  guess: GuessAttempt,
+  track: Pick<Track, 'title' | 'artist'>,
+  target: ShotlessGuessTarget,
+): boolean | null {
+  if (target === 'both') {
+    if (!normalizeSongTitle(guess.text) || !normalizeSongTitle(guess.artistText)) {
+      return null
+    }
+    return titlesMatch(guess.text, track.title) && artistsMatch(guess.artistText, track.artist)
+  }
+  if (!normalizeSongTitle(guess.text)) {
+    return null
+  }
+  if (target === 'title') {
+    return titlesMatch(guess.text, track.title)
+  }
+  if (target === 'artist') {
+    return artistsMatch(guess.text, track.artist)
+  }
+  return titlesMatch(guess.text, track.title) || artistsMatch(guess.text, track.artist)
+}
+
+export function guessTargetRevealLine(target: ShotlessGuessTarget): string {
+  if (target === 'artist') {
+    return 'Gesucht war der Interpret'
+  }
+  if (target === 'either') {
+    return 'Titel oder Interpret hat gereicht'
+  }
+  if (target === 'both') {
+    return 'Titel und Interpret waren nötig'
+  }
+  return 'Gesucht war der Titel'
+}
+
+export function guessFieldLabel(target: ShotlessGuessTarget): string {
+  if (target === 'artist') {
+    return 'Interpret'
+  }
+  if (target === 'either') {
+    return 'Titel oder Interpret'
+  }
+  if (target === 'both') {
+    return 'Titel und Interpret'
+  }
+  return 'Songtitel'
+}
+
 export function suggestSongTitles(
   tracks: readonly Pick<Track, 'title'>[],
   query: string,
   limit = 6,
 ): TitleSuggestion[] {
+  return suggestGuesses(tracks, query, 'title', limit).map((entry) => ({ title: entry.label }))
+}
+
+export function suggestGuesses(
+  tracks: readonly { title: string; artist?: string }[],
+  query: string,
+  field: 'title' | 'artist' | 'either',
+  limit = 6,
+): GuessSuggestion[] {
   const needle = normalizeSongTitle(query)
   if (needle.length < 2) {
     return []
   }
+  const matches: GuessSuggestion[] = []
   const seen = new Set<string>()
-  const matches: TitleSuggestion[] = []
-  for (const track of tracks) {
-    const key = normalizeSongTitle(track.title)
-    if (!key.includes(needle) || seen.has(key)) {
-      continue
+  function push(label: string, suggestionField: 'title' | 'artist'): void {
+    const key = `${suggestionField}:${normalizeSongTitle(label)}`
+    if (!normalizeSongTitle(label).includes(needle) || seen.has(key) || matches.length >= limit) {
+      return
     }
     seen.add(key)
-    matches.push({ title: track.title })
-    if (matches.length >= limit) {
-      break
+    matches.push({ label, field: suggestionField })
+  }
+  if (field !== 'artist') {
+    for (const track of tracks) {
+      push(track.title, 'title')
+    }
+  }
+  if (field !== 'title') {
+    for (const track of tracks) {
+      for (const label of artistSuggestionLabels(track.artist ?? '', needle)) {
+        push(label, 'artist')
+      }
     }
   }
   return matches
+}
+
+function artistSuggestionLabels(artist: string, needle: string): string[] {
+  const parts = artist
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+  const matched = parts.filter((part) => normalizeSongTitle(part).includes(needle))
+  if (matched.length > 0) {
+    return matched
+  }
+  if (normalizeSongTitle(artist).includes(needle)) {
+    return [artist.trim()]
+  }
+  return []
 }
 
 export function correctDrinkMessage(name: string, penalty: string): string {
@@ -209,7 +329,7 @@ export function reduceShotlessRound(round: ShotlessRound, command: ShotlessComma
     return revealGiveUp(round)
   }
   if (command.type === 'submit-guess') {
-    return submitGuess(round, command.guess, command.title)
+    return submitGuess(round, command)
   }
   if (command.type === 'claim') {
     return claimRound(round)
@@ -279,14 +399,22 @@ function revealCorrect(round: ShotlessRound, name: string): ShotlessRound {
   }
 }
 
-function submitGuess(round: ShotlessRound, guess: string, title: string): ShotlessRound {
+function submitGuess(
+  round: ShotlessRound,
+  command: Extract<ShotlessCommand, { type: 'submit-guess' }>,
+): ShotlessRound {
   if (round.view !== 'guessing') {
     return round
   }
-  if (!normalizeSongTitle(guess)) {
+  const verdict = isCorrectGuess(
+    { text: command.guess, artistText: command.artistGuess },
+    { title: command.title, artist: command.artist },
+    command.target,
+  )
+  if (verdict === null) {
     return round
   }
-  if (titlesMatch(guess, title)) {
+  if (verdict) {
     return revealCorrect(round, TIPPEN_GUESSER)
   }
   return {
