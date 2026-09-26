@@ -1,15 +1,15 @@
 import type { PhaseTimings } from '../lib/phaseTimings.ts'
-import { listMainMenuGames, type MainMenuGame } from '../lib/mainMenuGames.ts'
+import { SHOTLESS_ID, listMainMenuGames, type MainMenuGame } from '../lib/mainMenuGames.ts'
 import { AppMenu } from './AppMenu.tsx'
 
 interface MainMenuProps {
   savedTimings: PhaseTimings
   onSaveTimings: (timings: PhaseTimings) => void
   onLogout: () => void
-  onGuessSong: () => void
+  onSelectGame: (gameId: string) => void
 }
 
-export function MainMenu({ savedTimings, onSaveTimings, onLogout, onGuessSong }: MainMenuProps) {
+export function MainMenu({ savedTimings, onSaveTimings, onLogout, onSelectGame }: MainMenuProps) {
   return (
     <section className="panel with-menu">
       <header className="panel-head">
@@ -24,26 +24,38 @@ export function MainMenu({ savedTimings, onSaveTimings, onLogout, onGuessSong }:
       <p className="lede">Wähle ein Spiel. Weitere Modi folgen.</p>
       <div className="game-menu">
         {listMainMenuGames().map((game) => (
-          <GameMenuEntry key={game.id} game={game} onGuessSong={onGuessSong} />
+          <GameMenuEntry key={game.id} game={game} onSelectGame={onSelectGame} />
         ))}
       </div>
     </section>
   )
 }
 
-function GameMenuEntry({ game, onGuessSong }: { game: MainMenuGame; onGuessSong: () => void }) {
+function GameMenuEntry({ game, onSelectGame }: { game: MainMenuGame; onSelectGame: (gameId: string) => void }) {
   if (!game.available) {
     return (
-      <button type="button" className="game-entry is-locked" disabled aria-disabled="true">
+      <button type="button" className="game-entry is-locked" data-game={game.id} disabled aria-disabled="true">
         <GameMenuLabel game={game} />
       </button>
     )
   }
   return (
-    <button type="button" className="game-entry" onClick={onGuessSong}>
+    <button
+      type="button"
+      className={gameEntryClass(game)}
+      data-game={game.id}
+      onClick={() => onSelectGame(game.id)}
+    >
       <GameMenuLabel game={game} />
     </button>
   )
+}
+
+function gameEntryClass(game: MainMenuGame): string {
+  if (game.id === SHOTLESS_ID) {
+    return 'game-entry is-shotless'
+  }
+  return 'game-entry'
 }
 
 function GameMenuLabel({ game }: { game: MainMenuGame }) {

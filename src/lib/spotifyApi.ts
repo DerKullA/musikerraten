@@ -126,10 +126,18 @@ export async function fetchTracksForPlaylists(playlistIds: string[]): Promise<Tr
   return tracks
 }
 
-export async function startPlayback(deviceId: string, uri: string): Promise<void> {
+export function playbackRequestBody(
+  uri: string,
+  positionMs = 0,
+): { uris: [string]; position_ms: number } {
+  const position = Number.isFinite(positionMs) ? Math.max(0, Math.floor(positionMs)) : 0
+  return { uris: [uri], position_ms: position }
+}
+
+export async function startPlayback(deviceId: string, uri: string, positionMs = 0): Promise<void> {
   await spotifyRequest<void>(`/me/player/play?device_id=${encodeURIComponent(deviceId)}`, {
     method: 'PUT',
-    body: JSON.stringify({ uris: [uri], position_ms: 0 }),
+    body: JSON.stringify(playbackRequestBody(uri, positionMs)),
   })
 }
 

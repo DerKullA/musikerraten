@@ -1,4 +1,5 @@
 export const GUESS_SONG_ID = 'guess-song'
+export const SHOTLESS_ID = 'shotless'
 
 export interface MainMenuGame {
   id: string
@@ -16,10 +17,10 @@ export function listMainMenuGames(): readonly MainMenuGame[] {
       available: true,
     },
     {
-      id: 'placeholder-1',
-      kicker: 'Platzhalter',
-      label: 'Bald verfügbar',
-      available: false,
+      id: SHOTLESS_ID,
+      kicker: 'Trinkspiel',
+      label: 'Shotless',
+      available: true,
     },
     {
       id: 'placeholder-2',

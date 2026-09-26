@@ -3,8 +3,10 @@ import { GameScreen } from './components/GameScreen.tsx'
 import { LoginScreen } from './components/LoginScreen.tsx'
 import { MainMenu } from './components/MainMenu.tsx'
 import { PlaylistPicker } from './components/PlaylistPicker.tsx'
+import { ShotlessScreen } from './components/ShotlessScreen.tsx'
 import { nextPhase, phaseDuration, phasePlaysAudio, shuffleTracks } from './lib/gameLoop.ts'
-import { GUESS_SONG_ID, isPlayableMenuGame } from './lib/mainMenuGames.ts'
+import { GUESS_SONG_ID, SHOTLESS_ID, isPlayableMenuGame } from './lib/mainMenuGames.ts'
+import { clearShotlessSession } from './lib/shotlessSession.ts'
 import {
   clearSessionPhaseTimings,
   DEFAULT_PHASE_TIMINGS,
@@ -60,8 +62,11 @@ export default function App() {
   const [paused, setPaused] = useState(false)
   const [savedTimings, setSavedTimings] = useState<PhaseTimings>(() => readSessionPhaseTimings())
   const [roundTimings, setRoundTimings] = useState<PhaseTimings>(() => readSessionPhaseTimings())
+  const [menuGameId, setMenuGameId] = useState(GUESS_SONG_ID)
+  const [shotlessLive, setShotlessLive] = useState(false)
 
   const bootstrapped = useRef(false)
+  const screenRef = useRef<AppScreen>('login')
   const playerRef = useRef<SpotifyPlayer | null>(null)
   const deviceIdRef = useRef<string | null>(null)
   const timerRef = useRef<number | null>(null)
@@ -75,6 +80,7 @@ export default function App() {
   const savedTimingsRef = useRef(savedTimings)
   const roundTimingsRef = useRef(roundTimings)
   const navigationEpochRef = useRef(0)
+  screenRef.current = screen
 
   useEffect(() => {
     if (bootstrapped.current) {
@@ -133,6 +139,7 @@ export default function App() {
     navigationEpochRef.current += 1
     setLoadingPlaylists(false)
     setLoadingTracks(false)
+    setShotlessLive(false)
     showMainMenu()
   }
 
@@ -140,6 +147,8 @@ export default function App() {
     if (!isPlayableMenuGame(gameId)) {
       return
     }
+    setMenuGameId(gameId)
+    setShotlessLive(false)
     void openPlaylistScreen()
   }
 
@@ -179,6 +188,8 @@ export default function App() {
 
   function handleLogout(): void {
     stopSpeakerKeepAlive()
+    clearShotlessSession()
+    setShotlessLive(false)
     resetPhaseTimings()
     stopRound()
     playerRef.current?.disconnect()
@@ -235,6 +246,11 @@ export default function App() {
       setPhase('idle')
       phaseRef.current = 'idle'
       beginQuizMedia('idle')
+      if (menuGameId === SHOTLESS_ID) {
+        setShotlessLive(false)
+        setScreen('shotless')
+        return
+      }
       setScreen('game')
     } catch (cause) {
       if (epoch !== navigationEpochRef.current) {
@@ -454,6 +470,37 @@ export default function App() {
     syncQuizMediaPlayback(nextPlayback)
   }
 
+  async function playShotlessClip(uri: string, positionMs: number): Promise<void> {
+    try {
+      const deviceId = deviceIdRef.current
+      if (!deviceId) {
+        throw new Error('Spotify-Player nicht bereit.')
+      }
+      holdQuizMediaSession()
+      await playerRef.current?.activateElement()
+      await startPlayback(deviceId, uri, positionMs)
+    } catch (cause) {
+      throw new Error(formatSpotifyUserError(cause))
+    }
+  }
+
+  function syncShotlessPlayback(state: 'playing' | 'paused'): void {
+    if (screenRef.current !== 'shotless') {
+      return
+    }
+    if (!isQuizMediaSessionActive()) {
+      startQuizMediaSession(state)
+      return
+    }
+    syncQuizMediaPlayback(state)
+  }
+
+  function handleLeaveShotless(): void {
+    setShotlessLive(false)
+    void endQuizPlayback()
+    setScreen('playlists')
+  }
+
   function handleAbort(): void {
     stopRound()
     setScreen('playlists')
@@ -496,9 +543,10 @@ export default function App() {
   }
 
   const currentTrack = tracks[index] ?? null
+  const fullBleed = screen === 'game' || (screen === 'shotless' && shotlessLive)
 
   return (
-    <main className={screen === 'game' ? 'app app-game' : 'app'}>
+    <main className={fullBleed ? 'app app-game' : 'app'}>
       <div className="glow" aria-hidden="true" />
       {screen === 'login' ? (
         <LoginScreen
@@ -515,9 +563,7 @@ export default function App() {
           savedTimings={savedTimings}
           onSaveTimings={handleSaveTimings}
           onLogout={handleLogout}
-          onGuessSong={() => {
-            handleSelectGame(GUESS_SONG_ID)
-          }}
+          onSelectGame={handleSelectGame}
         />
       ) : null}
       {screen === 'playlists' ? (
@@ -559,6 +605,20 @@ export default function App() {
           }}
           onAbort={handleAbort}
           onLogout={handleLogout}
+        />
+      ) : null}
+      {screen === 'shotless' ? (
+        <ShotlessScreen
+          tracks={tracks}
+          error={error}
+          savedTimings={savedTimings}
+          onSaveTimings={handleSaveTimings}
+          onLogout={handleLogout}
+          onLeave={handleLeaveShotless}
+          onPlayClip={playShotlessClip}
+          onPauseClip={pauseCurrentTrack}
+          onPlayback={syncShotlessPlayback}
+          onLiveChange={setShotlessLive}
         />
       ) : null}
     </main>
