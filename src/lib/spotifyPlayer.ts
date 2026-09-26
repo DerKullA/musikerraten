@@ -1,3 +1,4 @@
+import { AUDIBLE_VOLUME } from './clipWarmup.ts'
 import { getValidAccessToken } from './spotifyAuth.ts'
 import { watchQuizPlayback } from './quizMediaSession.ts'
 
@@ -61,7 +62,7 @@ export function spotifyPlayerOptions(name: string): SpotifyPlayerOptions {
         .then(callback)
         .catch(() => callback(''))
     },
-    volume: 0.8,
+    volume: AUDIBLE_VOLUME,
     enableMediaSession: false,
   }
 }

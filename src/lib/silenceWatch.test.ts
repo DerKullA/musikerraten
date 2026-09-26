@@ -139,6 +139,55 @@ describe('createSilenceWatch', () => {
     await watch.release()
   })
 
+  it('beobachtet die Stille ohne erneuten Pause-Aufruf, wenn schon pausiert ist', async () => {
+    const clock = new ManualClock()
+    const pauses: string[] = []
+    let paused: boolean | null = true
+    const watch = createSilenceWatch(
+      {
+        pause: async () => {
+          pauses.push('pause')
+        },
+        probe: async () => paused,
+      },
+      clock,
+    )
+
+    await watch.arm()
+    expect(pauses).toEqual([])
+    await clock.fire()
+    expect(pauses).toEqual([])
+    paused = false
+    await clock.fire()
+    expect(pauses).toEqual(['pause'])
+    await watch.release()
+  })
+
+  it('stoppt die Kontrolle, ohne eine versiegelte Runde zu öffnen', async () => {
+    const clock = new ManualClock()
+    const pauses: string[] = []
+    const watch = createSilenceWatch(
+      {
+        pause: async () => {
+          pauses.push('pause')
+        },
+        probe: async () => false,
+      },
+      clock,
+    )
+
+    await watch.hold()
+    await watch.seal()
+    await watch.suspend()
+    await watch.hold()
+    await clock.fire()
+    expect(pauses).toEqual(['pause'])
+    await watch.release()
+    await watch.hold()
+    expect(pauses).toEqual(['pause', 'pause'])
+    await watch.release()
+  })
+
   it('ignoriert weitere Pausen, nachdem die Runde beendet wurde', async () => {
     const clock = new ManualClock()
     const pauses: string[] = []

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pauseConnectedPlayback, readSpotifyPaused } from './connectedPlayback.ts'
+import { isConfirmedPaused, pauseConnectedPlayback, readSpotifyPaused } from './connectedPlayback.ts'
 
 describe('pauseConnectedPlayback', () => {
   it('pausiert Web-API und SDK, auch wenn die Web-API scheitert', async () => {
@@ -33,6 +33,14 @@ describe('pauseConnectedPlayback', () => {
       },
     )
     expect(calls).toEqual(['sdk'])
+  })
+})
+
+describe('isConfirmedPaused', () => {
+  it('erkennt nur eine bestätigte Pause', () => {
+    expect(isConfirmedPaused(true)).toBe(true)
+    expect(isConfirmedPaused(false)).toBe(false)
+    expect(isConfirmedPaused(null)).toBe(false)
   })
 })
 

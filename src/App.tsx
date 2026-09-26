@@ -16,7 +16,13 @@ import {
   writeSessionPhaseTimings,
   type PhaseTimings,
 } from './lib/phaseTimings.ts'
-import { pauseConnectedPlayback, readSpotifyPaused } from './lib/connectedPlayback.ts'
+import { isConfirmedPaused, pauseConnectedPlayback, readSpotifyPaused } from './lib/connectedPlayback.ts'
+import {
+  AUDIBLE_VOLUME,
+  createClipWarmup,
+  readWarmPlayback,
+  type ClipWarmup,
+} from './lib/clipWarmup.ts'
 import { createSilenceWatch, type SilenceWatch } from './lib/silenceWatch.ts'
 import {
   fetchTracksForPlaylists,
@@ -83,6 +89,7 @@ export default function App() {
   const roundTimingsRef = useRef(roundTimings)
   const navigationEpochRef = useRef(0)
   const silenceRef = useRef<SilenceWatch | null>(null)
+  const warmupRef = useRef<ClipWarmup | null>(null)
   screenRef.current = screen
 
   useEffect(() => {
@@ -256,6 +263,12 @@ export default function App() {
         return
       }
       setScreen('game')
+      const opening = shuffled[0]
+      if (opening) {
+        void clipWarmup()
+          .prime({ uri: opening.uri, positionMs: 0 })
+          .catch(() => undefined)
+      }
     } catch (cause) {
       if (epoch !== navigationEpochRef.current) {
         return
@@ -287,6 +300,64 @@ export default function App() {
     return silenceRef.current
   }
 
+  function clipWarmup(): ClipWarmup {
+    warmupRef.current ??= createClipWarmup({
+      getState: async () => {
+        const player = playerRef.current
+        if (!player) {
+          return null
+        }
+        try {
+          return readWarmPlayback(await player.getCurrentState())
+        } catch {
+          return null
+        }
+      },
+      getVolume: async () => {
+        const player = playerRef.current
+        if (!player) {
+          return null
+        }
+        try {
+          return await player.getVolume()
+        } catch {
+          return null
+        }
+      },
+      setVolume: async (volume) => {
+        await playerRef.current?.setVolume(volume)
+      },
+      seek: async (positionMs) => {
+        const player = playerRef.current
+        if (!player) {
+          throw new Error('Spotify-Player nicht bereit.')
+        }
+        await player.seek(positionMs)
+      },
+      resume: async () => {
+        const player = playerRef.current
+        if (!player) {
+          throw new Error('Spotify-Player nicht bereit.')
+        }
+        await player.resume()
+      },
+      pause: () => pauseConnectedPlayback(deviceIdRef.current, playerRef.current, pausePlayback),
+      load: async (next) => {
+        const deviceId = deviceIdRef.current
+        if (!deviceId) {
+          throw new Error('Spotify-Player nicht bereit.')
+        }
+        await startPlayback(deviceId, next.uri, next.positionMs)
+      },
+      activate: async () => {
+        await playerRef.current?.activateElement()
+      },
+      suspendSilence: () => silence().suspend(),
+      restoreSilence: () => silence().arm(),
+    })
+    return warmupRef.current
+  }
+
   async function openAudiblePlayback(start: () => Promise<void>): Promise<void> {
     await silence().release()
     holdQuizMediaSession()
@@ -299,7 +370,7 @@ export default function App() {
     if (!track || !deviceId) {
       return
     }
-    await openAudiblePlayback(() => startPlayback(deviceId, track.uri))
+    await openAudiblePlayback(() => clipWarmup().play({ uri: track.uri, positionMs: 0 }))
     if (pausedRef.current) {
       await pauseCurrentTrack()
     }
@@ -310,6 +381,11 @@ export default function App() {
       return
     }
     holdQuizMediaSession()
+    const paused = await readSpotifyPaused(playerRef.current)
+    if (isConfirmedPaused(paused)) {
+      await silence().arm()
+      return
+    }
     await silence().hold()
   }
 
@@ -319,11 +395,21 @@ export default function App() {
       return
     }
     await openAudiblePlayback(async () => {
-      try {
-        await resumePlayback(deviceId)
-      } catch {
-        await playerRef.current?.resume()
+      if (await clipWarmup().resumeDisplaced()) {
+        return
       }
+      const player = playerRef.current
+      if (player) {
+        void player.activateElement().catch(() => undefined)
+        try {
+          await player.setVolume(AUDIBLE_VOLUME)
+          await player.resume()
+          return
+        } catch {
+          // Web-API, wenn das SDK die Fortsetzung ablehnt.
+        }
+      }
+      await resumePlayback(deviceId)
     })
   }
 
@@ -436,7 +522,6 @@ export default function App() {
     setPhase('playing')
     engageQuizMedia('playing')
     try {
-      await playerRef.current?.activateElement()
       await playCurrentTrack()
     } catch (cause) {
       setError(formatSpotifyUserError(cause))
@@ -460,7 +545,6 @@ export default function App() {
     setPhase('playing')
     engageQuizMedia('playing')
     try {
-      await playerRef.current?.activateElement()
       await playCurrentTrack()
     } catch (cause) {
       setError(formatSpotifyUserError(cause))
@@ -502,9 +586,11 @@ export default function App() {
 
   async function endQuizPlayback(): Promise<void> {
     const token = quizMediaToken()
+    warmupRef.current?.invalidate()
     try {
       await silence().seal()
       await pauseConnectedPlayback(deviceIdRef.current, playerRef.current, pausePlayback)
+      await playerRef.current?.setVolume(AUDIBLE_VOLUME)?.catch(() => undefined)
     } finally {
       stopQuizMediaSessionIfCurrent(token)
     }
@@ -530,16 +616,22 @@ export default function App() {
     syncQuizMediaPlayback(nextPlayback)
   }
 
+  function primeShotlessClip(uri: string, positionMs: number): Promise<void> {
+    if (!deviceIdRef.current || !playerRef.current) {
+      return Promise.resolve()
+    }
+    return clipWarmup()
+      .prime({ uri, positionMs })
+      .catch(() => undefined)
+  }
+
   async function playShotlessClip(uri: string, positionMs: number): Promise<void> {
     try {
       const deviceId = deviceIdRef.current
       if (!deviceId) {
         throw new Error('Spotify-Player nicht bereit.')
       }
-      await openAudiblePlayback(async () => {
-        await playerRef.current?.activateElement()
-        await startPlayback(deviceId, uri, positionMs)
-      })
+      await openAudiblePlayback(() => clipWarmup().play({ uri, positionMs }))
     } catch (cause) {
       throw new Error(formatSpotifyUserError(cause))
     }
@@ -685,6 +777,7 @@ export default function App() {
           onPlayClip={playShotlessClip}
           onResumeClip={resumeCurrentTrack}
           onPauseClip={pauseCurrentTrack}
+          onPrimeClip={primeShotlessClip}
           onPlayback={syncShotlessPlayback}
           onLiveChange={setShotlessLive}
         />

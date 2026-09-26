@@ -15,6 +15,16 @@ interface SpotifyPlayerOptions {
   enableMediaSession?: boolean
 }
 
+interface SpotifyPlaybackState {
+  paused: boolean
+  position?: number
+  track_window?: {
+    current_track?: {
+      uri?: string
+    } | null
+  } | null
+}
+
 interface SpotifyPlayer {
   connect: () => Promise<boolean>
   disconnect: () => void
@@ -23,7 +33,10 @@ interface SpotifyPlayer {
   activateElement: () => Promise<void>
   pause: () => Promise<void>
   resume: () => Promise<void>
-  getCurrentState: () => Promise<{ paused: boolean } | null>
+  seek: (positionMs: number) => Promise<void>
+  setVolume: (volume: number) => Promise<void>
+  getVolume: () => Promise<number>
+  getCurrentState: () => Promise<SpotifyPlaybackState | null>
 }
 
 interface SpotifyPlayerEvent {
