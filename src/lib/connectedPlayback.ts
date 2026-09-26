@@ -16,6 +16,10 @@ export async function pauseConnectedPlayback(
   await Promise.all([web, sdk])
 }
 
+export function isConfirmedPaused(paused: boolean | null): boolean {
+  return paused === true
+}
+
 export async function readSpotifyPaused(player: PlaybackStateProbe | null): Promise<boolean | null> {
   if (!player?.getCurrentState) {
     return null

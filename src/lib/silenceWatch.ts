@@ -16,6 +16,8 @@ export interface SilenceWatchDeps {
 
 export interface SilenceWatch {
   hold: () => Promise<void>
+  arm: () => Promise<void>
+  suspend: () => Promise<void>
   release: () => Promise<void>
   seal: () => Promise<void>
 }
@@ -137,6 +139,18 @@ export function createSilenceWatch(
         })
         .catch(() => undefined)
       return first
+    },
+    arm() {
+      if (sealed) {
+        return tail
+      }
+      const token = advance()
+      void audit(token).catch(() => undefined)
+      return tail
+    },
+    suspend() {
+      advance()
+      return tail
     },
     release() {
       sealed = false

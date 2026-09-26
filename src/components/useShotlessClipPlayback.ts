@@ -1,10 +1,12 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
+import { shouldPrimeParkedClip } from '../lib/clipWarmup.ts'
 import { createCancellableDelay, holdPlaybackThen, runBoundedClip } from '../lib/clipPlayback.ts'
 
 interface ClipHandlers {
   onPlayClip: (uri: string, positionMs: number) => Promise<void>
   onResumeClip: () => Promise<void>
   onPauseClip: () => Promise<void>
+  onPrimeClip?: (uri: string, positionMs: number) => Promise<void>
   onPlayback: (state: 'playing' | 'paused') => void
   onError: (message: string) => void
   onComplete: () => void
@@ -55,7 +57,13 @@ export function useShotlessClipPlayback(input: ShotlessClipInput): void {
         playback === 'continue'
           ? handlersRef.current.onResumeClip()
           : handlersRef.current.onPlayClip(uri, positionMs),
-      pause: () => handlersRef.current.onPauseClip(),
+      pause: async () => {
+        await handlersRef.current.onPauseClip()
+        if (!shouldPrimeParkedClip(playback, token, tokenRef.current)) {
+          return
+        }
+        void handlersRef.current.onPrimeClip?.(uri, positionMs)
+      },
       isCancelled: () => tokenRef.current !== token,
       onPlayback: (state: 'playing' | 'paused') => {
         handlersRef.current.onPlayback(state)

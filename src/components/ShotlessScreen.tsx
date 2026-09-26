@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { POST_REVEAL_PLAY_MS } from '../lib/phaseTimings.ts'
 import { startSpeakerKeepAlive } from '../lib/speakerKeepAlive.ts'
 import {
@@ -42,6 +42,7 @@ interface ShotlessScreenProps {
   onPlayClip: (uri: string, positionMs: number) => Promise<void>
   onResumeClip: () => Promise<void>
   onPauseClip: () => Promise<void>
+  onPrimeClip?: (uri: string, positionMs: number) => Promise<void>
   onPlayback: (state: 'playing' | 'paused') => void
   onLiveChange?: (live: boolean) => void
 }
@@ -54,6 +55,7 @@ export function ShotlessScreen({
   onPlayClip,
   onResumeClip,
   onPauseClip,
+  onPrimeClip,
   onPlayback,
   onLiveChange,
 }: ShotlessScreenProps) {
@@ -64,6 +66,11 @@ export function ShotlessScreen({
   const [nameDraft, setNameDraft] = useState('')
   const [nameError, setNameError] = useState<string | null>(null)
   const [started, setStarted] = useState(false)
+  const [openingOrigin] = useState(() => pickClipOrigin())
+  const onPrimeClipRef = useRef(onPrimeClip)
+  useLayoutEffect(() => {
+    onPrimeClipRef.current = onPrimeClip
+  })
   const [round, setRound] = useState<ShotlessRound>(() => createShotlessRound())
   const [query, setQuery] = useState('')
   const [artistQuery, setArtistQuery] = useState('')
@@ -101,6 +108,7 @@ export function ShotlessScreen({
       onPlayClip,
       onResumeClip,
       onPauseClip,
+      onPrimeClip,
       onPlayback,
       onError: setPlaybackError,
       onComplete: advanceAfterReveal,
@@ -145,6 +153,17 @@ export function ShotlessScreen({
     rememberSession(mode, next, guessTarget)
   }
 
+  useEffect(() => {
+    if (started) {
+      return
+    }
+    const opening = tracks[0]
+    if (!opening) {
+      return
+    }
+    void onPrimeClipRef.current?.(opening.uri, clipStartMs(opening.durationMs, openingOrigin))
+  }, [started, tracks, openingOrigin])
+
   function startRound(): void {
     if (!canStartShotless(mode, players) || !mode) {
       return
@@ -153,7 +172,7 @@ export function ShotlessScreen({
     setPlaybackError(null)
     setQuery('')
     setArtistQuery('')
-    setRound(createShotlessRound(pickClipOrigin()))
+    setRound(createShotlessRound(openingOrigin))
     rememberSession(mode, players, guessTarget)
     setStarted(true)
     onLiveChange?.(true)
