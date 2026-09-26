@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import type { PhaseTimings } from '../lib/phaseTimings.ts'
 import { startSpeakerKeepAlive } from '../lib/speakerKeepAlive.ts'
 import {
   addShotlessPlayer,
@@ -36,8 +35,6 @@ import { useShotlessClipPlayback } from './useShotlessClipPlayback.ts'
 interface ShotlessScreenProps {
   tracks: Track[]
   error: string | null
-  savedTimings: PhaseTimings
-  onSaveTimings: (timings: PhaseTimings) => void
   onLogout: () => void
   onLeave: () => void
   onPlayClip: (uri: string, positionMs: number) => Promise<void>
@@ -49,8 +46,6 @@ interface ShotlessScreenProps {
 export function ShotlessScreen({
   tracks,
   error,
-  savedTimings,
-  onSaveTimings,
   onLogout,
   onLeave,
   onPlayClip,
@@ -177,8 +172,6 @@ export function ShotlessScreen({
         nameDraft={nameDraft}
         nameError={nameError}
         error={error}
-        savedTimings={savedTimings}
-        onSaveTimings={onSaveTimings}
         onLogout={onLogout}
         onLeave={onLeave}
         guessTarget={guessTarget}
@@ -210,8 +203,6 @@ export function ShotlessScreen({
       suggestions={suggestions}
       artistSuggestions={artistSuggestions}
       error={playbackError ?? error}
-      savedTimings={savedTimings}
-      onSaveTimings={onSaveTimings}
       onLogout={onLogout}
       onLeave={onLeave}
       onQuery={setQuery}
@@ -267,8 +258,6 @@ interface ShotlessSetupProps {
   nameDraft: string
   nameError: string | null
   error: string | null
-  savedTimings: PhaseTimings
-  onSaveTimings: (timings: PhaseTimings) => void
   onLogout: () => void
   onLeave: () => void
   onSelectMode: (mode: ShotlessMode) => void
@@ -286,8 +275,6 @@ function ShotlessSetup({
   nameDraft,
   nameError,
   error,
-  savedTimings,
-  onSaveTimings,
   onLogout,
   onLeave,
   onSelectMode,
@@ -307,12 +294,7 @@ function ShotlessSetup({
           <h1>Shotless</h1>
         </div>
         <div className="panel-head-meta">
-          <AppMenu
-            timings={savedTimings}
-            onSaveTimings={onSaveTimings}
-            onLogout={onLogout}
-            onLeaveRound={onLeave}
-          />
+          <AppMenu onLogout={onLogout} onLeaveRound={onLeave} />
         </div>
       </header>
       <p className="lede">
@@ -444,8 +426,6 @@ interface ShotlessRoundViewProps {
   suggestions: readonly GuessSuggestion[]
   artistSuggestions: readonly GuessSuggestion[]
   error: string | null
-  savedTimings: PhaseTimings
-  onSaveTimings: (timings: PhaseTimings) => void
   onLogout: () => void
   onLeave: () => void
   onQuery: (value: string) => void
@@ -472,8 +452,6 @@ export function ShotlessRoundView({
   suggestions,
   artistSuggestions,
   error,
-  savedTimings,
-  onSaveTimings,
   onLogout,
   onLeave,
   onQuery,
@@ -499,12 +477,7 @@ export function ShotlessRoundView({
           <h1>{mode === 'party' ? 'Party' : 'Tippen'}</h1>
         </div>
         <div className="panel-head-meta">
-          <AppMenu
-            timings={savedTimings}
-            onSaveTimings={onSaveTimings}
-            onLogout={onLogout}
-            onLeaveRound={onLeave}
-          />
+          <AppMenu onLogout={onLogout} onLeaveRound={onLeave} />
           <p className="counter">
             {tracks.length === 0 ? '0 / 0' : `${round.trackIndex + 1} / ${tracks.length}`}
           </p>

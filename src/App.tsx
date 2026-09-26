@@ -626,8 +626,6 @@ export default function App() {
         <ShotlessScreen
           tracks={tracks}
           error={error}
-          savedTimings={savedTimings}
-          onSaveTimings={handleSaveTimings}
           onLogout={handleLogout}
           onLeave={handleLeaveShotless}
           onPlayClip={playShotlessClip}
