@@ -40,14 +40,19 @@ function guessingAt(stageIndex: number, extras: Partial<ShotlessRound> = {}): Sh
 describe('Shotless-Stufen', () => {
   it('ordnet Clip-Längen den Trinkstrafen zu', () => {
     expect(SHOTLESS_STAGES.map((stage) => [stage.durationMs, stage.penalty])).toEqual([
-      [500, 'Shot'],
-      [1_000, '5 Schlücke'],
-      [3_000, '3 Schlücke'],
+      [1_000, 'Shot'],
+      [2_000, '5 Schlücke'],
+      [4_000, '3 Schlücke'],
       [8_000, '1 Schluck'],
     ])
     expect(SHOTLESS_STAGES.map((stage) => stage.penalty).join(' ')).not.toMatch(/wasser|saft|limo|softdrink/i)
-    expect(stageStatusLabel(stageByIndex(0))).toBe('Stufe 1 von 4 · 0,5 s')
-    expect(formatClipLength(500)).toBe('0,5 s')
+    expect(stageStatusLabel(stageByIndex(0))).toBe('Stufe 1 von 4 · 1 s')
+    expect(stageStatusLabel(stageByIndex(1))).toBe('Stufe 2 von 4 · 2 s')
+    expect(stageStatusLabel(stageByIndex(2))).toBe('Stufe 3 von 4 · 4 s')
+    expect(stageStatusLabel(stageByIndex(3))).toBe('Stufe 4 von 4 · 8 s')
+    expect(formatClipLength(1_000)).toBe('1 s')
+    expect(formatClipLength(2_000)).toBe('2 s')
+    expect(formatClipLength(4_000)).toBe('4 s')
     expect(formatClipLength(8_000)).toBe('8 s')
     expect(penaltyPrompt('Shot')).toBe('Wenn jetzt erraten wird: Shot')
     expect(skipControlLabel(0)).toBe('Länger hören')

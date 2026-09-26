@@ -1,9 +1,9 @@
 import type { Track } from '../types.ts'
 
 export const SHOTLESS_STAGES = [
-  { index: 0, durationMs: 500, penalty: 'Shot' },
-  { index: 1, durationMs: 1_000, penalty: '5 Schlücke' },
-  { index: 2, durationMs: 3_000, penalty: '3 Schlücke' },
+  { index: 0, durationMs: 1_000, penalty: 'Shot' },
+  { index: 1, durationMs: 2_000, penalty: '5 Schlücke' },
+  { index: 2, durationMs: 4_000, penalty: '3 Schlücke' },
   { index: 3, durationMs: 8_000, penalty: '1 Schluck' },
 ] as const
 

@@ -84,9 +84,9 @@ describe('ShotlessRoundView', () => {
   it('zeigt die Shot-Strafe der ersten Stufe und verbirgt den Titel', () => {
     const markup = roundView(createShotlessRound())
 
-    expect(markup).toContain('Stufe 1 von 4 · 0,5 s')
+    expect(markup).toContain('Stufe 1 von 4 · 1 s')
     expect(markup).toContain('class="meter"')
-    expect(markup).toContain('animation-duration:500ms')
+    expect(markup).toContain('animation-duration:1000ms')
     expect(markup).toContain('Wenn jetzt erraten wird: Shot')
     expect(markup).toContain('class="shotless-penalty is-shot"')
     expect(markup).toContain('>Shot<')
@@ -123,11 +123,11 @@ describe('ShotlessRoundView', () => {
     expect(markup).not.toContain('Länger hören')
   })
 
-  it('füllt den Zeitbalken über die drei Sekunden der dritten Stufe', () => {
+  it('füllt den Zeitbalken über die vier Sekunden der dritten Stufe', () => {
     const markup = roundView({ ...createShotlessRound(), stageIndex: 2 })
 
     expect(markup).toContain('class="meter"')
-    expect(markup).toContain('animation-duration:3000ms')
+    expect(markup).toContain('animation-duration:4000ms')
   })
 
   it('zeigt einen Fehlschuss ohne Auflösung', () => {
@@ -138,7 +138,7 @@ describe('ShotlessRoundView', () => {
     })
 
     expect(markup).toContain('Falsch — du trinkst: 5 Schlücke')
-    expect(markup).toContain('animation-duration:1000ms')
+    expect(markup).toContain('animation-duration:2000ms')
     expect(markup).toContain('>5 Schlücke<')
     expect(markup).not.toContain('Geheimer Hit')
   })
