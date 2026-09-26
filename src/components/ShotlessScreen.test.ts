@@ -1,7 +1,6 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_PHASE_TIMINGS } from '../lib/phaseTimings.ts'
 import { createShotlessRound } from '../lib/shotlessRules.ts'
 import type { Track } from '../types.ts'
 import { ShotlessRoundView, ShotlessScreen } from './ShotlessScreen.tsx'
@@ -12,8 +11,6 @@ const secret: Track = {
   artist: 'Geheimkünstler',
   durationMs: 180_000,
 }
-
-const timings = DEFAULT_PHASE_TIMINGS
 
 function roundView(
   round: ReturnType<typeof createShotlessRound>,
@@ -33,8 +30,6 @@ function roundView(
       suggestions: [],
       artistSuggestions: [],
       error: null,
-      savedTimings: timings,
-      onSaveTimings: () => undefined,
       onLogout: () => undefined,
       onLeave: () => undefined,
       onQuery: () => undefined,
@@ -57,8 +52,6 @@ describe('ShotlessScreen', () => {
       createElement(ShotlessScreen, {
         tracks: [secret],
         error: null,
-        savedTimings: timings,
-        onSaveTimings: () => undefined,
         onLogout: () => undefined,
         onLeave: () => undefined,
         onPlayClip: () => Promise.resolve(),
@@ -75,6 +68,11 @@ describe('ShotlessScreen', () => {
     expect(markup).toContain('Titel oder Interpret')
     expect(markup).toContain('Titel und Interpret')
     expect(markup).toContain('Runde starten')
+    expect(markup).toContain('Menü öffnen')
+    expect(markup).toContain('Abmelden')
+    expect(markup).toContain('Zurück zum Hauptmenü')
+    expect(markup).not.toContain('Einstellungen')
+    expect(markup).not.toContain('Vorspiel')
     expect(markup).not.toMatch(/wasser|saft|limo/i)
     expect(markup).not.toContain('Geheimer Hit')
     expect(markup).not.toContain('Geheimkünstler')
@@ -92,6 +90,10 @@ describe('ShotlessRoundView', () => {
     expect(markup).toContain('Länger hören')
     expect(markup).toContain('Niemand oder Aufgeben: alle trinken einen Shot.')
     expect(markup).toContain('Tipp abgeben')
+    expect(markup).toContain('Abmelden')
+    expect(markup).toContain('Zurück zum Hauptmenü')
+    expect(markup).not.toContain('Einstellungen')
+    expect(markup).not.toContain('Vorspiel')
     expect(markup).not.toContain('Geheimer Hit')
     expect(markup).not.toContain('Geheimkünstler')
   })

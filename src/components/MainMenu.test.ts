@@ -22,6 +22,7 @@ describe('MainMenu', () => {
     expect(markup).toContain('data-game="guess-song"')
     expect(markup).toContain('data-game="shotless"')
     expect(markup).toContain('Menü öffnen')
+    expect(markup).toContain('Einstellungen')
     expect(markup).toContain('Abmelden')
     expect(markup.match(/Bald verfügbar/g)).toHaveLength(1)
     expect(markup.match(/class="game-entry"/g)).toHaveLength(1)

@@ -18,13 +18,20 @@ import {
 } from '../lib/phaseTimings.ts'
 
 interface AppMenuProps {
-  timings: PhaseTimings
-  onSaveTimings: (timings: PhaseTimings) => void
+  timings?: PhaseTimings
+  onSaveTimings?: (timings: PhaseTimings) => void
   onLogout: () => void
   onLeaveRound?: () => void
+  leaveLabel?: string
 }
 
-export function AppMenu({ timings, onSaveTimings, onLogout, onLeaveRound }: AppMenuProps) {
+export function AppMenu({
+  timings,
+  onSaveTimings,
+  onLogout,
+  onLeaveRound,
+  leaveLabel = 'Zurück',
+}: AppMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -72,6 +79,9 @@ export function AppMenu({ timings, onSaveTimings, onLogout, onLeaveRound }: AppM
   }
 
   function openSettings(): void {
+    if (!timings || !onSaveTimings) {
+      return
+    }
     setMenuOpen(false)
     setSettingsOpen(true)
   }
@@ -85,6 +95,8 @@ export function AppMenu({ timings, onSaveTimings, onLogout, onLeaveRound }: AppM
     setMenuOpen(false)
     onLeaveRound?.()
   }
+
+  const showPhaseSettings = timings !== undefined && onSaveTimings !== undefined
 
   return (
     <div className="app-menu" ref={menuRef}>
@@ -112,25 +124,39 @@ export function AppMenu({ timings, onSaveTimings, onLogout, onLeaveRound }: AppM
         inert={!menuOpen}
         onKeyDown={moveMenuFocus}
       >
-        <button
-          ref={firstItemRef}
-          type="button"
-          role="menuitem"
-          className="menu-item"
-          onClick={openSettings}
-        >
-          Einstellungen
-        </button>
-        {onLeaveRound ? (
-          <button type="button" role="menuitem" className="menu-item menu-item-leave" onClick={leaveRound}>
-            Zurück
+        {showPhaseSettings ? (
+          <button
+            ref={firstItemRef}
+            type="button"
+            role="menuitem"
+            className="menu-item"
+            onClick={openSettings}
+          >
+            Einstellungen
           </button>
         ) : null}
-        <button type="button" role="menuitem" className="menu-item menu-item-danger" onClick={logout}>
+        {onLeaveRound ? (
+          <button
+            ref={showPhaseSettings ? undefined : firstItemRef}
+            type="button"
+            role="menuitem"
+            className="menu-item menu-item-leave"
+            onClick={leaveRound}
+          >
+            {leaveLabel}
+          </button>
+        ) : null}
+        <button
+          ref={showPhaseSettings || onLeaveRound ? undefined : firstItemRef}
+          type="button"
+          role="menuitem"
+          className="menu-item menu-item-danger"
+          onClick={logout}
+        >
           Abmelden
         </button>
       </div>
-      {settingsOpen ? (
+      {settingsOpen && timings && onSaveTimings ? (
         <SettingsDialog timings={timings} onSave={onSaveTimings} onClose={closeSettings} />
       ) : null}
     </div>

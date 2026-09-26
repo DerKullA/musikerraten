@@ -16,6 +16,8 @@ import {
   writeSessionPhaseTimings,
   type PhaseTimings,
 } from './lib/phaseTimings.ts'
+import { pauseConnectedPlayback, readSpotifyPaused } from './lib/connectedPlayback.ts'
+import { createSilenceWatch, type SilenceWatch } from './lib/silenceWatch.ts'
 import {
   fetchTracksForPlaylists,
   fetchUserPlaylists,
@@ -80,6 +82,7 @@ export default function App() {
   const savedTimingsRef = useRef(savedTimings)
   const roundTimingsRef = useRef(roundTimings)
   const navigationEpochRef = useRef(0)
+  const silenceRef = useRef<SilenceWatch | null>(null)
   screenRef.current = screen
 
   useEffect(() => {
@@ -92,6 +95,7 @@ export default function App() {
     return () => {
       clearGameTimer()
       stopQuizMediaSession()
+      void silenceRef.current?.release()
       playerRef.current?.disconnect()
       unbindKeepAlive()
       stopSpeakerKeepAlive()
@@ -275,30 +279,38 @@ export default function App() {
     await player.activateElement()
   }
 
+  function silence(): SilenceWatch {
+    silenceRef.current ??= createSilenceWatch({
+      pause: () => pauseConnectedPlayback(deviceIdRef.current, playerRef.current, pausePlayback),
+      probe: () => readSpotifyPaused(playerRef.current),
+    })
+    return silenceRef.current
+  }
+
+  async function openAudiblePlayback(start: () => Promise<void>): Promise<void> {
+    await silence().release()
+    holdQuizMediaSession()
+    await start()
+  }
+
   async function playCurrentTrack(): Promise<void> {
     const track = tracksRef.current[indexRef.current]
     const deviceId = deviceIdRef.current
     if (!track || !deviceId) {
       return
     }
-    holdQuizMediaSession()
-    await startPlayback(deviceId, track.uri)
+    await openAudiblePlayback(() => startPlayback(deviceId, track.uri))
     if (pausedRef.current) {
       await pauseCurrentTrack()
     }
   }
 
   async function pauseCurrentTrack(): Promise<void> {
-    const deviceId = deviceIdRef.current
-    if (!deviceId) {
+    if (!deviceIdRef.current && !playerRef.current) {
       return
     }
     holdQuizMediaSession()
-    try {
-      await pausePlayback(deviceId)
-    } catch {
-      await playerRef.current?.pause()
-    }
+    await silence().hold()
   }
 
   async function resumeCurrentTrack(): Promise<void> {
@@ -306,12 +318,13 @@ export default function App() {
     if (!deviceId) {
       return
     }
-    holdQuizMediaSession()
-    try {
-      await resumePlayback(deviceId)
-    } catch {
-      await playerRef.current?.resume()
-    }
+    await openAudiblePlayback(async () => {
+      try {
+        await resumePlayback(deviceId)
+      } catch {
+        await playerRef.current?.resume()
+      }
+    })
   }
 
   function clearGameTimer(): void {
@@ -444,7 +457,8 @@ export default function App() {
   async function endQuizPlayback(): Promise<void> {
     const token = quizMediaToken()
     try {
-      await pauseCurrentTrack()
+      await silence().seal()
+      await pauseConnectedPlayback(deviceIdRef.current, playerRef.current, pausePlayback)
     } finally {
       stopQuizMediaSessionIfCurrent(token)
     }
@@ -476,9 +490,10 @@ export default function App() {
       if (!deviceId) {
         throw new Error('Spotify-Player nicht bereit.')
       }
-      holdQuizMediaSession()
-      await playerRef.current?.activateElement()
-      await startPlayback(deviceId, uri, positionMs)
+      await openAudiblePlayback(async () => {
+        await playerRef.current?.activateElement()
+        await startPlayback(deviceId, uri, positionMs)
+      })
     } catch (cause) {
       throw new Error(formatSpotifyUserError(cause))
     }
@@ -496,9 +511,8 @@ export default function App() {
   }
 
   function handleLeaveShotless(): void {
-    setShotlessLive(false)
     void endQuizPlayback()
-    setScreen('playlists')
+    handleBackToMenu()
   }
 
   function handleAbort(): void {
@@ -611,8 +625,6 @@ export default function App() {
         <ShotlessScreen
           tracks={tracks}
           error={error}
-          savedTimings={savedTimings}
-          onSaveTimings={handleSaveTimings}
           onLogout={handleLogout}
           onLeave={handleLeaveShotless}
           onPlayClip={playShotlessClip}

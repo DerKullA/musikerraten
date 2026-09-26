@@ -955,6 +955,7 @@ code {
   top: calc(100% + 8px);
   right: 0;
   z-index: 6;
+  width: max-content;
   min-width: 220px;
   padding: 6px;
   border: 1px solid var(--line);
