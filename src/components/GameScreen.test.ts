@@ -30,6 +30,7 @@ function screen(phase: GamePhase, running: boolean, timings: PhaseTimings = DEFA
       onResume: () => undefined,
       onReplay: () => undefined,
       onReveal: () => undefined,
+      onSkipNext: () => undefined,
       onAbort: () => undefined,
       onLogout: () => undefined,
     }),
@@ -52,6 +53,7 @@ describe('GameScreen', () => {
 
     expect(markup).not.toContain('Nochmal anhören')
     expect(markup).not.toContain('>Erraten<')
+    expect(markup).not.toContain('Nächster Song')
   })
 
   it('zeigt in der Auflösung den Zeitbalken der Auflösungsdauer und keine Rate-Knöpfe', () => {
@@ -60,6 +62,11 @@ describe('GameScreen', () => {
 
     expect(markup).toContain('class="meter ')
     expect(markup).toContain(`animation-duration:${POST_REVEAL_PLAY_MS}ms`)
+    expect(markup).toContain('class="btn skip-next"')
+    expect(markup).toContain('class="skip-icon"')
+    expect(markup).toContain('Nächster Song')
+    expect(markup).not.toContain('btn erraten')
+    expect(markup).not.toContain('btn aufgeben')
     expect(markup).toContain('Geheimer Hit')
     expect(markup).not.toContain('Nochmal anhören')
     expect(markup).not.toContain('>Erraten<')

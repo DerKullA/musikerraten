@@ -31,6 +31,7 @@ import {
 } from '../lib/shotlessRules.ts'
 import type { Track } from '../types.ts'
 import { AppMenu } from './AppMenu.tsx'
+import { SkipTrackButton } from './SkipTrackButton.tsx'
 import { useShotlessClipPlayback } from './useShotlessClipPlayback.ts'
 
 interface ShotlessScreenProps {
@@ -595,9 +596,7 @@ export function ShotlessRoundView({
             <div className="meter" key={`${round.trackIndex}-${round.replayNonce}`}>
               <span style={{ animationDuration: `${POST_REVEAL_PLAY_MS}ms` }} />
             </div>
-            <button type="button" className="btn primary cta" onClick={onNext}>
-              Nächster Song
-            </button>
+            <SkipTrackButton onSkip={onNext} />
           </div>
         ) : null}
       </div>

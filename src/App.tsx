@@ -468,6 +468,15 @@ export default function App() {
     scheduleFollowingPhase('playing', timings)
   }
 
+  async function skipToNextTrack(): Promise<void> {
+    if (!runningRef.current || phaseRef.current !== 'reveal') {
+      return
+    }
+    pausedRef.current = false
+    setPaused(false)
+    await enterPhase('playing')
+  }
+
   async function revealCurrentTrack(): Promise<void> {
     if (!runningRef.current) {
       return
@@ -659,6 +668,9 @@ export default function App() {
           }}
           onReveal={() => {
             void revealCurrentTrack()
+          }}
+          onSkipNext={() => {
+            void skipToNextTrack()
           }}
           onAbort={handleAbort}
           onLogout={handleLogout}

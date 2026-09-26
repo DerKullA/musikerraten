@@ -233,6 +233,29 @@ h1 {
   outline-offset: 3px;
 }
 
+.btn.skip-next {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  background: color-mix(in srgb, var(--amber) 18%, transparent);
+  color: var(--amber);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 2px var(--amber);
+}
+
+.btn.skip-next:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 3px;
+}
+
+.skip-icon {
+  width: 1.25em;
+  height: 1.25em;
+  flex: none;
+}
+
 .round-actions,
 .game-lower {
   display: grid;

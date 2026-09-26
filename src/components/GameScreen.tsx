@@ -5,6 +5,7 @@ import { formatTrackDuration, isTitleHidden, phaseDuration, phaseLabel } from '.
 import type { PhaseTimings } from '../lib/phaseTimings.ts'
 import type { GamePhase, Track } from '../types.ts'
 import { AppMenu } from './AppMenu.tsx'
+import { SkipTrackButton } from './SkipTrackButton.tsx'
 
 interface GameScreenProps {
   track: Track | null
@@ -22,6 +23,7 @@ interface GameScreenProps {
   onResume: () => void
   onReplay: () => void
   onReveal: () => void
+  onSkipNext: () => void
   onAbort: () => void
   onLogout: () => void
 }
@@ -42,6 +44,7 @@ export function GameScreen({
   onResume,
   onReplay,
   onReveal,
+  onSkipNext,
   onAbort,
   onLogout,
 }: GameScreenProps) {
@@ -50,6 +53,7 @@ export function GameScreen({
   const duration = phaseDuration(phase, roundTimings)
   const showLength = phase === 'reveal' && !hidden && track !== null && track.durationMs > 0
   const showGuessControls = running && (phase === 'playing' || phase === 'thinking')
+  const showSkipNext = running && phase === 'reveal'
   const cue = centerTransportCue({ running, paused, phase })
   const coverSrc = useLoadedAlbumCover(revealAlbumArtUrl(phase, track?.albumImageUrl))
 
@@ -144,6 +148,11 @@ export function GameScreen({
           <button type="button" className="btn erraten" onClick={onReveal}>
             Erraten
           </button>
+        </div>
+      ) : null}
+      {showSkipNext ? (
+        <div className="game-lower">
+          <SkipTrackButton onSkip={onSkipNext} />
         </div>
       ) : null}
     </section>
