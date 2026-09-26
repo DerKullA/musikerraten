@@ -10,27 +10,23 @@ describe('centerTransportCue', () => {
     })
   })
 
-  it('uses a pause icon while audio should be playing', () => {
-    expect(centerTransportCue({ running: true, paused: false, phase: 'playing' })).toEqual({
-      icon: 'pause',
-      label: 'Pause',
-      action: 'pause',
-    })
-    expect(centerTransportCue({ running: true, paused: false, phase: 'reveal' })).toEqual({
-      icon: 'pause',
-      label: 'Pause',
-      action: 'pause',
-    })
+  it('uses a pause icon while the phase timer is running', () => {
+    for (const phase of ['playing', 'thinking', 'reveal'] as const) {
+      expect(centerTransportCue({ running: true, paused: false, phase })).toEqual({
+        icon: 'pause',
+        label: 'Pause',
+        action: 'pause',
+      })
+    }
   })
 
-  it('uses a play icon during Denkzeit and does not label it Weiter', () => {
-    const cue = centerTransportCue({ running: true, paused: false, phase: 'thinking' })
-    expect(cue).toEqual({
-      icon: 'play',
-      label: 'Abspielen',
-      action: 'reveal',
-    })
-    expect(cue.label).not.toBe('Weiter')
+  it('pauses and resumes Denkzeit instead of skipping to the reveal', () => {
+    const running = centerTransportCue({ running: true, paused: false, phase: 'thinking' })
+    const paused = centerTransportCue({ running: true, paused: true, phase: 'thinking' })
+    expect(running.action).toBe('pause')
+    expect(paused.action).toBe('resume')
+    expect(running.action).not.toBe('resume')
+    expect([running.action, paused.action]).not.toContain('reveal')
   })
 
   it('uses a play icon labelled Weiter when the round is paused', () => {
