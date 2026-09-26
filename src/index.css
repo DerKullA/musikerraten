@@ -558,7 +558,8 @@ code {
 }
 
 .reveal-card {
-  margin-top: 28px;
+  margin-top: 0;
+  width: min(100%, 36rem);
 }
 
 .artist {

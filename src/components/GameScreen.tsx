@@ -115,13 +115,13 @@ export function GameScreen({
         ) : (
           <div className="meter idle" />
         )}
-      </div>
-      <div className={`reveal-card${phase === 'reveal' && !hidden ? ' is-reveal' : ''}`}>
-        <p className="artist">{hidden || !track ? '???' : track.artist}</p>
-        <h2 className="title">{hidden || !track ? 'Titel verborgen' : track.title}</h2>
-        {showLength && track ? (
-          <p className="track-duration">Gesamtlänge {formatTrackDuration(track.durationMs)}</p>
-        ) : null}
+        <div className={`reveal-card${phase === 'reveal' && !hidden ? ' is-reveal' : ''}`}>
+          <p className="artist">{hidden || !track ? '???' : track.artist}</p>
+          <h2 className="title">{hidden || !track ? 'Titel verborgen' : track.title}</h2>
+          {showLength && track ? (
+            <p className="track-duration">Gesamtlänge {formatTrackDuration(track.durationMs)}</p>
+          ) : null}
+        </div>
       </div>
     </section>
   )
