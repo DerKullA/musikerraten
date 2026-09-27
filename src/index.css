@@ -1196,18 +1196,6 @@ code {
   line-height: 1.05;
 }
 
-.game-dialog-card input {
-  width: 100%;
-  margin-top: 0.9rem;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: rgba(16, 22, 14, 0.45);
-  color: var(--paper);
-  padding: 14px 16px;
-  font-size: 1.05rem;
-  text-align: center;
-}
-
 .loser-bonus-copy,
 .loser-bonus-result,
 .loser-bonus-verdict {
@@ -1220,18 +1208,8 @@ code {
   font-weight: 700;
 }
 
-.loser-bonus-done,
-.winner-actions,
-.winner-chips {
+.loser-bonus-done {
   margin-top: 0.9rem;
-}
-
-.winner-actions,
-.winner-chips {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.55rem;
 }
 
 .fortune-stage {

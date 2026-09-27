@@ -2,13 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { revealAlbumArtUrl } from '../lib/albumArt.ts'
 import { centerTransportCue, type TransportIconName } from '../lib/centerTransport.ts'
 import { formatTrackDuration, isTitleHidden, phaseDuration, phaseLabel } from '../lib/gameLoop.ts'
-import { rememberWinnerName } from '../lib/loserBonus.ts'
 import type { PhaseTimings } from '../lib/phaseTimings.ts'
 import type { GamePhase, Track } from '../types.ts'
 import { AppMenu } from './AppMenu.tsx'
-import { LoserBonusOverlay, RoundWinnerDialog } from './LoserBonusOverlay.tsx'
 import { SkipTrackButton } from './SkipTrackButton.tsx'
-import { useLoserBonus } from './useLoserBonus.ts'
 
 interface GameScreenProps {
   track: Track | null
@@ -30,8 +27,6 @@ interface GameScreenProps {
   onSkipNext: () => void
   onAbort: () => void
   onLogout: () => void
-  onHoldTimer: () => void
-  onReleaseTimer: () => void
 }
 
 export function GameScreen({
@@ -54,27 +49,9 @@ export function GameScreen({
   onSkipNext,
   onAbort,
   onLogout,
-  onHoldTimer,
-  onReleaseTimer,
 }: GameScreenProps) {
   const [listenGeneration, setListenGeneration] = useState(0)
   const [listenLocked, setListenLocked] = useState(phase === 'playing' && !paused)
-  const [askWinner, setAskWinner] = useState(false)
-  const [winnerNames, setWinnerNames] = useState<string[]>([])
-  const { bonusWinner, noteLoserBonusOutcome, dismissLoserBonus } = useLoserBonus()
-  const manualRoundRef = useRef(false)
-  const lossNotedRef = useRef(false)
-  const onHoldTimerRef = useRef(onHoldTimer)
-  const onReleaseTimerRef = useRef(onReleaseTimer)
-  const noteOutcomeRef = useRef(noteLoserBonusOutcome)
-  if (phase !== 'reveal' && askWinner) {
-    setAskWinner(false)
-  }
-  const winnerPromptOpen = askWinner && phase === 'reveal' && bonusWinner === null
-  const timerHeld = winnerPromptOpen || bonusWinner !== null
-  onHoldTimerRef.current = onHoldTimer
-  onReleaseTimerRef.current = onReleaseTimer
-  noteOutcomeRef.current = noteLoserBonusOutcome
   const listenLockedRef = useRef(phase === 'playing' && !paused)
   const hidden = isTitleHidden(phase)
   const duration = phaseDuration(phase, roundTimings)
@@ -88,53 +65,6 @@ export function GameScreen({
   useEffect(() => {
     syncListenLock(snippetPlaying)
   }, [snippetPlaying])
-
-  useEffect(() => {
-    if (phase !== 'reveal') {
-      lossNotedRef.current = false
-      manualRoundRef.current = false
-      return
-    }
-    if (manualRoundRef.current || lossNotedRef.current) {
-      return
-    }
-    lossNotedRef.current = true
-    noteOutcomeRef.current(null)
-  }, [phase])
-
-  useEffect(() => {
-    if (!timerHeld) {
-      return
-    }
-    onHoldTimerRef.current()
-    return () => {
-      onReleaseTimerRef.current()
-    }
-  }, [timerHeld])
-
-  function requestReveal(): void {
-    if (phase !== 'playing' && phase !== 'thinking') {
-      return
-    }
-    manualRoundRef.current = true
-    setAskWinner(true)
-    onReveal()
-  }
-
-  function acceptWinner(name: string): void {
-    setAskWinner(false)
-    setWinnerNames((current) => rememberWinnerName(current, name))
-    noteLoserBonusOutcome(name)
-  }
-
-  function acceptNobody(): void {
-    setAskWinner(false)
-    noteLoserBonusOutcome(null)
-  }
-
-  function dismissBonus(): void {
-    dismissLoserBonus()
-  }
 
   function syncListenLock(locked: boolean): void {
     listenLockedRef.current = locked
@@ -236,7 +166,7 @@ export function GameScreen({
       </div>
       {showGuessControls ? (
         <div className="game-lower">
-          <button type="button" className="btn erraten" onClick={requestReveal}>
+          <button type="button" className="btn erraten" onClick={onReveal}>
             Erraten
           </button>
         </div>
@@ -246,10 +176,6 @@ export function GameScreen({
           <SkipTrackButton onSkip={onSkipNext} />
         </div>
       ) : null}
-      {winnerPromptOpen && !bonusWinner ? (
-        <RoundWinnerDialog names={winnerNames} onConfirm={acceptWinner} onNobody={acceptNobody} />
-      ) : null}
-      {bonusWinner ? <LoserBonusOverlay winner={bonusWinner} onDismiss={dismissBonus} /> : null}
     </section>
   )
 }

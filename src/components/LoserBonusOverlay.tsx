@@ -5,11 +5,9 @@ import {
   loserBonusHeadline,
   loserBonusSubline,
   loserBonusVerdict,
-  normalizeWinnerName,
   pickPunishmentIndex,
   wheelLabelPlacement,
   wheelStopRotation,
-  winnerNameError,
 } from '../lib/loserBonus.ts'
 
 const SEGMENT_COLORS = [
@@ -137,81 +135,6 @@ function WheelSegment({ index, title }: { index: number; title: string }) {
         {title}
       </text>
     </g>
-  )
-}
-
-interface RoundWinnerDialogProps {
-  names: readonly string[]
-  onConfirm: (name: string) => void
-  onNobody: () => void
-}
-
-export function RoundWinnerDialog({ names, onConfirm, onNobody }: RoundWinnerDialogProps) {
-  const [draft, setDraft] = useState('')
-  const [error, setError] = useState<string | null>(null)
-
-  function confirmRoundWinner(raw: string): void {
-    const nameError = winnerNameError(raw)
-    const name = normalizeWinnerName(raw)
-    if (nameError || !name) {
-      setError(nameError ?? 'Name fehlt.')
-      return
-    }
-    setError(null)
-    onConfirm(name)
-  }
-
-  function cancelWinnerPrompt(event: SyntheticEvent<HTMLDialogElement>): void {
-    event.preventDefault()
-    onNobody()
-  }
-
-  return (
-    <GameDialog labelledBy="round-winner-title" onCancel={cancelWinnerPrompt}>
-      <form
-        className="game-dialog-card"
-        onSubmit={(event) => {
-          event.preventDefault()
-          confirmRoundWinner(draft)
-        }}
-      >
-        <p className="eyebrow">Runde gewonnen</p>
-        <h2 id="round-winner-title">Wer hat's erraten?</h2>
-        <p className="loser-bonus-copy">Drei Siege in Folge lösen den Verlierer-Bonus aus.</p>
-        {names.length > 0 ? (
-          <div className="winner-chips">
-            {names.map((name) => (
-              <button key={name} type="button" className="btn outline" onClick={() => onConfirm(name)}>
-                {name}
-              </button>
-            ))}
-          </div>
-        ) : null}
-        <label className="sr-only" htmlFor="round-winner-name">
-          Name der Person
-        </label>
-        <input
-          id="round-winner-name"
-          value={draft}
-          placeholder="Name"
-          autoComplete="off"
-          maxLength={24}
-          onChange={(event) => {
-            setDraft(event.target.value)
-            setError(null)
-          }}
-        />
-        {error ? <p className="banner error">{error}</p> : null}
-        <div className="winner-actions">
-          <button type="submit" className="btn primary">
-            Gewonnen
-          </button>
-          <button type="button" className="btn ghost" onClick={onNobody}>
-            Niemand
-          </button>
-        </div>
-      </form>
-    </GameDialog>
   )
 }
 

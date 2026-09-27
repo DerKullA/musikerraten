@@ -69,27 +69,8 @@ export function normalizeWinnerName(raw: string): string | null {
   return name
 }
 
-export function winnerNameError(raw: string): string | null {
-  const name = raw.trim().replace(/\s+/g, ' ')
-  if (!name) {
-    return 'Name fehlt.'
-  }
-  if (name.length > WINNER_NAME_LIMIT) {
-    return 'Höchstens 24 Zeichen.'
-  }
-  return null
-}
-
 export function sameWinnerName(left: string, right: string): boolean {
   return left.trim().toLocaleLowerCase('de') === right.trim().toLocaleLowerCase('de')
-}
-
-export function rememberWinnerName(names: readonly string[], raw: string): string[] {
-  const name = normalizeWinnerName(raw)
-  if (!name || names.some((entry) => sameWinnerName(entry, name))) {
-    return [...names]
-  }
-  return [...names, name]
 }
 
 export function recordRoundOutcome(streak: WinStreak, rawWinner: string | null): StreakUpdate {

@@ -81,7 +81,6 @@ export default function App() {
   const timerRef = useRef<number | null>(null)
   const runningRef = useRef(false)
   const pausedRef = useRef(false)
-  const heldRef = useRef(false)
   const remainingMsRef = useRef(0)
   const deadlineRef = useRef<number | null>(null)
   const indexRef = useRef(0)
@@ -589,7 +588,6 @@ export default function App() {
   }
 
   function stopRound(): void {
-    heldRef.current = false
     runningRef.current = false
     setRunning(false)
     resetPauseState()
@@ -673,42 +671,13 @@ export default function App() {
     setScreen('playlists')
   }
 
-  function holdPhaseTimer(): void {
-    if (!runningRef.current || pausedRef.current || heldRef.current || phaseRef.current === 'idle') {
-      return
-    }
-    heldRef.current = true
-    remainingMsRef.current = remainingFromDeadline()
-    deadlineRef.current = null
-    clearGameTimer()
-  }
-
-  function releasePhaseTimer(): void {
-    if (!heldRef.current) {
-      return
-    }
-    heldRef.current = false
-    if (!runningRef.current || pausedRef.current || phaseRef.current === 'idle') {
-      return
-    }
-    const remaining = remainingMsRef.current
-    if (remaining <= 0) {
-      void enterPhase(nextPhase(phaseRef.current, roundTimingsRef.current))
-      return
-    }
-    armPhaseTimer(phaseRef.current, remaining, roundTimingsRef.current)
-  }
-
   function handlePause(): void {
     if (!runningRef.current || pausedRef.current || phaseRef.current === 'idle') {
       return
     }
-    if (!heldRef.current) {
-      remainingMsRef.current = remainingFromDeadline()
-      deadlineRef.current = null
-      clearGameTimer()
-    }
-    heldRef.current = false
+    remainingMsRef.current = remainingFromDeadline()
+    deadlineRef.current = null
+    clearGameTimer()
     pausedRef.current = true
     setPaused(true)
     markSnippetReady(false)
@@ -818,8 +787,6 @@ export default function App() {
           }}
           onAbort={handleAbort}
           onLogout={handleLogout}
-          onHoldTimer={holdPhaseTimer}
-          onReleaseTimer={releasePhaseTimer}
         />
       ) : null}
       {screen === 'shotless' ? (
