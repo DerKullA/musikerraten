@@ -133,6 +133,13 @@ export function GameScreen({
             <TransportIcon icon={cue.icon} />
           </button>
         </div>
+        {duration > 0 ? (
+          <div className={`meter ${paused ? 'paused' : ''}`} key={`${phase}-${index}-${listenGeneration}`}>
+            <span style={{ animationDuration: `${duration}ms` }} />
+          </div>
+        ) : (
+          <div className="meter idle" />
+        )}
         {showGuessControls ? (
           <div className="round-actions">
             <button
@@ -146,13 +153,6 @@ export function GameScreen({
           </div>
         ) : null}
         <div className="game-readout">
-          {duration > 0 ? (
-            <div className={`meter ${paused ? 'paused' : ''}`} key={`${phase}-${index}-${listenGeneration}`}>
-              <span style={{ animationDuration: `${duration}ms` }} />
-            </div>
-          ) : (
-            <div className="meter idle" />
-          )}
           <div className={`reveal-card${phase === 'reveal' && !hidden ? ' is-reveal' : ''}`}>
             <p className="artist">{hidden || !track ? '???' : track.artist}</p>
             <h2 className="title">{hidden || !track ? 'Titel verborgen' : track.title}</h2>

@@ -594,15 +594,11 @@ export function ShotlessRoundView({
             </li>
           ))}
         </ol>
-        {round.view === 'guessing' ? (
-          <div className="meter" key={`${round.trackIndex}-${round.stageIndex}-${round.replayNonce}`}>
-            <span style={{ animationDuration: `${stage.durationMs}ms` }} />
-          </div>
-        ) : null}
         {revealed ? (
           <RevealCard track={track} message={round.revealMessage} guessTarget={guessTarget} />
         ) : (
           <div className="shotless-stage">
+            <p className="shotless-prompt">Wer nicht errät, dann:</p>
             <p className={`shotless-penalty is-${penaltyTone(stage.penalty)}`} aria-live="assertive">
               {stage.penalty}
             </p>
@@ -620,6 +616,8 @@ export function ShotlessRoundView({
             artistQuery={artistQuery}
             suggestions={suggestions}
             artistSuggestions={artistSuggestions}
+            meterKey={`${round.trackIndex}-${round.stageIndex}-${round.replayNonce}`}
+            meterDurationMs={stage.durationMs}
             onQuery={onQuery}
             onArtistQuery={onArtistQuery}
             onSubmitGuess={onSubmitGuess}
@@ -628,6 +626,10 @@ export function ShotlessRoundView({
         ) : null}
         {round.view === 'guessing' && mode === 'party' ? (
           <div className="shotless-actions">
+            <ClipMeter
+              key={`${round.trackIndex}-${round.stageIndex}-${round.replayNonce}`}
+              durationMs={stage.durationMs}
+            />
             <ReplayClipButton className="btn primary cta" disabled={clipPlaying} onReplay={onReplay} />
           </div>
         ) : null}
@@ -665,14 +667,20 @@ export function ShotlessRoundView({
         ) : null}
         {revealed ? (
           <div className="shotless-actions">
-            <div className="meter" key={`${round.trackIndex}-${round.replayNonce}`}>
-              <span style={{ animationDuration: `${POST_REVEAL_PLAY_MS}ms` }} />
-            </div>
+            <ClipMeter key={`${round.trackIndex}-${round.replayNonce}`} durationMs={POST_REVEAL_PLAY_MS} />
             <SkipTrackButton onSkip={onNext} />
           </div>
         ) : null}
       </div>
     </section>
+  )
+}
+
+function ClipMeter({ durationMs }: { durationMs: number }) {
+  return (
+    <div className="meter">
+      <span style={{ animationDuration: `${durationMs}ms` }} />
+    </div>
   )
 }
 
@@ -719,6 +727,8 @@ interface GuessComposerProps {
   artistQuery: string
   suggestions: readonly GuessSuggestion[]
   artistSuggestions: readonly GuessSuggestion[]
+  meterKey: string
+  meterDurationMs: number
   onQuery: (value: string) => void
   onArtistQuery: (value: string) => void
   onSubmitGuess: () => void
@@ -731,6 +741,8 @@ function GuessComposer({
   artistQuery,
   suggestions,
   artistSuggestions,
+  meterKey,
+  meterDurationMs,
   onQuery,
   onArtistQuery,
   onSubmitGuess,
@@ -784,6 +796,7 @@ function GuessComposer({
           />
         </>
       ) : null}
+      <ClipMeter key={meterKey} durationMs={meterDurationMs} />
       <button type="submit" className="btn primary" disabled={!ready}>
         Tipp abgeben
       </button>
