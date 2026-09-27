@@ -68,6 +68,7 @@ export default function App() {
   const [phase, setPhase] = useState<GamePhase>('idle')
   const [running, setRunning] = useState(false)
   const [paused, setPaused] = useState(false)
+  const [snippetReady, setSnippetReady] = useState(false)
   const [savedTimings, setSavedTimings] = useState<PhaseTimings>(() => readSessionPhaseTimings())
   const [roundTimings, setRoundTimings] = useState<PhaseTimings>(() => readSessionPhaseTimings())
   const [menuGameId, setMenuGameId] = useState(GUESS_SONG_ID)
@@ -80,6 +81,7 @@ export default function App() {
   const timerRef = useRef<number | null>(null)
   const runningRef = useRef(false)
   const pausedRef = useRef(false)
+  const heldRef = useRef(false)
   const remainingMsRef = useRef(0)
   const deadlineRef = useRef<number | null>(null)
   const indexRef = useRef(0)
@@ -434,6 +436,10 @@ export default function App() {
     setPaused(false)
   }
 
+  function markSnippetReady(ready: boolean): void {
+    setSnippetReady(ready)
+  }
+
   function schedulePhase(next: GamePhase, delay: number): void {
     clearGameTimer()
     timerRef.current = window.setTimeout(() => {
@@ -487,10 +493,16 @@ export default function App() {
     const timings = capturePhaseTimings(next)
     phaseRef.current = next
     setPhase(next)
+    if (next === 'playing' || next === 'thinking') {
+      markSnippetReady(false)
+    }
     try {
       await applyPhaseAudio(next)
     } catch (cause) {
       setError(formatSpotifyUserError(cause))
+    }
+    if (phaseRef.current === next && next === 'thinking') {
+      markSnippetReady(true)
     }
     scheduleFollowingPhase(next, timings)
   }
@@ -520,6 +532,7 @@ export default function App() {
     const timings = capturePhaseTimings('playing')
     phaseRef.current = 'playing'
     setPhase('playing')
+    markSnippetReady(false)
     engageQuizMedia('playing')
     try {
       await playCurrentTrack()
@@ -543,6 +556,7 @@ export default function App() {
     const timings = roundTimingsRef.current
     phaseRef.current = 'playing'
     setPhase('playing')
+    markSnippetReady(false)
     engageQuizMedia('playing')
     try {
       await playCurrentTrack()
@@ -575,6 +589,7 @@ export default function App() {
   }
 
   function stopRound(): void {
+    heldRef.current = false
     runningRef.current = false
     setRunning(false)
     resetPauseState()
@@ -658,17 +673,53 @@ export default function App() {
     setScreen('playlists')
   }
 
+  function holdPhaseTimer(): void {
+    if (!runningRef.current || pausedRef.current || heldRef.current || phaseRef.current === 'idle') {
+      return
+    }
+    heldRef.current = true
+    remainingMsRef.current = remainingFromDeadline()
+    deadlineRef.current = null
+    clearGameTimer()
+  }
+
+  function releasePhaseTimer(): void {
+    if (!heldRef.current) {
+      return
+    }
+    heldRef.current = false
+    if (!runningRef.current || pausedRef.current || phaseRef.current === 'idle') {
+      return
+    }
+    const remaining = remainingMsRef.current
+    if (remaining <= 0) {
+      void enterPhase(nextPhase(phaseRef.current, roundTimingsRef.current))
+      return
+    }
+    armPhaseTimer(phaseRef.current, remaining, roundTimingsRef.current)
+  }
+
   function handlePause(): void {
     if (!runningRef.current || pausedRef.current || phaseRef.current === 'idle') {
       return
     }
-    remainingMsRef.current = remainingFromDeadline()
-    deadlineRef.current = null
-    clearGameTimer()
+    if (!heldRef.current) {
+      remainingMsRef.current = remainingFromDeadline()
+      deadlineRef.current = null
+      clearGameTimer()
+    }
+    heldRef.current = false
     pausedRef.current = true
     setPaused(true)
+    markSnippetReady(false)
     engageQuizMedia(phaseRef.current)
-    void pauseCurrentTrack()
+    void pauseCurrentTrack().finally(enableReplayAfterPause)
+  }
+
+  function enableReplayAfterPause(): void {
+    if (pausedRef.current) {
+      markSnippetReady(true)
+    }
   }
 
   async function handleResume(): Promise<void> {
@@ -744,6 +795,7 @@ export default function App() {
           total={tracks.length}
           running={running}
           paused={paused}
+          snippetReady={snippetReady}
           error={error}
           roundTimings={roundTimings}
           savedTimings={savedTimings}
@@ -766,6 +818,8 @@ export default function App() {
           }}
           onAbort={handleAbort}
           onLogout={handleLogout}
+          onHoldTimer={holdPhaseTimer}
+          onReleaseTimer={releasePhaseTimer}
         />
       ) : null}
       {screen === 'shotless' ? (

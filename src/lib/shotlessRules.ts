@@ -44,6 +44,7 @@ export interface ShotlessRound {
   view: ShotlessView
   feedback: string | null
   revealMessage: string | null
+  winner: string | null
   replayNonce: number
   origin: ClipOrigin
 }
@@ -303,6 +304,7 @@ export function createShotlessRound(origin: ClipOrigin = 'mitte'): ShotlessRound
     view: 'guessing',
     feedback: null,
     revealMessage: null,
+    winner: null,
     replayNonce: 0,
     origin,
   }
@@ -347,6 +349,7 @@ function advanceTrack(round: ShotlessRound, trackCount: number, origin: ClipOrig
     view: 'guessing',
     feedback: null,
     revealMessage: null,
+    winner: null,
     replayNonce: round.replayNonce + 1,
     origin,
   }
@@ -383,6 +386,7 @@ function revealGiveUp(round: ShotlessRound): ShotlessRound {
     view: 'reveal',
     feedback: null,
     revealMessage: everyoneShotMessage(),
+    winner: null,
   }
 }
 
@@ -392,6 +396,7 @@ function revealCorrect(round: ShotlessRound, name: string): ShotlessRound {
     view: 'reveal',
     feedback: null,
     revealMessage: correctDrinkMessage(name, stageByIndex(round.stageIndex).penalty),
+    winner: name,
   }
 }
 

@@ -86,31 +86,33 @@ export async function holdPlaybackThen(
   try {
     await handlers.play()
   } catch (cause) {
-    handlers.onPlayback('paused')
     handlers.onError(clipFailureMessage(cause))
+    await releaseAfterReset(handlers)
+    return
   }
   if (handlers.isCancelled()) {
     await safePause(handlers.pause)
     return
   }
   await wait(durationMs)
-  if (!handlers.isCancelled()) {
-    handlers.onPlayback('paused')
-  }
-  await safePause(handlers.pause)
+  await releaseAfterReset(handlers)
   if (!handlers.isCancelled()) {
     onAdvance()
   }
 }
 
 async function stopClip(handlers: BoundedClipHandlers, cause?: unknown): Promise<void> {
+  if (!handlers.isCancelled() && cause !== undefined) {
+    handlers.onError(clipFailureMessage(cause))
+  }
+  await releaseAfterReset(handlers)
+}
+
+async function releaseAfterReset(handlers: BoundedClipHandlers): Promise<void> {
+  await safePause(handlers.pause)
   if (!handlers.isCancelled()) {
     handlers.onPlayback('paused')
-    if (cause !== undefined) {
-      handlers.onError(clipFailureMessage(cause))
-    }
   }
-  await safePause(handlers.pause)
 }
 
 async function safePause(pause: () => Promise<void>): Promise<void> {

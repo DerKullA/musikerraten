@@ -30,7 +30,9 @@ import {
 } from '../lib/shotlessRules.ts'
 import type { Track } from '../types.ts'
 import { AppMenu } from './AppMenu.tsx'
+import { LoserBonusOverlay } from './LoserBonusOverlay.tsx'
 import { SkipTrackButton } from './SkipTrackButton.tsx'
+import { useLoserBonus } from './useLoserBonus.ts'
 import { useShotlessClipPlayback } from './useShotlessClipPlayback.ts'
 
 function restartsGuessingClip(current: ShotlessRound, next: ShotlessRound): boolean {
@@ -88,6 +90,9 @@ export function ShotlessScreen({
   const [clipPlaying, setClipPlaying] = useState(false)
   const clipPlayingRef = useRef(false)
   const onPlaybackRef = useRef(onPlayback)
+  const blockAdvanceRef = useRef(false)
+  const queuedAdvanceRef = useRef(false)
+  const { bonusWinner, noteLoserBonusOutcome, dismissLoserBonus } = useLoserBonus()
 
   useLayoutEffect(() => {
     onPlaybackRef.current = onPlayback
@@ -99,6 +104,10 @@ export function ShotlessScreen({
   const revealHold = started && round.view === 'reveal' && track !== null
 
   function advanceAfterReveal(): void {
+    if (blockAdvanceRef.current) {
+      queuedAdvanceRef.current = true
+      return
+    }
     setPlaybackError(null)
     setQuery('')
     setArtistQuery('')
@@ -112,6 +121,16 @@ export function ShotlessScreen({
         origin: pickClipOrigin(),
       })
     })
+  }
+
+  function dismissBonusAndMaybeAdvance(): void {
+    blockAdvanceRef.current = false
+    dismissLoserBonus()
+    if (!queuedAdvanceRef.current) {
+      return
+    }
+    queuedAdvanceRef.current = false
+    advanceAfterReveal()
   }
 
   useShotlessClipPlayback({
@@ -235,6 +254,12 @@ export function ShotlessScreen({
   }
 
   function applyRound(next: ShotlessRound): void {
+    if (round.view !== 'reveal' && next.view === 'reveal') {
+      const triggered = noteLoserBonusOutcome(next.winner)
+      if (triggered) {
+        blockAdvanceRef.current = true
+      }
+    }
     if (next.trackIndex !== round.trackIndex || next.stageIndex !== round.stageIndex) {
       clearGuessDraft()
     }
@@ -285,6 +310,7 @@ export function ShotlessScreen({
     mode === 'tippen' && guessTarget === 'both' ? suggestGuesses(tracks, artistQuery, 'artist') : []
 
   return (
+    <>
     <ShotlessRoundView
       mode={mode}
       guessTarget={guessTarget}
@@ -340,6 +366,10 @@ export function ShotlessScreen({
         )
       }}
     />
+      {bonusWinner ? (
+        <LoserBonusOverlay winner={bonusWinner} onDismiss={dismissBonusAndMaybeAdvance} />
+      ) : null}
+    </>
   )
 }
 
@@ -642,9 +672,11 @@ export function ShotlessRoundView({
               <button type="button" className="btn erraten" onClick={onClaim}>
                 Erraten!
               </button>
-            ) : (
-              <ReplayClipButton className="btn ghost" disabled={clipPlaying} onReplay={onReplay} />
-            )}
+            ) : !lastStage ? (
+              <button type="button" className="btn aufgeben" onClick={onNobody}>
+                Aufgeben
+              </button>
+            ) : null}
             <button
               type="button"
               className={lastStage ? 'btn aufgeben stage-skip' : 'btn outline stage-skip'}
@@ -656,11 +688,6 @@ export function ShotlessRoundView({
             {mode === 'party' && !lastStage ? (
               <button type="button" className="btn ghost" onClick={onNobody}>
                 Niemand
-              </button>
-            ) : null}
-            {mode === 'tippen' && !lastStage ? (
-              <button type="button" className="btn aufgeben" onClick={onNobody}>
-                Aufgeben
               </button>
             ) : null}
           </div>
@@ -713,9 +740,10 @@ function RevealCard({
   return (
     <div className="reveal-card is-reveal">
       {track.albumImageUrl ? <img className="shotless-cover" src={track.albumImageUrl} alt="" /> : null}
+      <p className="shotless-rule">{guessTargetRevealLine(guessTarget)}</p>
       <p className="artist">{artistLead ? track.title : track.artist}</p>
       <h2 className="title">{artistLead ? track.artist : track.title}</h2>
-      <p className="shotless-rule">{guessTargetRevealLine(guessTarget)}</p>
+      
       {message ? <p className="shotless-reveal-message">{message}</p> : null}
     </div>
   )

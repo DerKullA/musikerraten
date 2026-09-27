@@ -52,18 +52,20 @@ export function useShotlessClipPlayback(input: ShotlessClipInput): void {
       chainRef.current = chainRef.current.then(job).catch(() => undefined)
     }
 
+    async function parkClipAtCue(clipUri: string, cueMs: number): Promise<void> {
+      await handlersRef.current.onPauseClip()
+      if (!shouldPrimeParkedClip(playback, token, tokenRef.current)) {
+        return
+      }
+      await handlersRef.current.onPrimeClip?.(clipUri, cueMs)
+    }
+
     const clipHandlers = {
       play: () =>
         playback === 'continue'
           ? handlersRef.current.onResumeClip()
           : handlersRef.current.onPlayClip(uri, positionMs),
-      pause: async () => {
-        await handlersRef.current.onPauseClip()
-        if (!shouldPrimeParkedClip(playback, token, tokenRef.current)) {
-          return
-        }
-        void handlersRef.current.onPrimeClip?.(uri, positionMs)
-      },
+      pause: () => parkClipAtCue(uri, positionMs),
       isCancelled: () => tokenRef.current !== token,
       onPlayback: (state: 'playing' | 'paused') => {
         handlersRef.current.onPlayback(state)
