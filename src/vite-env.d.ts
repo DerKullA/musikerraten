@@ -18,6 +18,7 @@ interface SpotifyPlayerOptions {
 interface SpotifyPlaybackState {
   paused: boolean
   position?: number
+  loading?: boolean
   track_window?: {
     current_track?: {
       uri?: string

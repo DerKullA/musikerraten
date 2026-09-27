@@ -198,6 +198,15 @@ export function ShotlessScreen({
     return pickBackdropTrack(playedRef.current, finishedUri, Math.random)
   }
 
+  useEffect(() => {
+    const cueTrack = started ? track : (tracks[0] ?? null)
+    if (!cueTrack || (started && (round.view !== 'guessing' || clipHeard))) {
+      return
+    }
+    const origin = started ? round.origin : openingOrigin
+    void onPrimeClipRef.current?.(cueTrack.uri, clipStartMs(cueTrack.durationMs, origin))
+  }, [started, clipHeard, round.view, round.origin, round.trackIndex, track, tracks, openingOrigin])
+
   useShotlessClipPlayback({
     active: clipActive || revealHold,
     uri: track?.uri ?? null,

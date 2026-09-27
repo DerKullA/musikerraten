@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import {
   AUDIBLE_VOLUME,
+  BUFFER_STABLE_POLLS,
   createClipWarmup,
+  createColdBufferWatch,
   cueReached,
+  noteColdBufferSample,
   playheadEnteredCue,
   playbackHasStarted,
   playbackIsHeld,
   type ClipCue,
   type ClipWarmupDeps,
+  type ColdBufferWatch,
   type WarmPlaybackState,
 } from './clipWarmup.ts'
 
@@ -187,6 +191,58 @@ describe('createClipWarmup play', () => {
     expect(loaded).toBe(false)
   })
 
+  it('bleibt stumm, bis der Puffer nach dem Rücksprung am Einsatz steht', async () => {
+    let phase: 'phantom' | 'live' | 'paused' = 'phantom'
+    let position = 0
+    let volume = AUDIBLE_VOLUME
+    let audibleResumes = 0
+    const warmup = createClipWarmup(
+      warmupDeps({
+        getState: async () => {
+          if (phase === 'phantom') {
+            position += 700
+            if (position > cue.positionMs + 2_000) {
+              position = cue.positionMs
+              phase = 'live'
+            }
+            return { paused: false, positionMs: position, uri: cue.uri, loading: phase === 'phantom' }
+          }
+          if (phase === 'live' && position < cue.positionMs + 40) {
+            position += 20
+          }
+          return { paused: phase === 'paused', positionMs: position, uri: cue.uri, loading: false }
+        },
+        setVolume: async (next) => {
+          volume = next
+        },
+        load: async () => {
+          phase = 'phantom'
+          position = 0
+        },
+        pause: async () => {
+          phase = 'paused'
+        },
+        seek: async (positionMs) => {
+          position = positionMs
+          phase = 'live'
+        },
+        resume: async () => {
+          if (volume > 0) {
+            audibleResumes += 1
+          }
+          if (phase === 'paused') {
+            phase = 'live'
+          }
+        },
+      }),
+    )
+
+    await warmup.play(cue)
+    expect(audibleResumes).toBe(1)
+    expect(volume).toBe(AUDIBLE_VOLUME)
+    expect(position).toBeGreaterThanOrEqual(cue.positionMs - 180)
+  })
+
   it('meldet, wenn der neu geladene Song nicht startet', async () => {
     let loaded = false
     const warmup = createClipWarmup(
@@ -200,6 +256,40 @@ describe('createClipWarmup play', () => {
     )
 
     await expect(warmup.play(cue)).rejects.toThrow('Der Song hat nicht gestartet.')
+  })
+})
+
+describe('noteColdBufferSample', () => {
+  function sample(positionMs: number, loading = false, paused = false): WarmPlaybackState {
+    return { paused, positionMs, uri: cue.uri, loading }
+  }
+
+  function feed(watch: ColdBufferWatch, state: WarmPlaybackState) {
+    return noteColdBufferSample(watch, state, cue)
+  }
+
+  it('wartet den Positions-Rücksprung ab und gibt den Einsatz dann frei', () => {
+    let watch = createColdBufferWatch()
+    watch = feed(watch, sample(cue.positionMs + 2_400, true)).watch
+    const reset = feed(watch, sample(cue.positionMs, false))
+    expect(reset.ready).toBe(true)
+  })
+
+  it('gibt frei, sobald das Laden am Einsatz endet', () => {
+    let watch = createColdBufferWatch()
+    watch = feed(watch, sample(cue.positionMs, true)).watch
+    expect(feed(watch, sample(cue.positionMs, false)).ready).toBe(true)
+  })
+
+  it('zählt einen kalten Lauf ohne Signal erst nach mehreren Takten', () => {
+    let watch = createColdBufferWatch()
+    let ready = false
+    for (let poll = 0; poll < BUFFER_STABLE_POLLS; poll += 1) {
+      const noted = feed(watch, sample(cue.positionMs + poll * 20))
+      watch = noted.watch
+      ready = noted.ready
+    }
+    expect(ready).toBe(true)
   })
 })
 
@@ -271,5 +361,52 @@ describe('createClipWarmup prime', () => {
 
     await warmup.prime(cue)
     expect(order.lastIndexOf('pause')).toBeGreaterThan(order.lastIndexOf('seek'))
+  })
+
+  it('lässt den ersten Play den laufenden Vorlauf beenden', async () => {
+    let phase: 'idle' | 'playing' | 'paused' = 'idle'
+    let position = 0
+    let loads = 0
+    let releaseLoad: () => void = () => undefined
+    const loadGate = new Promise<void>((resolve) => {
+      releaseLoad = resolve
+    })
+    const warmup = createClipWarmup(
+      warmupDeps({
+        getState: async () => {
+          if (phase === 'idle') {
+            return null
+          }
+          if (phase !== 'paused' && position < cue.positionMs + 80) {
+            position += 200
+          }
+          return { paused: phase === 'paused', positionMs: position, uri: cue.uri }
+        },
+        load: async () => {
+          loads += 1
+          await loadGate
+          phase = 'playing'
+          position = 0
+        },
+        pause: async () => {
+          phase = 'paused'
+        },
+        seek: async (positionMs) => {
+          position = positionMs
+          phase = 'playing'
+        },
+        resume: async () => {
+          phase = 'playing'
+        },
+      }),
+    )
+
+    const priming = warmup.prime(cue)
+    const playing = warmup.play(cue)
+    releaseLoad()
+    await priming
+    await playing
+    expect(loads).toBe(1)
+    expect(phase).toBe('playing')
   })
 })
