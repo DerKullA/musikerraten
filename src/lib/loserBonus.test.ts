@@ -5,6 +5,7 @@ import {
   createWinStreak,
   describeWheelWedge,
   loserBonusHeadline,
+  loserBonusVerdict,
   pickPunishmentIndex,
   recordRoundOutcome,
   wheelStopRotation,
@@ -59,6 +60,13 @@ describe('loserBonusHeadline', () => {
   it('spricht die tippende Person direkt an', () => {
     expect(loserBonusHeadline('dir')).toBe('Du hast 3 Mal in Folge gewonnen.')
     expect(loserBonusHeadline('Noa')).toContain('Noa')
+  })
+})
+
+describe('loserBonusVerdict', () => {
+  it('legt die Strafe dem Gewinner auf', () => {
+    expect(loserBonusVerdict('Noa', 'Ehrenrunde')).toBe('Noa: Ehrenrunde')
+    expect(loserBonusVerdict('dir', 'Duett')).toBe('Du: Duett')
   })
 })
 

@@ -3,6 +3,7 @@ import {
   LOSER_PUNISHMENTS,
   describeWheelWedge,
   loserBonusHeadline,
+  loserBonusSpinHint,
   loserBonusSubline,
   loserBonusVerdict,
   pickPunishmentIndex,
@@ -25,10 +26,11 @@ const WHEEL_RADIUS = 46
 
 interface LoserBonusOverlayProps {
   winner: string
+  closing: boolean
   onDismiss: () => void
 }
 
-export function LoserBonusOverlay({ winner, onDismiss }: LoserBonusOverlayProps) {
+export function LoserBonusOverlay({ winner, closing, onDismiss }: LoserBonusOverlayProps) {
   const [rotation, setRotation] = useState(0)
   const [landedIndex, setLandedIndex] = useState<number | null>(null)
   const [spinning, setSpinning] = useState(false)
@@ -58,7 +60,7 @@ export function LoserBonusOverlay({ winner, onDismiss }: LoserBonusOverlayProps)
 
   function keepWheelOpen(event: SyntheticEvent<HTMLDialogElement>): void {
     event.preventDefault()
-    if (!spinning && punishment) {
+    if (!closing && !spinning && punishment) {
       onDismiss()
     }
   }
@@ -71,38 +73,40 @@ export function LoserBonusOverlay({ winner, onDismiss }: LoserBonusOverlayProps)
         <p className="loser-bonus-copy">{loserBonusSubline(winner)}</p>
         <div className="fortune-stage">
           <span className="fortune-pointer" aria-hidden="true" />
-          <svg
-            className={instantSpin ? 'fortune-wheel is-instant' : 'fortune-wheel'}
-            viewBox="-50 -50 100 100"
-            style={{ transform: `rotate(${rotation}deg)` }}
-            aria-hidden="true"
-            onTransitionEnd={(event) => {
-              if (event.propertyName === 'transform') {
-                finishWheelSpin()
-              }
-            }}
-          >
-            {LOSER_PUNISHMENTS.map((entry, index) => (
-              <WheelSegment key={entry.id} index={index} title={entry.title} />
-            ))}
-            <circle className="fortune-core" r="8" />
-          </svg>
-          <button
-            type="button"
-            className="fortune-hub btn primary"
-            disabled={spinning || punishment !== null}
-            onClick={spinFortuneWheel}
-          >
-            Drehen
-          </button>
+          <div className="fortune-disc">
+            <svg
+              className={instantSpin ? 'fortune-wheel is-instant' : 'fortune-wheel'}
+              viewBox="-50 -50 100 100"
+              style={{ transform: `rotate(${rotation}deg)` }}
+              aria-hidden="true"
+              onTransitionEnd={(event) => {
+                if (event.propertyName === 'transform') {
+                  finishWheelSpin()
+                }
+              }}
+            >
+              {LOSER_PUNISHMENTS.map((entry, index) => (
+                <WheelSegment key={entry.id} index={index} title={entry.title} />
+              ))}
+              <circle className="fortune-core" r="8" />
+            </svg>
+            <button
+              type="button"
+              className="fortune-hub btn primary"
+              disabled={spinning || punishment !== null}
+              onClick={spinFortuneWheel}
+            >
+              Drehen
+            </button>
+          </div>
         </div>
         <p className="loser-bonus-result" role="status">
-          {punishment && !spinning ? punishment.detail : 'Dreht das Rad. Die Strafe gilt für die Verlierer.'}
+          {punishment && !spinning ? punishment.detail : loserBonusSpinHint(winner)}
         </p>
         {punishment && !spinning ? (
           <>
             <p className="loser-bonus-verdict">{loserBonusVerdict(winner, punishment.title)}</p>
-            <button type="button" className="btn primary loser-bonus-done" onClick={onDismiss}>
+            <button type="button" className="btn primary loser-bonus-done" disabled={closing} onClick={onDismiss}>
               Strafe kassiert
             </button>
           </>

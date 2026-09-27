@@ -1216,11 +1216,12 @@ code {
   position: relative;
   width: min(100%, 19.5rem);
   margin: 0.85rem auto 0;
+  padding-top: 10px;
 }
 
 .fortune-pointer {
   position: absolute;
-  top: -0.15rem;
+  top: 0;
   left: 50%;
   z-index: 2;
   transform: translateX(-50%);
@@ -1232,11 +1233,19 @@ code {
   filter: drop-shadow(0 1px 0 #10160e) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.55));
 }
 
+.fortune-disc {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  contain: paint;
+}
+
 .fortune-wheel {
   display: block;
   width: 100%;
-  height: auto;
-  overflow: visible;
+  height: 100%;
+  overflow: hidden;
   transition: transform 4.4s cubic-bezier(0.12, 0.72, 0.08, 1);
 }
 

@@ -629,6 +629,32 @@ export default function App() {
     syncQuizMediaPlayback(nextPlayback)
   }
 
+  function readShotlessPaused(): Promise<boolean | null> {
+    return readSpotifyPaused(playerRef.current)
+  }
+
+  async function releaseShotlessSilence(): Promise<void> {
+    await silence().release()
+    await playerRef.current?.setVolume(AUDIBLE_VOLUME)?.catch(() => undefined)
+  }
+
+  function readShotlessPosition(): Promise<{ uri: string | null; positionMs: number } | null> {
+    const player = playerRef.current
+    if (!player) {
+      return Promise.resolve(null)
+    }
+    return player
+      .getCurrentState()
+      .then((state) => {
+        const warm = readWarmPlayback(state)
+        if (!warm) {
+          return null
+        }
+        return { uri: warm.uri, positionMs: warm.positionMs }
+      })
+      .catch(() => null)
+  }
+
   function primeShotlessClip(uri: string, positionMs: number): Promise<void> {
     if (!deviceIdRef.current || !playerRef.current) {
       return Promise.resolve()
@@ -799,6 +825,9 @@ export default function App() {
           onResumeClip={resumeCurrentTrack}
           onPauseClip={pauseCurrentTrack}
           onPrimeClip={primeShotlessClip}
+          onReadPosition={readShotlessPosition}
+          onReadPaused={readShotlessPaused}
+          onReleaseSilence={releaseShotlessSilence}
           onPlayback={syncShotlessPlayback}
           onLiveChange={setShotlessLive}
         />

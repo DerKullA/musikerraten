@@ -5,42 +5,42 @@ export const LOSER_PUNISHMENTS = [
   {
     id: 'ehrenrunde',
     title: 'Ehrenrunde',
-    detail: 'Alle Verlierer stehen auf, drehen sich einmal im Kreis und trinken einen Schluck.',
+    detail: 'Aufstehen, einmal im Kreis drehen, einen Schluck trinken.',
   },
   {
     id: 'duett',
     title: 'Duett',
-    detail: 'Die Verlierer singen zusammen den Refrain. Wer aussetzt, trinkt einen Shot.',
+    detail: 'Den Refrain allein singen. Stocken kostet einen Schluck.',
   },
   {
     id: 'linkshand',
     title: 'Linkshand',
-    detail: 'Der nächste Schluck nur mit der ungewohnten Hand. Danebengekleckert gibt einen extra.',
+    detail: 'Den nächsten Schluck nur mit der ungewohnten Hand.',
   },
   {
     id: 'kompliment',
     title: 'Kompliment',
-    detail: 'Jeder Verlierer sagt dem Gewinner ein ernst gemeintes Kompliment. Danach zwei Schlücke.',
+    detail: 'Der Runde ein Kompliment machen, danach einen Schluck.',
   },
   {
     id: 'funkstille',
     title: 'Funkstille',
-    detail: 'Bis der nächste Song startet: kein Wort. Wer redet, trinkt sofort einen Schluck.',
+    detail: 'Bis zum nächsten Song schweigen. Ein Wort kostet einen Schluck.',
   },
   {
     id: 'service',
     title: 'Service',
-    detail: 'Die Verlierer schenken allen nach und trinken selbst einen Shot.',
+    detail: 'Einmal nachschenken und selbst einen Schluck trinken.',
   },
   {
     id: 'taktstock',
     title: 'Taktstock',
-    detail: 'Drei Schlücke, jeder exakt auf ein Klatschen. Wer aus dem Takt ist, trinkt einen extra.',
+    detail: 'Zwei Schlücke, jeder genau auf ein Klatschen.',
   },
   {
     id: 'schutzgeld',
     title: 'Schutzgeld',
-    detail: 'Die Verlierer wählen eine Person, die mittrinkt, und nehmen selbst einen Shot.',
+    detail: 'Eine Person wählen. Ihr beide trinkt einen Schluck.',
   },
 ] as const
 
@@ -95,16 +95,23 @@ export function loserBonusHeadline(winner: string): string {
 
 export function loserBonusSubline(winner: string): string {
   if (sameWinnerName(winner, 'dir')) {
-    return 'Verlierer-Bonus für alle anderen.'
+    return 'Dein Verlierer-Bonus: eine kleine Strafe für die Siegesserie.'
   }
-  return `Verlierer-Bonus für alle außer ${winner}.`
+  return `Verlierer-Bonus für ${winner}: eine kleine Strafe für die Siegesserie.`
+}
+
+export function loserBonusSpinHint(winner: string): string {
+  if (sameWinnerName(winner, 'dir')) {
+    return 'Dreht das Rad. Die kleine Strafe gilt für dich.'
+  }
+  return `Dreht das Rad. Die kleine Strafe gilt für ${winner}.`
 }
 
 export function loserBonusVerdict(winner: string, title: string): string {
   if (sameWinnerName(winner, 'dir')) {
-    return `Alle anderen: ${title}`
+    return `Du: ${title}`
   }
-  return `Alle außer ${winner}: ${title}`
+  return `${winner}: ${title}`
 }
 
 export function pickPunishmentIndex(count: number, random: () => number = Math.random): number {

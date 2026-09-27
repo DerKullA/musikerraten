@@ -1,13 +1,11 @@
-// Der nächste Clip wird stumm an die Startposition gelegt und pausiert.
-// Der Tastendruck setzt nur die Lautstärke und setzt die lokale Wiedergabe fort.
+// Der nächste Clip wird an die Startposition gelegt und pausiert.
+// Die Spotify-Lautstärke bleibt dabei unangetastet.
 
 export const AUDIBLE_VOLUME = 0.8
-export const SILENT_VOLUME = 0
-export const SILENT_VOLUME_CEILING = 0.02
 export const CUE_POSITION_TOLERANCE_MS = 180
 export const PRIME_LEAD_MS = 240
-export const PRIME_POLL_MS = 40
-export const PRIME_POLL_LIMIT = 8
+export const PLAYBACK_START_POLL_MS = 50
+export const PLAYBACK_START_LIMIT = 80
 
 export interface ClipCue {
   uri: string
@@ -76,18 +74,6 @@ export function sameClipCue(
   return left.uri === right.uri && Math.abs(left.positionMs - right.positionMs) <= toleranceMs
 }
 
-export function volumeIsSilent(volume: number | null, ceiling = SILENT_VOLUME_CEILING): boolean {
-  return typeof volume === 'number' && Number.isFinite(volume) && volume <= ceiling
-}
-
-export function cueReached(
-  cue: ClipCue,
-  state: WarmPlaybackState,
-  toleranceMs = CUE_POSITION_TOLERANCE_MS,
-): boolean {
-  return state.uri === cue.uri && state.positionMs >= cue.positionMs - toleranceMs
-}
-
 export function choosePrimeAction(
   cue: ClipCue,
   state: WarmPlaybackState | null,
@@ -114,6 +100,44 @@ export function chooseWarmStart(
     return 'seek-resume'
   }
   return state.paused ? 'resume' : 'unmute'
+}
+
+export function playbackHasStarted(target: ClipCue, state: WarmPlaybackState | null): boolean {
+  return Boolean(state && state.uri === target.uri && !state.paused)
+}
+
+export function cueReached(
+  cue: ClipCue,
+  state: WarmPlaybackState,
+  toleranceMs = CUE_POSITION_TOLERANCE_MS,
+): boolean {
+  return state.uri === cue.uri && state.positionMs >= cue.positionMs - toleranceMs
+}
+
+export function playheadEnteredCue(
+  previous: WarmPlaybackState | null,
+  state: WarmPlaybackState | null,
+  cue: ClipCue,
+  toleranceMs = CUE_POSITION_TOLERANCE_MS,
+): boolean {
+  if (!previous || !state || state.paused || previous.uri !== cue.uri || state.uri !== cue.uri) {
+    return false
+  }
+  if (state.positionMs + toleranceMs < cue.positionMs) {
+    return false
+  }
+  return state.positionMs > previous.positionMs
+}
+
+export function playbackIsHeld(
+  previous: WarmPlaybackState | null,
+  state: WarmPlaybackState | null,
+  toleranceMs = CUE_POSITION_TOLERANCE_MS,
+): boolean {
+  if (!previous?.paused || !state?.paused || previous.uri !== state.uri) {
+    return false
+  }
+  return Math.abs(previous.positionMs - state.positionMs) <= toleranceMs
 }
 
 export function shouldPrimeParkedClip(
@@ -174,32 +198,10 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
     return run
   }
 
-  async function waitUntilCue(target: ClipCue, token: number): Promise<void> {
-    for (let attempt = 0; attempt < PRIME_POLL_LIMIT; attempt += 1) {
-      if (abortOf(token) !== 'continue') {
-        return
-      }
-      const state = await deps.getState().catch(() => null)
-      if (state && cueReached(target, state)) {
-        return
-      }
-      await sleep(PRIME_POLL_MS)
-    }
-  }
-
   async function runPrime(target: ClipCue, token: number): Promise<boolean> {
     let suspended = false
-    let started = false
     let parked = false
     try {
-      if (abortOf(token) !== 'continue') {
-        return false
-      }
-      await deps.setVolume(SILENT_VOLUME)
-      const silenced = volumeIsSilent(await deps.getVolume().catch(() => null))
-      if (!silenced) {
-        await deps.setVolume(audibleVolume).catch(() => undefined)
-      }
       if (abortOf(token) !== 'continue') {
         return false
       }
@@ -210,11 +212,14 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
       const action = choosePrimeAction(target, before)
       if (action === 'ready') {
         if (before && !before.paused) {
-          started = true
           parked = true
           await deps.pause()
         }
         return positionedAtCue(target, before, parked) && abortOf(token) === 'continue'
+      }
+      if (action === 'load') {
+        displacedPositionMs = null
+        return await parkIncomingTrack(target, token)
       }
       if (
         before &&
@@ -222,41 +227,18 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
         Math.abs(before.positionMs - target.positionMs) > CUE_POSITION_TOLERANCE_MS
       ) {
         displacedPositionMs = before.positionMs
-      } else if (action === 'load') {
-        displacedPositionMs = null
       }
-      if (!silenced && action === 'load') {
-        displacedPositionMs = null
-        return false
-      }
-      if (silenced) {
-        await deps.suspendSilence()
-        suspended = true
-      }
+      await deps.suspendSilence()
+      suspended = true
       if (abortOf(token) !== 'continue') {
         return false
       }
-      if (action === 'load') {
-        started = true
-        await deps.load(target)
-      } else {
-        await deps.seek(primeSeekMs(target.positionMs))
-        if (abortOf(token) !== 'continue') {
-          return false
-        }
-        if (silenced) {
-          started = true
-          await deps.resume()
-        }
-      }
-      if (started && abortOf(token) === 'continue') {
-        await waitUntilCue(target, token)
-      }
+      await deps.seek(primeSeekMs(target.positionMs))
       if (abortOf(token) !== 'continue') {
         return false
       }
       parked = true
-      await deps.pause()
+      await pauseUntilHeld(token)
       if (request === 'play') {
         await deps.resume().catch(() => undefined)
         return false
@@ -271,6 +253,7 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
         after.positionMs > target.positionMs + CUE_POSITION_TOLERANCE_MS
       ) {
         await deps.seek(target.positionMs)
+        await pauseUntilHeld(token)
         after = await deps.getState().catch(() => null)
       }
       return Boolean(after && after.paused && cueIsNear(target, after)) && abortOf(token) === 'continue'
@@ -278,11 +261,8 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
       if (suspended && abortOf(token) === 'continue') {
         await deps.restoreSilence().catch(() => undefined)
       }
-      if (abortOf(token) === 'silence') {
-        await deps.setVolume(audibleVolume).catch(() => undefined)
-        if (started || parked) {
-          await deps.pause().catch(() => undefined)
-        }
+      if (abortOf(token) === 'silence' && parked) {
+        await deps.pause().catch(() => undefined)
       }
     }
   }
@@ -303,7 +283,104 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
     await startWarm(target, token, 'resume')
   }
 
+  async function pauseUntilHeld(token: number): Promise<void> {
+    let previous: WarmPlaybackState | null = null
+    for (let attempt = 0; attempt < PLAYBACK_START_LIMIT; attempt += 1) {
+      if (generation !== token) {
+        return
+      }
+      await deps.pause()
+      const state = await deps.getState().catch(() => null)
+      if (playbackIsHeld(previous, state)) {
+        return
+      }
+      previous = state
+      await sleep(PLAYBACK_START_POLL_MS)
+    }
+  }
+
+  async function parkIncomingTrack(target: ClipCue, token: number): Promise<boolean> {
+    let suspended = false
+    await deps.setVolume(0)
+    try {
+      await deps.suspendSilence()
+      suspended = true
+      if (generation !== token) {
+        return false
+      }
+      await deps.load(target)
+      if (generation !== token) {
+        return false
+      }
+      await rollToCue(target, token)
+      if (generation !== token) {
+        return false
+      }
+      await pauseUntilHeld(token)
+      if (generation !== token) {
+        return false
+      }
+      await deps.seek(target.positionMs)
+      if (generation !== token) {
+        return false
+      }
+      await pauseUntilHeld(token)
+      const after = await deps.getState().catch(() => null)
+      return Boolean(after && after.paused && cueIsNear(target, after)) && generation === token
+    } finally {
+      await deps.setVolume(audibleVolume).catch(() => undefined)
+      if (suspended && generation === token) {
+        await deps.suspendSilence().catch(() => undefined)
+      }
+    }
+  }
+
+  async function rollToCue(target: ClipCue, token: number): Promise<void> {
+    let previous: WarmPlaybackState | null = null
+    let armed = false
+    for (let attempt = 0; attempt < PLAYBACK_START_LIMIT; attempt += 1) {
+      if (generation !== token) {
+        return
+      }
+      const state = await deps.getState().catch(() => null)
+      if (playheadEnteredCue(previous, state, target)) {
+        return
+      }
+      if (state?.uri === target.uri && !armed) {
+        await deps.seek(primeSeekMs(target.positionMs))
+        if (generation !== token) {
+          return
+        }
+        await deps.resume()
+        armed = true
+        previous = null
+        await sleep(PLAYBACK_START_POLL_MS)
+        continue
+      }
+      previous = state
+      await sleep(PLAYBACK_START_POLL_MS)
+    }
+    if (generation === token) {
+      throw new Error('Der Song hat nicht gestartet.')
+    }
+  }
+
+  async function startLoadedClip(target: ClipCue, token: number): Promise<void> {
+    const parked = await parkIncomingTrack(target, token)
+    if (generation !== token) {
+      return
+    }
+    if (!parked) {
+      throw new Error('Der Song hat nicht gestartet.')
+    }
+    await deps.resume()
+  }
+
   async function startWarm(target: ClipCue, token: number, kind: WarmStart): Promise<void> {
+    if (kind === 'load') {
+      await startLoadedClip(target, token)
+      return
+    }
     try {
       await deps.setVolume(audibleVolume)
       if (generation !== token) {
@@ -318,16 +395,12 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
           return
         }
       }
-      if (kind === 'load') {
-        await deps.load(target)
-        return
-      }
       await deps.resume()
     } catch (cause) {
-      if (generation !== token || kind === 'load') {
+      if (generation !== token) {
         throw cause
       }
-      await deps.load(target)
+      await startLoadedClip(target, token)
     }
   }
 
