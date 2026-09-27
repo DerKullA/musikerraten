@@ -103,10 +103,6 @@ export function stageStatusLabel(stage: ShotlessStage): string {
   return `Stufe ${stage.index + 1} von ${SHOTLESS_STAGES.length} · ${formatClipLength(stage.durationMs)}`
 }
 
-export function penaltyPrompt(penalty: string): string {
-  return `Wenn jetzt erraten wird: ${penalty}`
-}
-
 export function skipControlLabel(stageIndex: number): string {
   return isLastShotlessStage(stageIndex) ? 'Aufgeben' : 'Länger hören'
 }

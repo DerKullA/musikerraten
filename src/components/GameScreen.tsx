@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { revealAlbumArtUrl } from '../lib/albumArt.ts'
 import { centerTransportCue, type TransportIconName } from '../lib/centerTransport.ts'
 import { formatTrackDuration, isTitleHidden, phaseDuration, phaseLabel } from '../lib/gameLoop.ts'
@@ -49,6 +49,8 @@ export function GameScreen({
   onLogout,
 }: GameScreenProps) {
   const [listenGeneration, setListenGeneration] = useState(0)
+  const [listenLocked, setListenLocked] = useState(phase === 'playing' && !paused)
+  const listenLockedRef = useRef(phase === 'playing' && !paused)
   const hidden = isTitleHidden(phase)
   const duration = phaseDuration(phase, roundTimings)
   const showLength = phase === 'reveal' && !hidden && track !== null && track.durationMs > 0
@@ -56,6 +58,25 @@ export function GameScreen({
   const showSkipNext = running && phase === 'reveal'
   const cue = centerTransportCue({ running, paused, phase })
   const coverSrc = useLoadedAlbumCover(revealAlbumArtUrl(phase, track?.albumImageUrl))
+  const snippetPlaying = phase === 'playing' && !paused
+
+  useEffect(() => {
+    syncListenLock(snippetPlaying)
+  }, [snippetPlaying])
+
+  function syncListenLock(locked: boolean): void {
+    listenLockedRef.current = locked
+    setListenLocked(locked)
+  }
+
+  function replaySnippet(): void {
+    if (listenLockedRef.current || snippetPlaying) {
+      return
+    }
+    syncListenLock(true)
+    setListenGeneration((generation) => generation + 1)
+    onReplay()
+  }
 
   function activateTransport(): void {
     if (cue.action === 'start') {
@@ -117,10 +138,8 @@ export function GameScreen({
             <button
               type="button"
               className="btn primary cta"
-              onClick={() => {
-                setListenGeneration((generation) => generation + 1)
-                onReplay()
-              }}
+              disabled={listenLocked || snippetPlaying}
+              onClick={replaySnippet}
             >
               Nochmal anhören
             </button>

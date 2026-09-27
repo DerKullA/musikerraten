@@ -16,7 +16,6 @@ import {
   guessFieldLabel,
   guessTargetRevealLine,
   isLastShotlessStage,
-  penaltyPrompt,
   penaltyTone,
   pickClipOrigin,
   reduceShotlessRound,
@@ -33,6 +32,17 @@ import type { Track } from '../types.ts'
 import { AppMenu } from './AppMenu.tsx'
 import { SkipTrackButton } from './SkipTrackButton.tsx'
 import { useShotlessClipPlayback } from './useShotlessClipPlayback.ts'
+
+function restartsGuessingClip(current: ShotlessRound, next: ShotlessRound): boolean {
+  if (next.view !== 'guessing') {
+    return false
+  }
+  return (
+    next.replayNonce !== current.replayNonce ||
+    next.stageIndex !== current.stageIndex ||
+    next.trackIndex !== current.trackIndex
+  )
+}
 
 interface ShotlessScreenProps {
   tracks: Track[]
@@ -75,6 +85,13 @@ export function ShotlessScreen({
   const [query, setQuery] = useState('')
   const [artistQuery, setArtistQuery] = useState('')
   const [playbackError, setPlaybackError] = useState<string | null>(null)
+  const [clipPlaying, setClipPlaying] = useState(false)
+  const clipPlayingRef = useRef(false)
+  const onPlaybackRef = useRef(onPlayback)
+
+  useLayoutEffect(() => {
+    onPlaybackRef.current = onPlayback
+  })
 
   const track = tracks[round.trackIndex] ?? null
   const stage = stageByIndex(round.stageIndex)
@@ -109,7 +126,7 @@ export function ShotlessScreen({
       onResumeClip,
       onPauseClip,
       onPrimeClip,
-      onPlayback,
+      onPlayback: reportClipPlayback,
       onError: setPlaybackError,
       onComplete: advanceAfterReveal,
     },
@@ -164,6 +181,24 @@ export function ShotlessScreen({
     void onPrimeClipRef.current?.(opening.uri, clipStartMs(opening.durationMs, openingOrigin))
   }, [started, tracks, openingOrigin])
 
+  function markClipPlaying(playing: boolean): void {
+    clipPlayingRef.current = playing
+    setClipPlaying(playing)
+  }
+
+  function reportClipPlayback(state: 'playing' | 'paused'): void {
+    markClipPlaying(state === 'playing')
+    onPlaybackRef.current(state)
+  }
+
+  useEffect(() => {
+    if (!started || clipActive || revealHold) {
+      return
+    }
+    markClipPlaying(false)
+    onPlaybackRef.current('paused')
+  }, [started, clipActive, revealHold])
+
   function startRound(): void {
     if (!canStartShotless(mode, players) || !mode) {
       return
@@ -172,6 +207,7 @@ export function ShotlessScreen({
     setPlaybackError(null)
     setQuery('')
     setArtistQuery('')
+    markClipPlaying(true)
     setRound(createShotlessRound(openingOrigin))
     rememberSession(mode, players, guessTarget)
     setStarted(true)
@@ -181,6 +217,21 @@ export function ShotlessScreen({
   function clearGuessDraft(): void {
     setQuery('')
     setArtistQuery('')
+  }
+
+  function commitRound(next: ShotlessRound): void {
+    if (restartsGuessingClip(round, next)) {
+      markClipPlaying(true)
+    }
+    applyRound(next)
+  }
+
+  function replayRound(): void {
+    if (clipPlayingRef.current) {
+      return
+    }
+    setPlaybackError(null)
+    commitRound(reduceShotlessRound(round, { type: 'replay' }))
   }
 
   function applyRound(next: ShotlessRound): void {
@@ -265,12 +316,9 @@ export function ShotlessScreen({
         submitGuess(suggestion.label, '')
       }}
       onSkip={() => {
-        applyRound(reduceShotlessRound(round, { type: 'skip' }))
+        commitRound(reduceShotlessRound(round, { type: 'skip' }))
       }}
-      onReplay={() => {
-        setPlaybackError(null)
-        applyRound(reduceShotlessRound(round, { type: 'replay' }))
-      }}
+      onReplay={replayRound}
       onClaim={() => {
         applyRound(reduceShotlessRound(round, { type: 'claim' }))
       }}
@@ -280,9 +328,10 @@ export function ShotlessScreen({
       onNobody={() => {
         applyRound(reduceShotlessRound(round, { type: 'nobody' }))
       }}
+      clipPlaying={clipPlaying}
       onNext={() => {
         setPlaybackError(null)
-        applyRound(
+        commitRound(
           reduceShotlessRound(round, {
             type: 'next',
             trackCount: tracks.length,
@@ -477,6 +526,7 @@ interface ShotlessRoundViewProps {
   onPickSuggestion: (suggestion: GuessSuggestion) => void
   onSkip: () => void
   onReplay: () => void
+  clipPlaying: boolean
   onClaim: () => void
   onAssign: (name: string) => void
   onNobody: () => void
@@ -503,6 +553,7 @@ export function ShotlessRoundView({
   onPickSuggestion,
   onSkip,
   onReplay,
+  clipPlaying,
   onClaim,
   onAssign,
   onNobody,
@@ -552,7 +603,6 @@ export function ShotlessRoundView({
           <RevealCard track={track} message={round.revealMessage} guessTarget={guessTarget} />
         ) : (
           <div className="shotless-stage">
-            <p className="shotless-prompt">{penaltyPrompt(stage.penalty)}</p>
             <p className={`shotless-penalty is-${penaltyTone(stage.penalty)}`} aria-live="assertive">
               {stage.penalty}
             </p>
@@ -562,9 +612,6 @@ export function ShotlessRoundView({
           <p className="shotless-feedback" role="status">
             {round.feedback}
           </p>
-        ) : null}
-        {round.view !== 'reveal' ? (
-          <p className="shotless-rule">Niemand oder Aufgeben: alle trinken einen Shot.</p>
         ) : null}
         {round.view === 'guessing' && mode === 'tippen' ? (
           <GuessComposer
@@ -581,9 +628,7 @@ export function ShotlessRoundView({
         ) : null}
         {round.view === 'guessing' && mode === 'party' ? (
           <div className="shotless-actions">
-            <button type="button" className="btn primary cta" onClick={onReplay}>
-              Nochmal anhören
-            </button>
+            <ReplayClipButton className="btn primary cta" disabled={clipPlaying} onReplay={onReplay} />
           </div>
         ) : null}
         {round.view === 'pick-player' ? (
@@ -596,9 +641,7 @@ export function ShotlessRoundView({
                 Erraten!
               </button>
             ) : (
-              <button type="button" className="btn ghost" onClick={onReplay}>
-                Nochmal anhören
-              </button>
+              <ReplayClipButton className="btn ghost" disabled={clipPlaying} onReplay={onReplay} />
             )}
             <button
               type="button"
@@ -630,6 +673,22 @@ export function ShotlessRoundView({
         ) : null}
       </div>
     </section>
+  )
+}
+
+function ReplayClipButton({
+  className,
+  disabled,
+  onReplay,
+}: {
+  className: string
+  disabled: boolean
+  onReplay: () => void
+}) {
+  return (
+    <button type="button" className={className} disabled={disabled} onClick={onReplay}>
+      Nochmal anhören
+    </button>
   )
 }
 

@@ -90,7 +90,6 @@ export function useShotlessClipPlayback(input: ShotlessClipInput): void {
       tokenRef.current += 1
       delay.cancel()
       cancelDelayRef.current = () => undefined
-      handlersRef.current.onPlayback('paused')
       enqueue(async () => {
         await handlersRef.current.onPauseClip()
       })
