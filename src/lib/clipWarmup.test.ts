@@ -409,4 +409,76 @@ describe('createClipWarmup prime', () => {
     expect(loads).toBe(1)
     expect(phase).toBe('playing')
   })
+
+  it('startet den ersten Song nach dem Vorlauf erst hörbar am Einsatz', async () => {
+    let phase: 'idle' | 'phantom' | 'live' | 'paused' = 'idle'
+    let position = 0
+    let volume = AUDIBLE_VOLUME
+    let loads = 0
+    let audibleResumes = 0
+    let releaseLoad: () => void = () => undefined
+    const loadGate = new Promise<void>((resolve) => {
+      releaseLoad = resolve
+    })
+    const warmup = createClipWarmup(
+      warmupDeps({
+        getState: async () => {
+          if (phase === 'idle') {
+            return null
+          }
+          if (phase === 'phantom') {
+            position += 700
+            if (position > cue.positionMs + 2_000) {
+              position = cue.positionMs
+              phase = 'live'
+            }
+            return {
+              paused: false,
+              positionMs: position,
+              uri: cue.uri,
+              loading: phase === 'phantom',
+            }
+          }
+          if (phase === 'live' && position < cue.positionMs + 40) {
+            position += 20
+          }
+          return { paused: phase === 'paused', positionMs: position, uri: cue.uri, loading: false }
+        },
+        setVolume: async (next) => {
+          volume = next
+        },
+        load: async () => {
+          loads += 1
+          await loadGate
+          phase = 'phantom'
+          position = 0
+        },
+        pause: async () => {
+          phase = 'paused'
+        },
+        seek: async (positionMs) => {
+          position = positionMs
+          phase = 'live'
+        },
+        resume: async () => {
+          if (volume > 0) {
+            audibleResumes += 1
+          }
+          if (phase === 'paused') {
+            phase = 'live'
+          }
+        },
+      }),
+    )
+
+    const priming = warmup.prime(cue)
+    const playing = warmup.play(cue)
+    releaseLoad()
+    await priming
+    await playing
+    expect(loads).toBe(1)
+    expect(audibleResumes).toBe(1)
+    expect(volume).toBe(AUDIBLE_VOLUME)
+    expect(phase).toBe('live')
+  })
 })
