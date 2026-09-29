@@ -126,19 +126,43 @@ export async function fetchTracksForPlaylists(playlistIds: string[]): Promise<Tr
   return tracks
 }
 
+export function playlistItemsPath(playlistId: string, offset: number, limit: number): string {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  })
+  return `/playlists/${encodeURIComponent(playlistId)}/items?${params.toString()}`
+}
+
 export function playbackRequestBody(
   uri: string,
   positionMs = 0,
-): { uris: [string]; position_ms: number } {
+  followingUri?: string,
+): { uris: string[]; position_ms: number } {
   const position = Number.isFinite(positionMs) ? Math.max(0, Math.floor(positionMs)) : 0
-  return { uris: [uri], position_ms: position }
+  const uris = followingUri && followingUri !== uri ? [uri, followingUri] : [uri]
+  return { uris, position_ms: position }
 }
 
-export async function startPlayback(deviceId: string, uri: string, positionMs = 0): Promise<void> {
+export async function startPlayback(
+  deviceId: string,
+  uri: string,
+  positionMs = 0,
+  followingUri?: string,
+): Promise<void> {
   await spotifyRequest<void>(`/me/player/play?device_id=${encodeURIComponent(deviceId)}`, {
     method: 'PUT',
-    body: JSON.stringify(playbackRequestBody(uri, positionMs)),
+    body: JSON.stringify(playbackRequestBody(uri, positionMs, followingUri)),
   })
+  void ensureLinearPlayback(deviceId)
+}
+
+export async function queuePlayback(deviceId: string, uri: string): Promise<void> {
+  const params = new URLSearchParams({
+    uri,
+    device_id: deviceId,
+  })
+  await spotifyRequest<void>(`/me/player/queue?${params.toString()}`, { method: 'POST' })
 }
 
 export async function pausePlayback(deviceId: string): Promise<void> {
@@ -158,14 +182,22 @@ async function fetchPlaylistItemPage(
   offset: number,
   limit: number,
 ): Promise<PlaylistItemPage> {
+  return await spotifyRequest<PlaylistItemPage>(playlistItemsPath(playlistId, offset, limit))
+}
+
+let linearPlaybackReady = false
+
+async function ensureLinearPlayback(deviceId: string): Promise<void> {
+  if (linearPlaybackReady) {
+    return
+  }
+  linearPlaybackReady = true
+  const device = encodeURIComponent(deviceId)
   try {
-    return await spotifyRequest<PlaylistItemPage>(
-      `/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}`,
-    )
+    await spotifyRequest<void>(`/me/player/shuffle?state=false&device_id=${device}`, { method: 'PUT' })
+    await spotifyRequest<void>(`/me/player/repeat?state=off&device_id=${device}`, { method: 'PUT' })
   } catch {
-    return await spotifyRequest<PlaylistItemPage>(
-      `/playlists/${playlistId}/items?limit=${limit}&offset=${offset}`,
-    )
+    // Ein fehlgeschlagener Moduswechsel darf den nächsten Song nicht blockieren.
   }
 }
 

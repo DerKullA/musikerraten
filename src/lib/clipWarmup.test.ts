@@ -9,6 +9,7 @@ import {
   playheadEnteredCue,
   playbackHasStarted,
   playbackIsHeld,
+  readQueuedTrackUri,
   type ClipCue,
   type ClipWarmupDeps,
   type ColdBufferWatch,
@@ -70,6 +71,18 @@ describe('playbackIsHeld', () => {
     expect(playbackIsHeld(paused, paused)).toBe(true)
     expect(playbackIsHeld(playing, paused)).toBe(false)
     expect(playbackIsHeld(paused, { ...paused, positionMs: paused.positionMs + 1_000 })).toBe(false)
+  })
+})
+
+describe('readQueuedTrackUri', () => {
+  it('liest nur den nächsten Track aus der Warteschlange', () => {
+    expect(readQueuedTrackUri({ track_window: { next_tracks: [{ uri: 'spotify:track:b' }] } })).toBe(
+      'spotify:track:b',
+    )
+    expect(readQueuedTrackUri({ track_window: { next_tracks: [{ uri: 'spotify:episode:x' }] } })).toBe(
+      null,
+    )
+    expect(readQueuedTrackUri(null)).toBe(null)
   })
 })
 
@@ -256,6 +269,70 @@ describe('createClipWarmup play', () => {
     )
 
     await expect(warmup.play(cue)).rejects.toThrow('Der Song hat nicht gestartet.')
+  })
+
+  it('springt zum vorgemerkten Folgesong, ohne ihn neu zu laden', async () => {
+    const target = { uri: 'spotify:track:b', positionMs: 0 }
+    let handed = false
+    let loaded = false
+    let queued = false
+    const warmup = createClipWarmup(
+      warmupDeps({
+        getState: async () =>
+          handed
+            ? { paused: false, positionMs: 20, uri: target.uri }
+            : { paused: false, positionMs: 1_000, uri: 'spotify:track:a' },
+        handoff: async () => {
+          handed = true
+          return true
+        },
+        queueFollowing: async () => {
+          queued = true
+        },
+        load: async () => {
+          loaded = true
+        },
+      }),
+    )
+
+    await warmup.play(target)
+    expect(handed).toBe(true)
+    expect(loaded).toBe(false)
+    expect(queued).toBe(true)
+  })
+
+  it('lädt neu, wenn kein Folgesong anliegt', async () => {
+    const target = { uri: 'spotify:track:b', positionMs: 0 }
+    let loaded = false
+    let stage: 'before' | 'loading' | 'live' | 'paused' = 'before'
+    const warmup = createClipWarmup(
+      warmupDeps({
+        getState: async () => {
+          if (stage === 'before') {
+            return { paused: false, positionMs: 400, uri: 'spotify:track:a' }
+          }
+          if (stage === 'loading') {
+            stage = 'live'
+            return { paused: false, positionMs: 0, uri: target.uri, loading: true }
+          }
+          return { paused: stage === 'paused', positionMs: 30, uri: target.uri, loading: false }
+        },
+        handoff: async () => false,
+        load: async () => {
+          loaded = true
+          stage = 'loading'
+        },
+        pause: async () => {
+          stage = 'paused'
+        },
+        resume: async () => {
+          stage = 'live'
+        },
+      }),
+    )
+
+    await warmup.play(target)
+    expect(loaded).toBe(true)
   })
 })
 

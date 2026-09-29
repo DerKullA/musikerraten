@@ -20,6 +20,7 @@ import { isConfirmedPaused, pauseConnectedPlayback, readSpotifyPaused } from './
 import {
   AUDIBLE_VOLUME,
   createClipWarmup,
+  readQueuedTrackUri,
   readWarmPlayback,
   type ClipWarmup,
 } from './lib/clipWarmup.ts'
@@ -28,6 +29,7 @@ import {
   fetchTracksForPlaylists,
   fetchUserPlaylists,
   pausePlayback,
+  queuePlayback,
   resumePlayback,
   startPlayback,
 } from './lib/spotifyApi.ts'
@@ -301,6 +303,19 @@ export default function App() {
     return silenceRef.current
   }
 
+  function trackAfter(uri: string): string | null {
+    const queued = tracksRef.current
+    const current = queued.findIndex((track) => track.uri === uri)
+    if (current < 0 || queued.length < 2) {
+      return null
+    }
+    const next = queued[(current + 1) % queued.length]
+    if (!next || next.uri === uri) {
+      return null
+    }
+    return next.uri
+  }
+
   function clipWarmup(): ClipWarmup {
     warmupRef.current ??= createClipWarmup({
       getState: async () => {
@@ -348,7 +363,36 @@ export default function App() {
         if (!deviceId) {
           throw new Error('Spotify-Player nicht bereit.')
         }
-        await startPlayback(deviceId, next.uri, next.positionMs)
+        const following = next.positionMs === 0 ? (trackAfter(next.uri) ?? undefined) : undefined
+        await startPlayback(deviceId, next.uri, next.positionMs, following)
+      },
+      handoff: async (next) => {
+        if (next.positionMs !== 0) {
+          return false
+        }
+        const player = playerRef.current
+        if (!player) {
+          return false
+        }
+        const state = await player.getCurrentState().catch(() => null)
+        if (readQueuedTrackUri(state) !== next.uri) {
+          return false
+        }
+        await player.nextTrack()
+        return true
+      },
+      queueFollowing: async (next) => {
+        const deviceId = deviceIdRef.current
+        const player = playerRef.current
+        const following = trackAfter(next.uri)
+        if (!deviceId || !player || !following) {
+          return
+        }
+        const state = await player.getCurrentState().catch(() => null)
+        if (readQueuedTrackUri(state) === following) {
+          return
+        }
+        await queuePlayback(deviceId, following)
       },
       activate: async () => {
         await playerRef.current?.activateElement()

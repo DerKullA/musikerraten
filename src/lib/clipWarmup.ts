@@ -35,6 +35,7 @@ interface SdkPlaybackState {
     current_track?: {
       uri?: string
     } | null
+    next_tracks?: Array<{ uri?: string } | null> | null
   } | null
 }
 
@@ -46,6 +47,8 @@ export interface ClipWarmupDeps {
   resume: () => Promise<void>
   pause: () => Promise<void>
   load: (cue: ClipCue) => Promise<void>
+  handoff?: (cue: ClipCue) => Promise<boolean>
+  queueFollowing?: (cue: ClipCue) => Promise<void>
   activate: () => Promise<void>
   suspendSilence: () => Promise<void>
   restoreSilence: () => Promise<void>
@@ -198,6 +201,14 @@ export function shouldPrimeParkedClip(
   activeToken: number,
 ): boolean {
   return playback === 'clip' && clipToken === activeToken
+}
+
+export function readQueuedTrackUri(state: SdkPlaybackState | null): string | null {
+  const uri = state?.track_window?.next_tracks?.[0]?.uri
+  if (typeof uri !== 'string' || !uri.startsWith('spotify:track:')) {
+    return null
+  }
+  return uri
 }
 
 export function readWarmPlayback(state: SdkPlaybackState | null): WarmPlaybackState | null {
@@ -467,6 +478,40 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
     return false
   }
 
+  async function startQueuedHandoff(target: ClipCue, token: number): Promise<boolean> {
+    if (!deps.handoff || target.positionMs !== 0) {
+      return false
+    }
+    let accepted = false
+    try {
+      accepted = await deps.handoff(target)
+    } catch {
+      return generation !== token
+    }
+    if (generation !== token) {
+      return true
+    }
+    if (!accepted) {
+      return false
+    }
+    await deps.setVolume(audibleVolume)
+    for (let attempt = 0; attempt < PLAYBACK_START_LIMIT; attempt += 1) {
+      if (generation !== token) {
+        return true
+      }
+      const state = await deps.getState().catch(() => null)
+      if (state?.uri === target.uri && state.paused) {
+        await deps.resume().catch(() => undefined)
+      }
+      if (playbackHasStarted(target, state)) {
+        void deps.queueFollowing?.(target)?.catch(() => undefined)
+        return true
+      }
+      await sleep(PLAYBACK_START_POLL_MS)
+    }
+    return false
+  }
+
   async function startLoadedClip(target: ClipCue, token: number): Promise<void> {
     const parked = await parkIncomingTrack(target, token)
     if (generation !== token) {
@@ -480,6 +525,10 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
 
   async function startWarm(target: ClipCue, token: number, kind: WarmStart): Promise<void> {
     if (kind === 'load') {
+      const handedOff = await startQueuedHandoff(target, token)
+      if (handedOff || generation !== token) {
+        return
+      }
       await startLoadedClip(target, token)
       return
     }
