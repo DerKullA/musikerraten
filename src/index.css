@@ -49,20 +49,43 @@ input {
 .app {
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
   width: min(760px, calc(100% - 32px));
+  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0 auto;
-  padding: 48px 0 72px;
+  padding: 48px 0 0;
 }
 
 .app-game {
   width: 100%;
   max-width: none;
-  min-height: 100vh;
-  min-height: 100dvh;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
+}
+
+.app-footer {
+  margin-top: auto;
+  padding: 28px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  text-align: center;
+  pointer-events: none;
+}
+
+.app-footer p {
+  margin: 0;
+  color: color-mix(in srgb, var(--muted) 78%, transparent);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+}
+
+.app-game .panel.game {
+  min-height: 0;
+}
+
+.app-game .app-footer {
+  padding: 2px 12px calc(8px + env(safe-area-inset-bottom, 0px));
 }
 
 .glow {
