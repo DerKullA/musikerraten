@@ -8,6 +8,7 @@ interface ClipHandlers {
   onResumeClip: () => Promise<void>
   onPauseClip: () => Promise<void>
   onPrimeClip?: (uri: string, positionMs: number) => Promise<void>
+  onInvalidateClip?: () => void
   onReadPosition?: () => Promise<BackdropPosition | null>
   onNextBackdropTrack?: (finishedUri: string) => BackdropTrack | null
   onPlayback: (state: 'playing' | 'paused') => void
@@ -32,6 +33,8 @@ export function useShotlessClipPlayback(input: ShotlessClipInput): void {
   const handlersRef = useRef(input.handlers)
   const chainRef = useRef<Promise<void>>(Promise.resolve())
   const tokenRef = useRef(0)
+  const clipUriRef = useRef<string | null>(null)
+  const clipWasActiveRef = useRef(false)
   const cancelDelayRef = useRef<() => void>(() => undefined)
   const releaseRef = useRef(input.releaseRef)
   const suppressPauseRef = useRef(input.suppressPauseRef)
@@ -48,6 +51,15 @@ export function useShotlessClipPlayback(input: ShotlessClipInput): void {
   })
 
   useEffect(() => {
+    const nextActive = Boolean(active && uri && durationMs > 0)
+    if (uri && clipWasActiveRef.current && clipUriRef.current && clipUriRef.current !== uri) {
+      handlersRef.current.onInvalidateClip?.()
+    }
+    if (uri) {
+      clipUriRef.current = uri
+    }
+    clipWasActiveRef.current = nextActive
+
     function publishRelease(release: () => Promise<void>): void {
       const slot = releaseRef.current
       if (slot) {

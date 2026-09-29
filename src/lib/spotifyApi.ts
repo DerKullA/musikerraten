@@ -1,5 +1,6 @@
 import type { Playlist, Track } from '../types.ts'
 import { pickAlbumImageUrl, type AlbumImage } from './albumArt.ts'
+import { reportPlaybackFailure } from './playbackLog.ts'
 import { getValidAccessToken } from './spotifyAuth.ts'
 
 const API = 'https://api.spotify.com/v1'
@@ -51,7 +52,14 @@ export async function spotifyRequest<T>(path: string, init: RequestInit = {}): P
   }
   if (!response.ok) {
     const text = await response.text()
-    throw new Error(text || `Spotify-Fehler ${response.status}`)
+    const message = text || `Spotify-Fehler ${response.status}`
+    if (path.startsWith('/me/player')) {
+      throw reportPlaybackFailure(message, {
+        action: 'api',
+        step: path.split('?')[0] ?? path,
+      })
+    }
+    throw new Error(message)
   }
   return (await response.json()) as T
 }
