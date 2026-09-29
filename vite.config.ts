@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
+import { normalizeBasePath } from './src/lib/basePath.ts'
 
 function readPackageVersion(): string {
   const parsed: unknown = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
@@ -21,7 +22,7 @@ function isPackageVersion(value: unknown): value is { version: string } {
 }
 
 export default defineConfig({
-  base: process.env.VITE_BASE || '/',
+  base: normalizeBasePath(process.env.VITE_BASE),
   define: {
     __APP_VERSION__: JSON.stringify(readPackageVersion()),
   },

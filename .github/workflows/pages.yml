@@ -36,6 +36,7 @@ jobs:
       - name: Install
         run: npm ci
       - name: Build
+        # Solange Pages live ist: Basis /musikerraten/ (entspricht npm run build:pages).
         run: npm run build
         env:
           VITE_BASE: /musikerraten/

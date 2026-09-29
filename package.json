@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:pages": "tsc -b && vite build --base=/musikerraten/",
+    "build:wisinguy": "tsc -b && vite build --base=/",
     "lint": "oxlint",
     "test": "vitest run",
     "preview": "vite preview --host 127.0.0.1 --port 43123"
