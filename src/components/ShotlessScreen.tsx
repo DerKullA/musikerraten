@@ -528,7 +528,7 @@ function ShotlessSetup({
   const ready = canStartShotless(mode, players)
 
   return (
-    <section className="panel with-menu">
+    <section className="panel with-menu fit-screen">
       <header className="panel-head">
         <div>
           <p className="eyebrow">Trinkspiel</p>
@@ -538,6 +538,7 @@ function ShotlessSetup({
           <AppMenu onLogout={onLogout} onLeaveRound={onLeave} leaveLabel="Zurück zum Hauptmenü" />
         </div>
       </header>
+      <div className="fit-scroll">
       <p className="lede">
         Kurze Schnipsel, jedes Mal an einer anderen Stelle im Song. Wer länger hören muss, trinkt weniger. Wer
         richtig liegt, lässt die anderen trinken. Niemand oder Aufgeben: alle einen Shot. Nur Ansagen auf dem
@@ -591,6 +592,7 @@ function ShotlessSetup({
           onRemoveName={onRemoveName}
         />
       ) : null}
+      </div>
       <div className="actions">
         <button type="button" className="btn primary cta" onClick={onStart} disabled={!ready}>
           Runde starten
@@ -760,16 +762,6 @@ export function ShotlessRoundView({
             {round.feedback}
           </p>
         ) : null}
-        {round.view === 'guessing' ? (
-          <div className="shotless-actions">
-            <ClipMeter
-              key={`${round.trackIndex}-${round.stageIndex}-${round.replayNonce}`}
-              durationMs={stage.durationMs}
-              running={firstPlayReady}
-            />
-            <ListenClipButton className="btn primary cta" disabled={clipPlaying} onListen={onListen} />
-          </div>
-        ) : null}
         {round.view === 'guessing' && mode === 'tippen' ? (
           <GuessComposer
             target={guessTarget}
@@ -786,17 +778,25 @@ export function ShotlessRoundView({
         {round.view === 'pick-player' ? (
           <PlayerPick players={players} onAssign={onAssign} onNobody={onNobody} />
         ) : null}
-        {round.view === 'guessing' ? (
-          <div className="shotless-actions">
-            {mode === 'party' ? (
-              <button type="button" className="btn erraten" onClick={onClaim}>
-                Erraten!
-              </button>
-            ) : !lastStage ? (
-              <button type="button" className="btn aufgeben" onClick={onNobody}>
-                Aufgeben
-              </button>
-            ) : null}
+      </div>
+      {round.view === 'guessing' ? (
+        <div className="game-dock">
+          <ClipMeter
+            key={`${round.trackIndex}-${round.stageIndex}-${round.replayNonce}`}
+            durationMs={stage.durationMs}
+            running={firstPlayReady}
+          />
+          <ListenClipButton className="btn primary cta" disabled={clipPlaying} onListen={onListen} />
+          {mode === 'party' ? (
+            <button type="button" className="btn erraten" onClick={onClaim}>
+              Erraten!
+            </button>
+          ) : !lastStage ? (
+            <button type="button" className="btn aufgeben" onClick={onNobody}>
+              Aufgeben
+            </button>
+          ) : null}
+          <div className="dock-pair">
             <button
               type="button"
               className={lastStage ? 'btn aufgeben stage-skip' : 'btn outline stage-skip'}
@@ -811,14 +811,14 @@ export function ShotlessRoundView({
               </button>
             ) : null}
           </div>
-        ) : null}
-        {revealed ? (
-          <div className="shotless-actions">
-            <ClipMeter key={`${round.trackIndex}-${round.replayNonce}`} durationMs={POST_REVEAL_PLAY_MS} />
-            <SkipTrackButton onSkip={onNext} />
-          </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
+      {revealed ? (
+        <div className="game-dock">
+          <ClipMeter key={`${round.trackIndex}-${round.replayNonce}`} durationMs={POST_REVEAL_PLAY_MS} />
+          <SkipTrackButton onSkip={onNext} />
+        </div>
+      ) : null}
     </section>
   )
 }

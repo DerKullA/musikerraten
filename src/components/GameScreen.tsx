@@ -146,18 +146,6 @@ export function GameScreen({
         ) : (
           <div className="meter idle" />
         )}
-        {showGuessControls ? (
-          <div className="round-actions">
-            <button
-              type="button"
-              className="btn primary cta"
-              disabled={listenLocked || snippetPlaying || !snippetReady}
-              onClick={replaySnippet}
-            >
-              Nochmal anhören
-            </button>
-          </div>
-        ) : null}
         <div className="game-readout">
           <div className={`reveal-card${phase === 'reveal' && !hidden ? ' is-reveal' : ''}`}>
             <p className="artist">{hidden || !track ? '???' : track.artist}</p>
@@ -169,14 +157,22 @@ export function GameScreen({
         </div>
       </div>
       {showGuessControls ? (
-        <div className="game-lower">
+        <div className="game-dock">
+          <button
+            type="button"
+            className="btn primary cta"
+            disabled={listenLocked || snippetPlaying || !snippetReady}
+            onClick={replaySnippet}
+          >
+            Nochmal anhören
+          </button>
           <button type="button" className="btn erraten" onClick={onReveal}>
             Erraten
           </button>
         </div>
       ) : null}
       {showSkipNext ? (
-        <div className="game-lower">
+        <div className="game-dock">
           <SkipTrackButton onSkip={onSkipNext} />
         </div>
       ) : null}

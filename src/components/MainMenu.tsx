@@ -11,7 +11,7 @@ interface MainMenuProps {
 
 export function MainMenu({ savedTimings, onSaveTimings, onLogout, onSelectGame }: MainMenuProps) {
   return (
-    <section className="panel with-menu">
+    <section className="panel with-menu fit-screen">
       <header className="panel-head">
         <div>
           <p className="eyebrow">Musikerraten</p>
@@ -21,11 +21,13 @@ export function MainMenu({ savedTimings, onSaveTimings, onLogout, onSelectGame }
           <AppMenu timings={savedTimings} onSaveTimings={onSaveTimings} onLogout={onLogout} />
         </div>
       </header>
+      <div className="fit-scroll">
       <p className="lede">Wähle ein Spiel. Weitere Modi folgen.</p>
       <div className="game-menu">
         {listMainMenuGames().map((game) => (
           <GameMenuEntry key={game.id} game={game} onSelectGame={onSelectGame} />
         ))}
+      </div>
       </div>
     </section>
   )
