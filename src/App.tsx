@@ -23,11 +23,14 @@ import {
   createClipWarmup,
   readQueuedTrackUri,
   readWarmPlayback,
+  type ClipCue,
   type ClipWarmup,
 } from './lib/clipWarmup.ts'
 import { createSilenceWatch, type SilenceWatch } from './lib/silenceWatch.ts'
+import type { PlaybackClaimResult } from './lib/playbackDevice.ts'
 import { logPlaybackError, rememberPlaybackLog, wasPlaybackLogged, type PlaybackLogAction } from './lib/playbackLog.ts'
 import {
+  ensurePlaybackOnDevice,
   fetchTracksForPlaylists,
   fetchUserPlaylists,
   pausePlayback,
@@ -384,6 +387,7 @@ export default function App() {
         await player.nextTrack()
         return true
       },
+      claimDevice: (cue) => claimPlaybackDevice(cue),
       queueFollowing: async (next) => {
         const deviceId = deviceIdRef.current
         const player = playerRef.current
@@ -402,9 +406,42 @@ export default function App() {
       },
       suspendSilence: () => silence().suspend(),
       restoreSilence: () => silence().arm(),
-      readPhase: () => (screenRef.current === 'shotless' ? 'shotless' : phaseRef.current),
+      readPhase: playbackPhase,
     })
     return warmupRef.current
+  }
+
+  function playbackPhase(): string {
+    return screenRef.current === 'shotless' ? 'shotless' : phaseRef.current
+  }
+
+  async function claimPlaybackDevice(cue: ClipCue | null): Promise<PlaybackClaimResult> {
+    const deviceId = deviceIdRef.current
+    const player = playerRef.current
+    if (!deviceId || !player) {
+      return 'idle'
+    }
+    try {
+      await player.activateElement()
+    } catch (cause) {
+      if (!wasPlaybackLogged(cause)) {
+        const message =
+          cause instanceof Error && cause.message
+            ? cause.message
+            : 'Spotify-Player lässt sich nicht aktivieren.'
+        logPlaybackError(message, {
+          uri: cue?.uri ?? null,
+          action: 'transfer',
+          phase: playbackPhase(),
+          step: 'activate',
+        })
+      }
+    }
+    return await ensurePlaybackOnDevice(deviceId, {
+      uri: cue?.uri,
+      phase: playbackPhase(),
+      mute: () => player.setVolume(0),
+    })
   }
 
   function notePlaybackFailure(cause: unknown, action: PlaybackLogAction, uri: string | null): void {
@@ -415,7 +452,7 @@ export default function App() {
     logPlaybackError(message, {
       uri,
       action,
-      phase: screenRef.current === 'shotless' ? 'shotless' : phaseRef.current,
+      phase: playbackPhase(),
     })
     if (cause instanceof Error) {
       rememberPlaybackLog(cause)
@@ -467,6 +504,8 @@ export default function App() {
         return
       }
       const player = playerRef.current
+      const track = tracksRef.current[indexRef.current]
+      await claimPlaybackDevice(track ? { uri: track.uri, positionMs: 0 } : null)
       if (player) {
         void player.activateElement().catch(() => undefined)
         try {

@@ -293,6 +293,74 @@ describe('createClipWarmup play', () => {
     logged.mockRestore()
   })
 
+  it('holt die Wiedergabe auf dieses Gerät, bevor der Song lädt', async () => {
+    const order: string[] = []
+    let phase: 'idle' | 'playing' | 'paused' | 'resumed' = 'idle'
+    let position = 0
+    const warmup = createClipWarmup(
+      warmupDeps({
+        claimDevice: async () => {
+          order.push('claim')
+          return 'local'
+        },
+        getState: async () => {
+          if (phase === 'idle') {
+            return null
+          }
+          if (phase !== 'paused' && position < cue.positionMs + 80) {
+            position += 200
+          }
+          return { paused: phase === 'paused', positionMs: position, uri: cue.uri }
+        },
+        setVolume: async (next) => {
+          order.push(`volume:${next}`)
+        },
+        load: async () => {
+          order.push('load')
+          phase = 'playing'
+          position = 0
+        },
+        pause: async () => {
+          phase = 'paused'
+        },
+        seek: async (positionMs) => {
+          position = positionMs
+          phase = 'playing'
+        },
+        resume: async () => {
+          phase = 'resumed'
+        },
+      }),
+    )
+
+    await warmup.play(cue)
+    const claimAt = order.indexOf('claim')
+    const loadAt = order.indexOf('load')
+    expect(claimAt).toBeGreaterThanOrEqual(0)
+    expect(loadAt).toBeGreaterThan(claimAt)
+    expect(order.indexOf('volume:0')).toBeLessThan(loadAt)
+  })
+
+  it('lädt neu, wenn das vorgeladene Gerät die Wiedergabe verloren hat', async () => {
+    let onDevice = true
+    let loaded = false
+    const ready = { paused: true, positionMs: cue.positionMs, uri: cue.uri }
+    const warmup = createClipWarmup(
+      warmupDeps({
+        claimDevice: async () => (onDevice ? 'local' : 'transferred'),
+        getState: async () => (onDevice ? ready : null),
+        load: async () => {
+          loaded = true
+        },
+      }),
+    )
+
+    await warmup.prime(cue)
+    onDevice = false
+    await expect(warmup.play(cue)).rejects.toThrow('Der Song hat nicht gestartet.')
+    expect(loaded).toBe(true)
+  })
+
   it('springt zum vorgemerkten Folgesong, ohne ihn neu zu laden', async () => {
     const target = { uri: 'spotify:track:b', positionMs: 0 }
     let handed = false

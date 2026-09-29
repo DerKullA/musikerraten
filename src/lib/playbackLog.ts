@@ -1,4 +1,4 @@
-export type PlaybackLogAction = 'prime' | 'play' | 'restore' | 'api' | 'sdk'
+export type PlaybackLogAction = 'prime' | 'play' | 'restore' | 'api' | 'sdk' | 'transfer'
 
 export interface PlaybackLogContext {
   uri?: string | null
