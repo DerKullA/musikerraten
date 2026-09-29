@@ -42,12 +42,12 @@ Die Redirect URI ist immer Origin plus Vite-Basis, **mit abschließendem Schräg
 | --- | --- | --- |
 | Lokal | `npm run dev` | `http://127.0.0.1:43123/` |
 | GitHub Pages (live) | `npm run build:pages` | `https://derkulla.github.io/musikerraten/` |
-| wisinguy.com (nach Cutover) | `npm run build:wisinguy` | `https://wisinguy.com/` |
+| musikerraten.wirsindgeil.com (nach Cutover) | `npm run build:prod` | `https://musikerraten.wirsindgeil.com/` |
 | Vercel / andere Wurzel-Domain | `npm run build` | `https://<deployment>/` |
 
 Die Zeichenkette muss **exakt** mit dem Dashboard übereinstimmen (Schema, Host, Port, Pfad, Schrägstrich). `http://localhost` ist für neue Spotify-Apps nicht zulässig, nutze `127.0.0.1`.
 
-Produktions-Redirects müssen **HTTPS** sein. Pages bleibt auf `https://derkulla.github.io/musikerraten/`, bis der Cutover fertig ist. `https://wisinguy.com/` kommt erst dazu, wenn die neue Origin live geht. Details und Checkliste: [DEPLOY.md](DEPLOY.md).
+Produktions-Redirects müssen **HTTPS** sein. Pages bleibt auf `https://derkulla.github.io/musikerraten/`, bis der Cutover fertig ist. HTTPS für `https://musikerraten.wirsindgeil.com/` ist live; die Redirect-URI darf ins Dashboard, sobald der Login dort laufen soll. Details und Checkliste: [DEPLOY.md](DEPLOY.md).
 
 ## GitHub Pages
 
@@ -62,9 +62,9 @@ Unter *Settings → Pages* als Quelle **GitHub Actions** wählen. Im Spotify-Das
 
 `vercel.json` baut nach `dist` und leitet alle Routen auf `/index.html` um. Ohne `VITE_BASE` ist die Basis `/`. Die Redirect URI ist der HTTPS-Origin mit abschließendem Schrägstrich.
 
-## Eigener Server (wisinguy.com)
+## Eigener Server (musikerraten.wirsindgeil.com)
 
-`npm run build:wisinguy` erzeugt `dist/` mit Basis `/` für `https://wisinguy.com/`. Auslieferung über den Symlink `/var/www/wisinguy.com/current` auf ein Release unter `/var/www/wisinguy.com/releases/<id>/`. SSH, Helfer `~/bin/deploy-wisinguy.sh`, `try_files` und die Cutover-Checkliste stehen in [DEPLOY.md](DEPLOY.md).
+`npm run build:prod` erzeugt `dist/` mit Basis `/` für `https://musikerraten.wirsindgeil.com/`. Die Client-ID kommt aus `.env.local` bzw. dem Secret `VITE_SPOTIFY_CLIENT_ID`. Auslieferung über den Symlink `/var/www/musikerraten.wirsindgeil.com/current` auf ein Release unter `/var/www/musikerraten.wirsindgeil.com/releases/<id>/`. SSH-Alias `webserver` (`christian@10.73.92.1`, WireGuard), Helfer `~/bin/deploy-musikerraten.sh` und die Cutover-Checkliste stehen in [DEPLOY.md](DEPLOY.md). Nginx, Docroot und HTTPS sind live.
 
 ## Umgebungsvariablen
 
@@ -83,5 +83,5 @@ Keine echten Client-IDs und keine `.env`-Dateien ins Repository committen. `VITE
 - `npm run dev` – Entwicklung auf `127.0.0.1:43123` (Basis `/`)
 - `npm run build` – Typecheck und Production-Build, Basis `/` sofern `VITE_BASE` leer ist
 - `npm run build:pages` – Basis `/musikerraten/` für GitHub Pages
-- `npm run build:wisinguy` – Basis `/` für wisinguy.com
+- `npm run build:prod` – Basis `/` für https://musikerraten.wirsindgeil.com/
 - `npm run preview` – gebaute App lokal ansehen
