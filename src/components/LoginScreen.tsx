@@ -16,7 +16,8 @@ export function LoginScreen({
   const redirectUri = getRedirectUri()
 
   return (
-    <section className="panel hero">
+    <section className="panel hero fit-screen">
+      <div className="fit-scroll">
       <p className="eyebrow">Playlist-Quiz</p>
       <h1>Musikerraten</h1>
       <p className="lede">
@@ -24,11 +25,6 @@ export function LoginScreen({
         der nächste Titel.
       </p>
       {error ? <p className="banner error">{error}</p> : null}
-      <div className="actions">
-        <button type="button" className="btn primary" onClick={onSpotifyLogin} disabled={busy || !clientIdPresent}>
-          {busy ? 'Verbinde …' : 'Mit Spotify anmelden'}
-        </button>
-      </div>
       <aside className="notes">
         <p>
           Die Wiedergabe über das Spotify Web Playback SDK braucht ein <strong>Spotify-Premium</strong>
@@ -44,6 +40,12 @@ export function LoginScreen({
           </p>
         ) : null}
       </aside>
+      </div>
+      <div className="actions">
+        <button type="button" className="btn primary" onClick={onSpotifyLogin} disabled={busy || !clientIdPresent}>
+          {busy ? 'Verbinde …' : 'Mit Spotify anmelden'}
+        </button>
+      </div>
     </section>
   )
 }

@@ -16,14 +16,22 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 html,
 body,
 #root {
   min-height: 100%;
+  min-height: 100dvh;
 }
 
 body {
   margin: 0;
+  max-width: 100%;
+  overflow-x: hidden;
   color: var(--paper);
   background:
     radial-gradient(1200px 600px at 10% -10%, rgba(212, 225, 87, 0.16), transparent 55%),
@@ -42,8 +50,14 @@ body::before {
 }
 
 button,
-input {
+input,
+label {
   font: inherit;
+  touch-action: manipulation;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
 }
 
 .app {
@@ -51,25 +65,36 @@ input {
   z-index: 1;
   display: flex;
   flex-direction: column;
-  width: min(760px, calc(100% - 32px));
+  width: min(760px, 100%);
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0 auto;
-  padding: 48px 0 0;
+  padding:
+    calc(40px + env(safe-area-inset-top, 0px))
+    max(16px, env(safe-area-inset-right, 0px))
+    0
+    max(16px, env(safe-area-inset-left, 0px));
 }
 
 .app-game {
   width: 100%;
   max-width: none;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
   margin: 0;
   padding: 0;
+  overflow: hidden;
 }
 
 .app-footer {
+  flex: none;
   margin-top: auto;
-  padding: 28px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  padding: 16px 16px calc(12px + env(safe-area-inset-bottom, 0px));
   text-align: center;
   pointer-events: none;
+  background: var(--ink);
 }
 
 .app-footer p {
@@ -85,7 +110,9 @@ input {
 }
 
 .app-game .app-footer {
-  padding: 2px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+  margin-top: 0;
+  padding: 2px 12px calc(6px + env(safe-area-inset-bottom, 0px));
+  background: var(--ink);
 }
 
 .glow {
@@ -106,6 +133,8 @@ input {
 }
 
 .panel-head {
+  position: relative;
+  z-index: 4;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -131,9 +160,10 @@ input {
 h1 {
   margin: 0;
   font-family: var(--display);
-  font-size: clamp(2.2rem, 6vw, 4rem);
+  font-size: clamp(2.05rem, 8vw, 4rem);
   line-height: 0.95;
   font-weight: 500;
+  overflow-wrap: break-word;
 }
 
 .lede,
@@ -185,15 +215,17 @@ h1 {
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 12px 16px;
   margin: 22px 0 10px;
 }
 
 .btn {
   border: 0;
   border-radius: 999px;
-  padding: 13px 22px;
+  min-height: 48px;
+  padding: 12px 22px;
   cursor: pointer;
   color: var(--ink);
   background: var(--paper);
@@ -287,10 +319,49 @@ h1 {
 }
 
 .round-actions,
-.game-lower {
+.game-lower,
+.game-dock {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   width: min(100%, 36rem);
+  margin-inline: auto;
+}
+
+.game-dock {
+  flex: none;
+  position: relative;
+  z-index: 1;
+}
+
+.game-dock .btn,
+.shotless-actions .btn,
+.guess-field .btn {
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 18px;
+  font-size: 1.08rem;
+  font-weight: 700;
+  white-space: normal;
+}
+
+.game-dock .btn.cta {
+  min-height: 58px;
+  font-size: clamp(1.15rem, 0.95rem + 1vw, 1.4rem);
+}
+
+.dock-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.dock-pair .btn:only-child {
+  grid-column: 1 / -1;
+}
+
+.dock-pair .btn {
+  padding-inline: 12px;
+  font-size: 1rem;
 }
 
 .btn.compact {
@@ -300,12 +371,12 @@ h1 {
 
 .btn.cta {
   width: 100%;
-  min-height: 68px;
-  padding: 18px 28px;
-  font-size: clamp(1.25rem, 0.5rem + 4.1vw, 1.85rem);
+  min-height: 64px;
+  padding: 16px 22px;
+  font-size: clamp(1.2rem, 0.7rem + 2.2vw, 1.7rem);
   font-weight: 700;
   line-height: 1.15;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .btn.cta.is-wrapping {
@@ -376,8 +447,19 @@ h1 {
   color: var(--ink);
 }
 
-.game-entry:not(:disabled):hover {
-  filter: brightness(1.05);
+@media (hover: hover) and (pointer: fine) {
+  .game-entry:not(:disabled):hover {
+    filter: brightness(1.05);
+  }
+
+  .burger-button:hover {
+    background: rgba(212, 225, 87, 0.16);
+    color: var(--lime);
+  }
+
+  .menu-item:hover {
+    background: rgba(243, 234, 216, 0.08);
+  }
 }
 
 .sr-only {
@@ -478,6 +560,7 @@ h1 {
 
 .player-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -494,8 +577,13 @@ h1 {
 }
 
 .player-row input {
-  flex: 1;
+  flex: 1 1 12rem;
   border-radius: 999px;
+}
+
+.player-row .btn {
+  flex: none;
+  min-height: 52px;
 }
 
 .guess-field input {
@@ -522,7 +610,9 @@ h1 {
   border-radius: 999px;
   background: rgba(243, 234, 216, 0.08);
   color: var(--paper);
-  padding: 10px 14px;
+  min-height: 48px;
+  padding: 12px 16px;
+  font-size: 1rem;
   cursor: pointer;
 }
 
@@ -538,21 +628,27 @@ h1 {
 }
 
 .stage-rail {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
   width: min(100%, 36rem);
   margin: 0;
 }
 
 .stage-rail li {
-  padding: 6px 10px;
-  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 8px 6px;
+  border-radius: 16px;
   color: var(--muted);
   background: rgba(243, 234, 216, 0.06);
-  font-size: 0.82rem;
+  font-size: 0.92rem;
   font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  overflow-wrap: break-word;
 }
 
 .stage-rail li.is-current {
@@ -585,9 +681,10 @@ h1 {
   margin: 0;
   font-family: var(--display);
   font-weight: 560;
-  font-size: clamp(3.6rem, 16vw, 7.2rem);
+  font-size: clamp(2.6rem, min(16vw, 14dvh), 7.2rem);
   line-height: 0.88;
   letter-spacing: -0.03em;
+  overflow-wrap: break-word;
 }
 
 .shotless-penalty.is-shot {
@@ -638,7 +735,8 @@ h1 {
 
 .panel.shotless .shotless-actions,
 .panel.shotless .guess-field {
-  margin-top: 0;
+  margin-top: auto;
+  width: min(100%, 36rem);
 }
 
 .player-choice {
@@ -665,6 +763,7 @@ code {
   padding: 0.1em 0.35em;
   border-radius: 6px;
   background: rgba(243, 234, 216, 0.08);
+  overflow-wrap: anywhere;
 }
 
 .playlist-list {
@@ -680,12 +779,20 @@ code {
 .playlist {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 12px;
+  gap: 14px;
   align-items: center;
-  padding: 12px 14px;
+  min-height: 64px;
+  padding: 14px 16px;
   border-radius: 16px;
   background: rgba(243, 234, 216, 0.04);
   cursor: pointer;
+}
+
+.playlist input[type='checkbox'] {
+  width: 1.35rem;
+  height: 1.35rem;
+  margin: 0;
+  accent-color: var(--lime);
 }
 
 .playlist.selected {
@@ -695,6 +802,7 @@ code {
 .playlist strong,
 .playlist small {
   display: block;
+  overflow-wrap: anywhere;
 }
 
 .playlist small {
@@ -707,23 +815,22 @@ code {
 }
 
 .panel.game {
-  flex: 1;
+  flex: 1 1 auto;
   width: min(760px, 100%);
-  min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 0;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: clamp(0.7rem, 2dvh, 1.2rem);
+  gap: clamp(0.45rem, 1.6dvh, 1.1rem);
   border: 0;
   border-radius: 0;
   box-shadow: none;
   background: transparent;
   padding:
-    calc(clamp(0.75rem, 2.2dvh, 1.4rem) + env(safe-area-inset-top, 0px))
-    calc(clamp(1rem, 4vw, 1.75rem) + env(safe-area-inset-right, 0px))
-    calc(clamp(0.7rem, 2dvh, 1.15rem) + env(safe-area-inset-bottom, 0px))
-    calc(clamp(1rem, 4vw, 1.75rem) + env(safe-area-inset-left, 0px));
+    calc(clamp(0.6rem, 1.6dvh, 1.15rem) + env(safe-area-inset-top, 0px))
+    max(clamp(0.85rem, 4vw, 1.5rem), env(safe-area-inset-right, 0px))
+    clamp(0.25rem, 0.8dvh, 0.55rem)
+    max(clamp(0.85rem, 4vw, 1.5rem), env(safe-area-inset-left, 0px));
 }
 
 .panel.game h1 {
@@ -735,8 +842,24 @@ code {
 }
 
 .panel.game .panel-head {
+  flex: none;
   flex-direction: row;
   align-items: flex-start;
+  min-width: 0;
+}
+
+.panel.game .panel-head > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+
+.panel.game > .banner {
+  flex: none;
+  max-height: 4.6rem;
+  margin: 0;
+  overflow: auto;
+  padding: 10px 12px;
+  font-size: 0.95rem;
 }
 
 .panel.game .panel-head-meta {
@@ -759,9 +882,13 @@ code {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: clamp(0.75rem, 2.4dvh, 1.35rem);
+  justify-content: safe center;
+  gap: clamp(0.55rem, 1.8dvh, 1.15rem);
   min-height: 0;
   width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .game-readout {
@@ -781,8 +908,9 @@ code {
 .game-center-control {
   display: grid;
   place-items: center;
-  width: clamp(8.75rem, min(68vw, 40dvh), 22.5rem);
-  height: clamp(8.75rem, min(68vw, 40dvh), 22.5rem);
+  flex: none;
+  width: clamp(7.5rem, min(52vw, 32dvh), 20rem);
+  height: clamp(7.5rem, min(52vw, 32dvh), 20rem);
 }
 
 .center-transport {
@@ -994,8 +1122,8 @@ code {
   display: grid;
   gap: 5px;
   place-content: center;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -1012,7 +1140,6 @@ code {
   background: currentColor;
 }
 
-.burger-button:hover,
 .burger-button.is-open {
   background: rgba(212, 225, 87, 0.16);
   color: var(--lime);
@@ -1039,8 +1166,8 @@ code {
   top: calc(100% + 8px);
   right: 0;
   z-index: 6;
-  width: max-content;
-  min-width: 220px;
+  width: min(18.5rem, calc(100vw - 1.5rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+  min-width: min(220px, calc(100vw - 1.5rem));
   padding: 6px;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -1050,21 +1177,22 @@ code {
 }
 
 .menu-item {
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
+  min-height: 48px;
   border: 0;
   border-radius: 12px;
   padding: 12px 14px;
   background: transparent;
   color: var(--paper);
-  font-size: clamp(1.05rem, 0.72rem + 2vw, 1.35rem);
-  line-height: 1.2;
+  font-size: clamp(1.05rem, 0.9rem + 0.6vw, 1.25rem);
+  line-height: 1.25;
   text-align: left;
-  white-space: nowrap;
+  white-space: normal;
   cursor: pointer;
 }
 
-.menu-item:hover,
 .menu-item:focus-visible {
   background: rgba(243, 234, 216, 0.08);
 }
@@ -1081,13 +1209,17 @@ code {
   z-index: 30;
   display: grid;
   place-items: center;
-  padding: 20px;
+  padding:
+    max(16px, env(safe-area-inset-top, 0px))
+    max(16px, env(safe-area-inset-right, 0px))
+    max(16px, env(safe-area-inset-bottom, 0px))
+    max(16px, env(safe-area-inset-left, 0px));
   background: rgba(8, 12, 7, 0.72);
 }
 
 .settings-dialog {
   width: min(440px, 100%);
-  max-height: min(640px, calc(100vh - 32px));
+  max-height: min(640px, calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px));
   overflow: auto;
   padding: 28px 24px 22px;
   border: 1px solid var(--line);
@@ -1130,12 +1262,14 @@ code {
 
 .timing-input input {
   width: 5.5rem;
+  min-height: 48px;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: rgba(243, 234, 216, 0.06);
   color: var(--paper);
   color-scheme: dark;
+  font-size: 1rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1154,9 +1288,85 @@ code {
   text-align: right;
 }
 
-@media (max-width: 640px) {
+.fit-screen {
+  display: flex;
+  flex-direction: column;
+}
+
+.fit-scroll {
+  min-width: 0;
+}
+
+@media (min-width: 721px) {
+  .panel.hero.fit-screen {
+    display: grid;
+    align-content: start;
+  }
+
+  .panel.hero .fit-scroll {
+    display: contents;
+  }
+
+  .panel.hero .actions {
+    order: 1;
+  }
+
+  .panel.hero .notes {
+    order: 2;
+  }
+}
+
+.panel.with-menu .panel-head > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+
+@media (max-width: 720px) {
+  .app:not(.app-game) {
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+  }
+
+  .app:not(.app-game) > .panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  .app:not(.app-game) > .panel.fit-screen {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .fit-screen > .fit-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+
+  .fit-screen > .actions {
+    flex: none;
+    margin-top: 12px;
+    padding-top: 8px;
+    background: color-mix(in srgb, var(--ink-soft) 92%, black);
+  }
+
+  .fit-screen .playlist-list {
+    max-height: none;
+    overflow: visible;
+  }
+
   .panel {
-    padding: 28px 18px 22px;
+    padding: 20px 16px 16px;
     border-radius: 22px;
   }
 
@@ -1172,6 +1382,7 @@ code {
   .panel.with-menu .panel-head {
     flex-direction: row;
     align-items: flex-start;
+    gap: 12px;
   }
 
   .panel.with-menu .panel-head-meta {
@@ -1179,19 +1390,81 @@ code {
     align-items: flex-end;
   }
 
-  .session-exit .btn {
+  .session-exit .btn,
+  .actions .btn {
     width: 100%;
+    min-height: 52px;
+  }
+
+  .btn.compact {
     min-height: 48px;
+    padding: 12px 16px;
+    font-size: 1rem;
   }
 
   .btn.cta {
-    min-height: 84px;
+    min-height: 60px;
+  }
+
+  .guess-targets {
+    gap: 10px;
+  }
+
+  .guess-target {
+    min-height: 56px;
+    font-size: 0.98rem;
+    line-height: 1.2;
+  }
+
+  .app-footer {
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .settings-dialog .actions {
+    flex-direction: column;
+  }
+}
+
+@media (max-height: 740px) {
+  .shotless-penalty {
+    font-size: clamp(2.1rem, 11dvh, 3.4rem);
+  }
+
+  .shotless-cover {
+    width: min(112px, 28vw);
+    margin-bottom: 6px;
+  }
+
+  .panel.game {
+    gap: 0.4rem;
+  }
+
+  .game-dock .btn,
+  .game-dock .btn.cta,
+  .shotless-actions .btn {
+    min-height: 48px;
+    padding: 10px 14px;
+  }
+
+  .reveal-card.is-reveal .title {
+    font-size: clamp(1.85rem, 8vw, 2.8rem);
+  }
+}
+
+@media (max-height: 520px) {
+  .game-center-control {
+    width: clamp(4.25rem, 26dvh, 7rem);
+    height: clamp(4.25rem, 26dvh, 7rem);
+  }
+
+  .panel.game h1 {
+    font-size: 1.35rem;
   }
 }
 
 .game-dialog {
-  width: min(28rem, calc(100vw - 1.5rem));
-  max-height: calc(100dvh - 1.5rem);
+  width: min(28rem, calc(100vw - 1rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem);
   margin: auto;
   padding: 0;
   border: 1px solid var(--line);
@@ -1232,6 +1505,8 @@ code {
 }
 
 .loser-bonus-done {
+  width: 100%;
+  min-height: 52px;
   margin-top: 0.9rem;
 }
 

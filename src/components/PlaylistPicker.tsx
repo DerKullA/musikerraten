@@ -35,7 +35,7 @@ export function PlaylistPicker({
   const allSelected = playlists.length > 0 && selectedCount === playlists.length
 
   return (
-    <section className="panel with-menu">
+    <section className="panel with-menu fit-screen">
       <header className="panel-head">
         <div>
           <p className="eyebrow">Spotify</p>
@@ -50,6 +50,7 @@ export function PlaylistPicker({
           />
         </div>
       </header>
+      <div className="fit-scroll">
       <p className="lede">
         Wähle eine oder mehrere Playlists. Daraus werden die Titel-URIs geladen.
       </p>
@@ -89,6 +90,7 @@ export function PlaylistPicker({
           )
         })}
       </ul>
+      </div>
       <div className="actions">
         <button
           type="button"
