@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { AppFooter } from './components/AppFooter.tsx'
 import { GameScreen } from './components/GameScreen.tsx'
 import { LoginScreen } from './components/LoginScreen.tsx'
 import { MainMenu } from './components/MainMenu.tsx'
@@ -902,6 +903,7 @@ export default function App() {
           onLiveChange={setShotlessLive}
         />
       ) : null}
+      <AppFooter />
     </main>
   )
 }
