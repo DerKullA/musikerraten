@@ -110,6 +110,7 @@ export function ShotlessScreen({
   const [artistQuery, setArtistQuery] = useState('')
   const [playbackError, setPlaybackError] = useState<string | null>(null)
   const [clipPlaying, setClipPlaying] = useState(false)
+  const [readyClipKey, setReadyClipKey] = useState<string | null>(null)
   const clipPlayingRef = useRef(false)
   const onPlaybackRef = useRef(onPlayback)
   const blockAdvanceRef = useRef(false)
@@ -126,6 +127,8 @@ export function ShotlessScreen({
 
   const track = tracks[round.trackIndex] ?? null
   const stage = stageByIndex(round.stageIndex)
+  const clipKey = `${round.trackIndex}:${round.stageIndex}:${round.replayNonce}:${round.view}`
+  const firstPlayReady = readyClipKey === clipKey
   const clipActive = started && round.view === 'guessing' && track !== null
   const revealHold = started && round.view === 'reveal' && track !== null
 
@@ -230,6 +233,9 @@ export function ShotlessScreen({
       onReadPosition,
       onNextBackdropTrack: nextBackdropTrack,
       onPlayback: reportClipPlayback,
+      onFirstPlayReady: () => {
+        setReadyClipKey(clipKey)
+      },
       onError: setPlaybackError,
       onComplete: advanceAfterReveal,
     },
@@ -458,6 +464,7 @@ export function ShotlessScreen({
         applyRound(reduceShotlessRound(round, { type: 'nobody' }))
       }}
       clipPlaying={clipPlaying}
+      firstPlayReady={firstPlayReady}
       onNext={() => {
         setPlaybackError(null)
         commitRound(
@@ -666,6 +673,7 @@ interface ShotlessRoundViewProps {
   onSkip: () => void
   onListen: () => void
   clipPlaying: boolean
+  firstPlayReady: boolean
   onClaim: () => void
   onAssign: (name: string) => void
   onNobody: () => void
@@ -693,6 +701,7 @@ export function ShotlessRoundView({
   onSkip,
   onListen,
   clipPlaying,
+  firstPlayReady,
   onClaim,
   onAssign,
   onNobody,
@@ -753,6 +762,7 @@ export function ShotlessRoundView({
             <ClipMeter
               key={`${round.trackIndex}-${round.stageIndex}-${round.replayNonce}`}
               durationMs={stage.durationMs}
+              running={firstPlayReady}
             />
             <ListenClipButton className="btn primary cta" disabled={clipPlaying} onListen={onListen} />
           </div>
@@ -810,10 +820,10 @@ export function ShotlessRoundView({
   )
 }
 
-function ClipMeter({ durationMs }: { durationMs: number }) {
+function ClipMeter({ durationMs, running = true }: { durationMs: number; running?: boolean }) {
   return (
-    <div className="meter">
-      <span style={{ animationDuration: `${durationMs}ms` }} />
+    <div className={`meter${running ? '' : ' idle'}`}>
+      {running ? <span style={{ animationDuration: `${durationMs}ms` }} /> : null}
     </div>
   )
 }

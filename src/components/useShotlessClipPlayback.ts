@@ -11,6 +11,7 @@ interface ClipHandlers {
   onReadPosition?: () => Promise<BackdropPosition | null>
   onNextBackdropTrack?: (finishedUri: string) => BackdropTrack | null
   onPlayback: (state: 'playing' | 'paused') => void
+  onFirstPlayReady?: () => void
   onError: (message: string) => void
   onComplete: () => void
 }
@@ -101,6 +102,9 @@ export function useShotlessClipPlayback(input: ShotlessClipInput): void {
       isCancelled: () => tokenRef.current !== token,
       onPlayback: (state: 'playing' | 'paused') => {
         handlersRef.current.onPlayback(state)
+      },
+      onFirstPlayReady: () => {
+        handlersRef.current.onFirstPlayReady?.()
       },
       onError: (message: string) => {
         handlersRef.current.onError(message)

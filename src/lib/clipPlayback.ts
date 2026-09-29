@@ -17,6 +17,7 @@ export interface BoundedClipHandlers {
   play: () => Promise<void>
   pause: () => Promise<void>
   isCancelled: () => boolean
+  onFirstPlayReady?: () => void
   onPlayback: (state: 'playing' | 'paused') => void
   onError: (message: string) => void
 }
@@ -69,6 +70,7 @@ export async function runBoundedClip(
     await safePause(handlers.pause)
     return
   }
+  handlers.onFirstPlayReady?.()
   await wait(durationMs)
   await stopClip(handlers)
 }

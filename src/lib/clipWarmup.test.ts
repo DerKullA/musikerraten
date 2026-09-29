@@ -7,6 +7,7 @@ import {
   cueReached,
   noteColdBufferSample,
   playheadEnteredCue,
+  firstPlayIsReady,
   playbackHasStarted,
   playbackIsHeld,
   readQueuedTrackUri,
@@ -34,6 +35,19 @@ function warmupDeps(overrides: Partial<ClipWarmupDeps> = {}): ClipWarmupDeps {
     ...overrides,
   }
 }
+
+describe('firstPlayIsReady', () => {
+  const playing: WarmPlaybackState = { paused: false, positionMs: cue.positionMs, uri: cue.uri }
+
+  it('gilt erst, wenn der Playhead nach dem Einsatz weiterläuft', () => {
+    const later = { ...playing, positionMs: cue.positionMs + 40 }
+    expect(firstPlayIsReady(cue, null, later)).toBe(false)
+    expect(firstPlayIsReady(cue, { ...playing, paused: true }, later)).toBe(false)
+    expect(firstPlayIsReady(cue, playing, playing)).toBe(false)
+    expect(firstPlayIsReady(cue, playing, later)).toBe(true)
+    expect(firstPlayIsReady(cue, playing, { ...later, loading: true })).toBe(false)
+  })
+})
 
 describe('playbackHasStarted', () => {
   it('erkennt nur den laufenden Zielsong', () => {

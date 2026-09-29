@@ -15,6 +15,7 @@ interface GameScreenProps {
   running: boolean
   paused: boolean
   snippetReady: boolean
+  audiblePlay: boolean
   error: string | null
   roundTimings: PhaseTimings
   savedTimings: PhaseTimings
@@ -37,6 +38,7 @@ export function GameScreen({
   running,
   paused,
   snippetReady,
+  audiblePlay,
   error,
   roundTimings,
   savedTimings,
@@ -137,7 +139,9 @@ export function GameScreen({
         </div>
         {duration > 0 ? (
           <div className={`meter ${paused ? 'paused' : ''}`} key={`${phase}-${index}-${listenGeneration}`}>
-            <span style={{ animationDuration: `${duration}ms` }} />
+            {phase !== 'playing' || audiblePlay ? (
+              <span style={{ animationDuration: `${duration}ms` }} />
+            ) : null}
           </div>
         ) : (
           <div className="meter idle" />

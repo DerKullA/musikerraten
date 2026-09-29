@@ -71,6 +71,7 @@ export default function App() {
   const [running, setRunning] = useState(false)
   const [paused, setPaused] = useState(false)
   const [snippetReady, setSnippetReady] = useState(false)
+  const [audiblePlay, setAudiblePlay] = useState(false)
   const [savedTimings, setSavedTimings] = useState<PhaseTimings>(() => readSessionPhaseTimings())
   const [roundTimings, setRoundTimings] = useState<PhaseTimings>(() => readSessionPhaseTimings())
   const [menuGameId, setMenuGameId] = useState(GUESS_SONG_ID)
@@ -483,6 +484,10 @@ export default function App() {
     setSnippetReady(ready)
   }
 
+  function markAudiblePlay(ready: boolean): void {
+    setAudiblePlay(ready)
+  }
+
   function schedulePhase(next: GamePhase, delay: number): void {
     clearGameTimer()
     timerRef.current = window.setTimeout(() => {
@@ -539,10 +544,18 @@ export default function App() {
     if (next === 'playing' || next === 'thinking') {
       markSnippetReady(false)
     }
+    if (next === 'playing') {
+      markAudiblePlay(false)
+    }
+    let playbackStarted = false
     try {
       await applyPhaseAudio(next)
+      playbackStarted = true
     } catch (cause) {
       setError(formatSpotifyUserError(cause))
+    }
+    if (playbackStarted && phaseRef.current === next && next === 'playing') {
+      markAudiblePlay(true)
     }
     if (phaseRef.current === next && next === 'thinking') {
       markSnippetReady(true)
@@ -576,11 +589,17 @@ export default function App() {
     phaseRef.current = 'playing'
     setPhase('playing')
     markSnippetReady(false)
+    markAudiblePlay(false)
     engageQuizMedia('playing')
+    let playbackStarted = false
     try {
       await playCurrentTrack()
+      playbackStarted = true
     } catch (cause) {
       setError(formatSpotifyUserError(cause))
+    }
+    if (playbackStarted && phaseRef.current === 'playing') {
+      markAudiblePlay(true)
     }
     scheduleFollowingPhase('playing', timings)
   }
@@ -600,11 +619,17 @@ export default function App() {
     phaseRef.current = 'playing'
     setPhase('playing')
     markSnippetReady(false)
+    markAudiblePlay(false)
     engageQuizMedia('playing')
+    let playbackStarted = false
     try {
       await playCurrentTrack()
+      playbackStarted = true
     } catch (cause) {
       setError(formatSpotifyUserError(cause))
+    }
+    if (playbackStarted && phaseRef.current === 'playing') {
+      markAudiblePlay(true)
     }
     scheduleFollowingPhase('playing', timings)
   }
@@ -835,6 +860,7 @@ export default function App() {
           running={running}
           paused={paused}
           snippetReady={snippetReady}
+          audiblePlay={audiblePlay}
           error={error}
           roundTimings={roundTimings}
           savedTimings={savedTimings}

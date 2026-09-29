@@ -115,6 +115,23 @@ export function playbackHasStarted(target: ClipCue, state: WarmPlaybackState | n
   return Boolean(state && state.uri === target.uri && !state.paused)
 }
 
+export function firstPlayIsReady(
+  cue: ClipCue,
+  previous: WarmPlaybackState | null,
+  state: WarmPlaybackState | null,
+): boolean {
+  if (!previous || !state || state.paused || state.loading || previous.paused) {
+    return false
+  }
+  if (previous.uri !== cue.uri || state.uri !== cue.uri) {
+    return false
+  }
+  if (state.positionMs + CUE_POSITION_TOLERANCE_MS < cue.positionMs) {
+    return false
+  }
+  return state.positionMs > previous.positionMs
+}
+
 export function cueReached(
   cue: ClipCue,
   state: WarmPlaybackState,
@@ -344,9 +361,28 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
         return
       }
       await startWarm(target, token, chooseWarmStart(target, state))
+    } else {
+      await startWarm(target, token, 'resume')
+    }
+    if (generation !== token) {
       return
     }
-    await startWarm(target, token, 'resume')
+    await waitUntilFirstPlayReady(target, token)
+  }
+
+  async function waitUntilFirstPlayReady(target: ClipCue, token: number): Promise<void> {
+    let previous: WarmPlaybackState | null = null
+    for (let attempt = 0; attempt < PLAYBACK_START_LIMIT; attempt += 1) {
+      if (generation !== token) {
+        return
+      }
+      const state = await deps.getState().catch(() => null)
+      if (firstPlayIsReady(target, previous, state)) {
+        return
+      }
+      previous = state
+      await sleep(PLAYBACK_START_POLL_MS)
+    }
   }
 
   async function pauseUntilHeld(token: number): Promise<void> {
