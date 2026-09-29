@@ -1,6 +1,7 @@
 // Ein neuer Song wird stumm vorgeladen, bis der Puffer am Einsatz steht.
 // Hörbar wird danach nur die Lautstärke angehoben und fortgesetzt.
 
+import type { PlaybackClaimResult } from './playbackDevice.ts'
 import {
   logPlaybackError,
   rememberPlaybackLog,
@@ -57,6 +58,7 @@ export interface ClipWarmupDeps {
   load: (cue: ClipCue) => Promise<void>
   handoff?: (cue: ClipCue) => Promise<boolean>
   queueFollowing?: (cue: ClipCue) => Promise<void>
+  claimDevice?: (cue: ClipCue | null) => Promise<PlaybackClaimResult | void>
   activate: () => Promise<void>
   suspendSilence: () => Promise<void>
   restoreSilence: () => Promise<void>
@@ -290,6 +292,17 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
     return 'silence'
   }
 
+  async function claimPlayback(target: ClipCue | null): Promise<boolean> {
+    if (!deps.claimDevice) {
+      return false
+    }
+    try {
+      return (await deps.claimDevice(target)) === 'transferred'
+    } catch {
+      return false
+    }
+  }
+
   function enqueue(work: () => Promise<void>): Promise<void> {
     const run = task.then(work, work)
     task = run.then(
@@ -304,6 +317,7 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
     let parked = false
     try {
       void deps.activate().catch(() => undefined)
+      const transferred = await claimPlayback(target)
       if (abortOf(token) !== 'continue') {
         return false
       }
@@ -311,7 +325,7 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
       if (abortOf(token) !== 'continue') {
         return false
       }
-      const action = choosePrimeAction(target, before)
+      const action = transferred ? 'load' : choosePrimeAction(target, before)
       if (action === 'ready') {
         if (before && !before.paused) {
           parked = true
@@ -374,15 +388,30 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
       return
     }
     void deps.activate().catch(() => undefined)
-    if (!fast) {
-      const state = await deps.getState().catch(() => null)
+    if (fast) {
+      const primed = await deps.getState().catch(() => null)
       if (generation !== token) {
         return
       }
-      await startWarm(target, token, chooseWarmStart(target, state))
-    } else {
-      await startWarm(target, token, 'resume')
+      const warmStart = chooseWarmStart(target, primed)
+      if (warmStart === 'resume' || warmStart === 'unmute') {
+        await startWarm(target, token, warmStart)
+        if (generation !== token) {
+          return
+        }
+        await waitUntilFirstPlayReady(target, token)
+        return
+      }
     }
+    const transferred = await claimPlayback(target)
+    if (generation !== token) {
+      return
+    }
+    const state = transferred ? null : await deps.getState().catch(() => null)
+    if (generation !== token) {
+      return
+    }
+    await startWarm(target, token, transferred ? 'load' : chooseWarmStart(target, state), transferred)
     if (generation !== token) {
       return
     }
@@ -424,6 +453,7 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
     let suspended = false
     await deps.setVolume(0)
     try {
+      await claimPlayback(target)
       await deps.suspendSilence()
       suspended = true
       if (generation !== token) {
@@ -664,11 +694,18 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
     await deps.resume()
   }
 
-  async function startWarm(target: ClipCue, token: number, kind: WarmStart): Promise<void> {
+  async function startWarm(
+    target: ClipCue,
+    token: number,
+    kind: WarmStart,
+    fromTransfer = false,
+  ): Promise<void> {
     if (kind === 'load') {
-      const handedOff = await startQueuedHandoff(target, token)
-      if (handedOff || generation !== token) {
-        return
+      if (!fromTransfer) {
+        const handedOff = await startQueuedHandoff(target, token)
+        if (handedOff || generation !== token) {
+          return
+        }
       }
       await startLoadedClip(target, token)
       return
@@ -701,6 +738,7 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
       return
     }
     void deps.activate().catch(() => undefined)
+    await claimPlayback(null)
     await deps.setVolume(audibleVolume)
     if (generation !== token) {
       return

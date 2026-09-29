@@ -1,6 +1,19 @@
 import type { Playlist, Track } from '../types.ts'
 import { pickAlbumImageUrl, type AlbumImage } from './albumArt.ts'
-import { reportPlaybackFailure } from './playbackLog.ts'
+import {
+  PLAYBACK_TRANSFER_CONFIRM_MS,
+  PLAYBACK_TRANSFER_CONFIRM_POLLS,
+  isInactivePlaybackTransfer,
+  needsPlaybackTransfer,
+  playbackDeviceClaimIsFresh,
+  playbackDeviceMatches,
+  playbackTransferStillForeign,
+  readActiveDeviceId,
+  transferPlaybackBody,
+  type ActivePlaybackDevice,
+  type PlaybackClaimResult,
+} from './playbackDevice.ts'
+import { logPlaybackError, reportPlaybackFailure, type PlaybackLogContext } from './playbackLog.ts'
 import { getValidAccessToken } from './spotifyAuth.ts'
 
 const API = 'https://api.spotify.com/v1'
@@ -37,7 +50,11 @@ interface SpotifyItem {
   }
 }
 
-export async function spotifyRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function spotifyRequest<T>(
+  path: string,
+  init: RequestInit = {},
+  log?: PlaybackLogContext | false,
+): Promise<T> {
   const token = await getValidAccessToken()
   const response = await fetch(`${API}${path}`, {
     ...init,
@@ -53,15 +70,34 @@ export async function spotifyRequest<T>(path: string, init: RequestInit = {}): P
   if (!response.ok) {
     const text = await response.text()
     const message = text || `Spotify-Fehler ${response.status}`
-    if (path.startsWith('/me/player')) {
-      throw reportPlaybackFailure(message, {
-        action: 'api',
-        step: path.split('?')[0] ?? path,
-      })
+    const failure = playbackRequestFailure(path, init.method, log)
+    if (failure) {
+      throw reportPlaybackFailure(message, failure)
     }
     throw new Error(message)
   }
   return (await response.json()) as T
+}
+
+function playbackRequestFailure(
+  path: string,
+  method: string | undefined,
+  log: PlaybackLogContext | false | undefined,
+): PlaybackLogContext | null {
+  if (log === false) {
+    return null
+  }
+  const route = path.split('?')[0] ?? path
+  if (!route.startsWith('/me/player')) {
+    return null
+  }
+  const transfer = route === '/me/player' && (method ?? 'GET').toUpperCase() === 'PUT'
+  return {
+    uri: log?.uri,
+    phase: log?.phase,
+    action: log?.action ?? (transfer ? 'transfer' : 'api'),
+    step: log?.step ?? (transfer ? 'transfer' : route),
+  }
 }
 
 export async function fetchUserPlaylists(): Promise<Playlist[]> {
@@ -158,11 +194,150 @@ export async function startPlayback(
   positionMs = 0,
   followingUri?: string,
 ): Promise<void> {
-  await spotifyRequest<void>(`/me/player/play?device_id=${encodeURIComponent(deviceId)}`, {
-    method: 'PUT',
-    body: JSON.stringify(playbackRequestBody(uri, positionMs, followingUri)),
-  })
+  await spotifyRequest<void>(
+    `/me/player/play?device_id=${encodeURIComponent(deviceId)}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(playbackRequestBody(uri, positionMs, followingUri)),
+    },
+    { action: 'api', step: '/me/player/play', uri },
+  )
   void ensureLinearPlayback(deviceId)
+}
+
+export interface PlaybackDeviceClaimContext {
+  uri?: string | null
+  phase?: string
+  mute?: () => Promise<void>
+  nowMs?: number
+  sleep?: (delayMs: number) => Promise<void>
+}
+
+let playbackTransferFailed = false
+let confirmedPlaybackDeviceId: string | null = null
+let confirmedPlaybackDeviceAtMs = 0
+
+interface SpotifyPlayerPayload {
+  device?: {
+    id?: string | null
+  } | null
+}
+
+function rememberConfirmedPlaybackDevice(deviceId: string): void {
+  playbackTransferFailed = false
+  confirmedPlaybackDeviceId = deviceId
+  confirmedPlaybackDeviceAtMs = Date.now()
+}
+
+function clearConfirmedPlaybackDevice(): void {
+  confirmedPlaybackDeviceId = null
+  confirmedPlaybackDeviceAtMs = 0
+}
+
+function transferLog(context: PlaybackDeviceClaimContext): PlaybackLogContext {
+  return {
+    uri: context.uri,
+    phase: context.phase,
+    action: 'transfer',
+    step: 'transfer',
+  }
+}
+
+async function readActivePlaybackDevice(): Promise<ActivePlaybackDevice> {
+  try {
+    const playback = await spotifyRequest<SpotifyPlayerPayload | undefined>('/me/player', {}, false)
+    return { known: true, deviceId: readActiveDeviceId(playback) }
+  } catch {
+    return { known: false, deviceId: null }
+  }
+}
+
+async function pauseForeignPlayback(deviceId: string): Promise<void> {
+  await spotifyRequest<void>(`/me/player/pause?device_id=${encodeURIComponent(deviceId)}`, { method: 'PUT' }, false)
+}
+
+export async function ensurePlaybackOnDevice(
+  deviceId: string,
+  context: PlaybackDeviceClaimContext = {},
+): Promise<PlaybackClaimResult> {
+  const nowMs = context.nowMs ?? Date.now()
+  if (
+    !playbackTransferFailed &&
+    playbackDeviceClaimIsFresh(confirmedPlaybackDeviceId, deviceId, confirmedPlaybackDeviceAtMs, nowMs)
+  ) {
+    return 'local'
+  }
+
+  const active = await readActivePlaybackDevice()
+  if (
+    !needsPlaybackTransfer({
+      localDeviceId: deviceId,
+      active,
+      previousTransferFailed: playbackTransferFailed,
+    })
+  ) {
+    if (playbackDeviceMatches(active.deviceId, deviceId)) {
+      rememberConfirmedPlaybackDevice(deviceId)
+      return 'local'
+    }
+    return 'idle'
+  }
+
+  await context.mute?.().catch(() => undefined)
+  if (active.deviceId && playbackTransferStillForeign(active.deviceId, deviceId)) {
+    await pauseForeignPlayback(active.deviceId).catch(() => undefined)
+  }
+
+  try {
+    await spotifyRequest<void>(
+      '/me/player',
+      {
+        method: 'PUT',
+        body: JSON.stringify(transferPlaybackBody(deviceId)),
+      },
+      transferLog(context),
+    )
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : ''
+    playbackTransferFailed = !isInactivePlaybackTransfer(message)
+    if (playbackTransferFailed) {
+      clearConfirmedPlaybackDevice()
+    }
+    return 'transferred'
+  }
+
+  const sleep = context.sleep ?? wait
+  let seenDeviceId: string | null = null
+  for (let attempt = 0; attempt < PLAYBACK_TRANSFER_CONFIRM_POLLS; attempt += 1) {
+    const snapshot = await readActivePlaybackDevice()
+    seenDeviceId = snapshot.deviceId
+    if (playbackDeviceMatches(snapshot.deviceId, deviceId)) {
+      rememberConfirmedPlaybackDevice(deviceId)
+      return 'transferred'
+    }
+    if (attempt < PLAYBACK_TRANSFER_CONFIRM_POLLS - 1) {
+      await sleep(PLAYBACK_TRANSFER_CONFIRM_MS)
+    }
+  }
+
+  if (playbackTransferStillForeign(seenDeviceId, deviceId)) {
+    playbackTransferFailed = true
+    clearConfirmedPlaybackDevice()
+    logPlaybackError('Die Wiedergabe liegt noch auf einem anderen Gerät.', transferLog(context))
+    return 'transferred'
+  }
+
+  playbackTransferFailed = false
+  return 'transferred'
+}
+
+function wait(delayMs: number): Promise<void> {
+  if (delayMs <= 0) {
+    return Promise.resolve()
+  }
+  return new Promise((resolve) => {
+    setTimeout(resolve, delayMs)
+  })
 }
 
 export async function queuePlayback(deviceId: string, uri: string): Promise<void> {
