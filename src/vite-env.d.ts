@@ -18,10 +18,12 @@ interface SpotifyPlayerOptions {
 interface SpotifyPlaybackState {
   paused: boolean
   position?: number
+  loading?: boolean
   track_window?: {
     current_track?: {
       uri?: string
     } | null
+    next_tracks?: Array<{ uri?: string } | null> | null
   } | null
 }
 
@@ -37,6 +39,7 @@ interface SpotifyPlayer {
   setVolume: (volume: number) => Promise<void>
   getVolume: () => Promise<number>
   getCurrentState: () => Promise<SpotifyPlaybackState | null>
+  nextTrack: () => Promise<void>
 }
 
 interface SpotifyPlayerEvent {

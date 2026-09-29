@@ -14,6 +14,8 @@ interface GameScreenProps {
   total: number
   running: boolean
   paused: boolean
+  snippetReady: boolean
+  audiblePlay: boolean
   error: string | null
   roundTimings: PhaseTimings
   savedTimings: PhaseTimings
@@ -35,6 +37,8 @@ export function GameScreen({
   total,
   running,
   paused,
+  snippetReady,
+  audiblePlay,
   error,
   roundTimings,
   savedTimings,
@@ -70,7 +74,7 @@ export function GameScreen({
   }
 
   function replaySnippet(): void {
-    if (listenLockedRef.current || snippetPlaying) {
+    if (listenLockedRef.current || snippetPlaying || !snippetReady) {
       return
     }
     syncListenLock(true)
@@ -135,7 +139,9 @@ export function GameScreen({
         </div>
         {duration > 0 ? (
           <div className={`meter ${paused ? 'paused' : ''}`} key={`${phase}-${index}-${listenGeneration}`}>
-            <span style={{ animationDuration: `${duration}ms` }} />
+            {phase !== 'playing' || audiblePlay ? (
+              <span style={{ animationDuration: `${duration}ms` }} />
+            ) : null}
           </div>
         ) : (
           <div className="meter idle" />
@@ -145,7 +151,7 @@ export function GameScreen({
             <button
               type="button"
               className="btn primary cta"
-              disabled={listenLocked || snippetPlaying}
+              disabled={listenLocked || snippetPlaying || !snippetReady}
               onClick={replaySnippet}
             >
               Nochmal anhören

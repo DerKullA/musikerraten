@@ -20,6 +20,7 @@ import { isConfirmedPaused, pauseConnectedPlayback, readSpotifyPaused } from './
 import {
   AUDIBLE_VOLUME,
   createClipWarmup,
+  readQueuedTrackUri,
   readWarmPlayback,
   type ClipWarmup,
 } from './lib/clipWarmup.ts'
@@ -28,6 +29,7 @@ import {
   fetchTracksForPlaylists,
   fetchUserPlaylists,
   pausePlayback,
+  queuePlayback,
   resumePlayback,
   startPlayback,
 } from './lib/spotifyApi.ts'
@@ -68,6 +70,8 @@ export default function App() {
   const [phase, setPhase] = useState<GamePhase>('idle')
   const [running, setRunning] = useState(false)
   const [paused, setPaused] = useState(false)
+  const [snippetReady, setSnippetReady] = useState(false)
+  const [audiblePlay, setAudiblePlay] = useState(false)
   const [savedTimings, setSavedTimings] = useState<PhaseTimings>(() => readSessionPhaseTimings())
   const [roundTimings, setRoundTimings] = useState<PhaseTimings>(() => readSessionPhaseTimings())
   const [menuGameId, setMenuGameId] = useState(GUESS_SONG_ID)
@@ -300,6 +304,19 @@ export default function App() {
     return silenceRef.current
   }
 
+  function trackAfter(uri: string): string | null {
+    const queued = tracksRef.current
+    const current = queued.findIndex((track) => track.uri === uri)
+    if (current < 0 || queued.length < 2) {
+      return null
+    }
+    const next = queued[(current + 1) % queued.length]
+    if (!next || next.uri === uri) {
+      return null
+    }
+    return next.uri
+  }
+
   function clipWarmup(): ClipWarmup {
     warmupRef.current ??= createClipWarmup({
       getState: async () => {
@@ -347,7 +364,36 @@ export default function App() {
         if (!deviceId) {
           throw new Error('Spotify-Player nicht bereit.')
         }
-        await startPlayback(deviceId, next.uri, next.positionMs)
+        const following = next.positionMs === 0 ? (trackAfter(next.uri) ?? undefined) : undefined
+        await startPlayback(deviceId, next.uri, next.positionMs, following)
+      },
+      handoff: async (next) => {
+        if (next.positionMs !== 0) {
+          return false
+        }
+        const player = playerRef.current
+        if (!player) {
+          return false
+        }
+        const state = await player.getCurrentState().catch(() => null)
+        if (readQueuedTrackUri(state) !== next.uri) {
+          return false
+        }
+        await player.nextTrack()
+        return true
+      },
+      queueFollowing: async (next) => {
+        const deviceId = deviceIdRef.current
+        const player = playerRef.current
+        const following = trackAfter(next.uri)
+        if (!deviceId || !player || !following) {
+          return
+        }
+        const state = await player.getCurrentState().catch(() => null)
+        if (readQueuedTrackUri(state) === following) {
+          return
+        }
+        await queuePlayback(deviceId, following)
       },
       activate: async () => {
         await playerRef.current?.activateElement()
@@ -434,6 +480,14 @@ export default function App() {
     setPaused(false)
   }
 
+  function markSnippetReady(ready: boolean): void {
+    setSnippetReady(ready)
+  }
+
+  function markAudiblePlay(ready: boolean): void {
+    setAudiblePlay(ready)
+  }
+
   function schedulePhase(next: GamePhase, delay: number): void {
     clearGameTimer()
     timerRef.current = window.setTimeout(() => {
@@ -487,10 +541,24 @@ export default function App() {
     const timings = capturePhaseTimings(next)
     phaseRef.current = next
     setPhase(next)
+    if (next === 'playing' || next === 'thinking') {
+      markSnippetReady(false)
+    }
+    if (next === 'playing') {
+      markAudiblePlay(false)
+    }
+    let playbackStarted = false
     try {
       await applyPhaseAudio(next)
+      playbackStarted = true
     } catch (cause) {
       setError(formatSpotifyUserError(cause))
+    }
+    if (playbackStarted && phaseRef.current === next && next === 'playing') {
+      markAudiblePlay(true)
+    }
+    if (phaseRef.current === next && next === 'thinking') {
+      markSnippetReady(true)
     }
     scheduleFollowingPhase(next, timings)
   }
@@ -520,11 +588,18 @@ export default function App() {
     const timings = capturePhaseTimings('playing')
     phaseRef.current = 'playing'
     setPhase('playing')
+    markSnippetReady(false)
+    markAudiblePlay(false)
     engageQuizMedia('playing')
+    let playbackStarted = false
     try {
       await playCurrentTrack()
+      playbackStarted = true
     } catch (cause) {
       setError(formatSpotifyUserError(cause))
+    }
+    if (playbackStarted && phaseRef.current === 'playing') {
+      markAudiblePlay(true)
     }
     scheduleFollowingPhase('playing', timings)
   }
@@ -543,11 +618,18 @@ export default function App() {
     const timings = roundTimingsRef.current
     phaseRef.current = 'playing'
     setPhase('playing')
+    markSnippetReady(false)
+    markAudiblePlay(false)
     engageQuizMedia('playing')
+    let playbackStarted = false
     try {
       await playCurrentTrack()
+      playbackStarted = true
     } catch (cause) {
       setError(formatSpotifyUserError(cause))
+    }
+    if (playbackStarted && phaseRef.current === 'playing') {
+      markAudiblePlay(true)
     }
     scheduleFollowingPhase('playing', timings)
   }
@@ -616,6 +698,32 @@ export default function App() {
     syncQuizMediaPlayback(nextPlayback)
   }
 
+  function readShotlessPaused(): Promise<boolean | null> {
+    return readSpotifyPaused(playerRef.current)
+  }
+
+  async function releaseShotlessSilence(): Promise<void> {
+    await silence().release()
+    await playerRef.current?.setVolume(AUDIBLE_VOLUME)?.catch(() => undefined)
+  }
+
+  function readShotlessPosition(): Promise<{ uri: string | null; positionMs: number } | null> {
+    const player = playerRef.current
+    if (!player) {
+      return Promise.resolve(null)
+    }
+    return player
+      .getCurrentState()
+      .then((state) => {
+        const warm = readWarmPlayback(state)
+        if (!warm) {
+          return null
+        }
+        return { uri: warm.uri, positionMs: warm.positionMs }
+      })
+      .catch(() => null)
+  }
+
   function primeShotlessClip(uri: string, positionMs: number): Promise<void> {
     if (!deviceIdRef.current || !playerRef.current) {
       return Promise.resolve()
@@ -667,8 +775,15 @@ export default function App() {
     clearGameTimer()
     pausedRef.current = true
     setPaused(true)
+    markSnippetReady(false)
     engageQuizMedia(phaseRef.current)
-    void pauseCurrentTrack()
+    void pauseCurrentTrack().finally(enableReplayAfterPause)
+  }
+
+  function enableReplayAfterPause(): void {
+    if (pausedRef.current) {
+      markSnippetReady(true)
+    }
   }
 
   async function handleResume(): Promise<void> {
@@ -744,6 +859,8 @@ export default function App() {
           total={tracks.length}
           running={running}
           paused={paused}
+          snippetReady={snippetReady}
+          audiblePlay={audiblePlay}
           error={error}
           roundTimings={roundTimings}
           savedTimings={savedTimings}
@@ -778,6 +895,9 @@ export default function App() {
           onResumeClip={resumeCurrentTrack}
           onPauseClip={pauseCurrentTrack}
           onPrimeClip={primeShotlessClip}
+          onReadPosition={readShotlessPosition}
+          onReadPaused={readShotlessPaused}
+          onReleaseSilence={releaseShotlessSilence}
           onPlayback={syncShotlessPlayback}
           onLiveChange={setShotlessLive}
         />

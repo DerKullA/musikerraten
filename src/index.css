@@ -1165,3 +1165,117 @@ code {
     min-height: 84px;
   }
 }
+
+.game-dialog {
+  width: min(28rem, calc(100vw - 1.5rem));
+  max-height: calc(100dvh - 1.5rem);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--ink-soft) 94%, black);
+  color: var(--paper);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  overflow: auto;
+}
+
+.game-dialog::backdrop {
+  background: rgba(8, 12, 7, 0.78);
+}
+
+.game-dialog-card {
+  padding: 1.35rem 1.2rem 1.2rem;
+  text-align: center;
+}
+
+.game-dialog-card h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(1.7rem, 5vw, 2.3rem);
+  font-weight: 500;
+  line-height: 1.05;
+}
+
+.loser-bonus-copy,
+.loser-bonus-result,
+.loser-bonus-verdict {
+  margin: 0.75rem 0 0;
+  line-height: 1.45;
+}
+
+.loser-bonus-verdict {
+  color: var(--lime);
+  font-weight: 700;
+}
+
+.loser-bonus-done {
+  margin-top: 0.9rem;
+}
+
+.fortune-stage {
+  position: relative;
+  width: min(100%, 19.5rem);
+  margin: 0.85rem auto 0;
+  padding-top: 10px;
+}
+
+.fortune-pointer {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 11px solid transparent;
+  border-right: 11px solid transparent;
+  border-top: 18px solid var(--paper);
+  filter: drop-shadow(0 1px 0 #10160e) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.55));
+}
+
+.fortune-disc {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  contain: paint;
+}
+
+.fortune-wheel {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  transition: transform 4.4s cubic-bezier(0.12, 0.72, 0.08, 1);
+}
+
+.fortune-wheel.is-instant {
+  transition: none;
+}
+
+.fortune-label {
+  fill: #10160e;
+  font-family: var(--sans);
+  font-weight: 700;
+}
+
+.fortune-core {
+  fill: #10160e;
+}
+
+.fortune-hub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  width: 4.75rem;
+  height: 4.75rem;
+  transform: translate(-50%, -50%);
+  padding: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fortune-wheel {
+    transition: none;
+  }
+}
