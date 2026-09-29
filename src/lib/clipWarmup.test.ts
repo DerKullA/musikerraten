@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   AUDIBLE_VOLUME,
   BUFFER_STABLE_POLLS,
+  BUFFER_WAIT_LIMIT,
   createClipWarmup,
   createColdBufferWatch,
   cueReached,
@@ -347,6 +348,217 @@ describe('createClipWarmup play', () => {
 
     await warmup.play(target)
     expect(loaded).toBe(true)
+  })
+
+  it('startet den zweiten Song, sobald der Player den ersten Track freigibt', async () => {
+    const second = { uri: 'spotify:track:b', positionMs: 12_000 }
+    let uri = 'spotify:track:a'
+    let position = 4_000
+    let paused = false
+    let loading = false
+    let hold = true
+    let seenSecond = 0
+    const warmup = createClipWarmup(
+      warmupDeps({
+        getState: async () => {
+          if (uri === second.uri) {
+            seenSecond += 1
+            if (seenSecond > 3) {
+              loading = false
+            }
+            if (!loading && !paused && position < second.positionMs) {
+              position = Math.min(second.positionMs, position + 400)
+            }
+          }
+          return { paused, positionMs: position, uri, loading }
+        },
+        pause: async () => {
+          paused = true
+          if (uri === 'spotify:track:a') {
+            hold = false
+          }
+        },
+        load: async (next) => {
+          if (next.uri === second.uri && hold) {
+            return
+          }
+          uri = next.uri
+          position = 0
+          paused = false
+          loading = true
+        },
+        resume: async () => {
+          paused = false
+          if (uri === second.uri) {
+            loading = false
+          }
+        },
+        seek: async (positionMs) => {
+          position = positionMs
+          paused = false
+          loading = false
+        },
+      }),
+    )
+
+    await warmup.play(second)
+    expect(uri).toBe(second.uri)
+    expect(paused).toBe(false)
+  })
+
+  it('setzt einen pausiert ladenden Folgesong fort', async () => {
+    const second = { uri: 'spotify:track:b', positionMs: 12_000 }
+    let uri = 'spotify:track:a'
+    let position = 2_000
+    let paused = true
+    let loading = false
+    let resumes = 0
+    const warmup = createClipWarmup(
+      warmupDeps({
+        getState: async () => {
+          if (uri === second.uri && !loading && !paused && position < second.positionMs) {
+            position = Math.min(second.positionMs, position + 500)
+          }
+          return { paused, positionMs: position, uri, loading }
+        },
+        load: async () => {
+          uri = second.uri
+          position = 0
+          paused = true
+          loading = true
+        },
+        resume: async () => {
+          resumes += 1
+          if (uri === second.uri && loading) {
+            loading = false
+            paused = false
+          } else if (uri === second.uri) {
+            paused = false
+          }
+        },
+        pause: async () => {
+          paused = true
+        },
+        seek: async (positionMs) => {
+          position = positionMs
+          loading = false
+          paused = false
+        },
+      }),
+    )
+
+    await warmup.play(second)
+    expect(resumes).toBeGreaterThan(0)
+    expect(uri).toBe(second.uri)
+    expect(paused).toBe(false)
+  })
+
+  it('wartet den langsamen Folgesong ab, statt ihn neu zu laden', async () => {
+    const target = { uri: 'spotify:track:b', positionMs: 0 }
+    let polls = 0
+    let loaded = false
+    let queued = false
+    const switchAfter = BUFFER_WAIT_LIMIT + 40
+    const warmup = createClipWarmup(
+      warmupDeps({
+        getState: async () => {
+          polls += 1
+          const switched = polls > switchAfter
+          return {
+            paused: false,
+            positionMs: switched ? 40 + polls : 5_000,
+            uri: switched ? target.uri : 'spotify:track:a',
+            loading: false,
+          }
+        },
+        handoff: async () => true,
+        load: async () => {
+          loaded = true
+        },
+        queueFollowing: async () => {
+          queued = true
+        },
+      }),
+    )
+
+    await warmup.play(target)
+    expect(loaded).toBe(false)
+    expect(queued).toBe(true)
+  })
+
+  it('beginnt die Pufferwarte erst, wenn der neue URI wirklich anliegt', async () => {
+    const target = { uri: 'spotify:track:b', positionMs: 12_000 }
+    let polls = 0
+    let loaded = false
+    let paused = false
+    let position = 0
+    const switchAfter = BUFFER_WAIT_LIMIT + 30
+    const warmup = createClipWarmup(
+      warmupDeps({
+        getState: async () => {
+          polls += 1
+          if (!loaded || polls <= switchAfter) {
+            return { paused: true, positionMs: 8_000, uri: 'spotify:track:a', loading: false }
+          }
+          if (!paused && position < target.positionMs) {
+            position = Math.min(target.positionMs, position + 600)
+          }
+          return { paused, positionMs: position, uri: target.uri, loading: false }
+        },
+        load: async () => {
+          loaded = true
+          position = 0
+        },
+        pause: async () => {
+          paused = true
+        },
+        resume: async () => {
+          paused = false
+        },
+        seek: async (positionMs) => {
+          position = positionMs
+          paused = false
+        },
+      }),
+    )
+
+    await warmup.play(target)
+    expect(loaded).toBe(true)
+    expect(polls).toBeGreaterThan(BUFFER_WAIT_LIMIT)
+  })
+
+  it('lädt nach invalidate den nächsten Song, nicht den verworfenen', async () => {
+    const first = { uri: 'spotify:track:a', positionMs: 0 }
+    const second = { uri: 'spotify:track:b', positionMs: 0 }
+    let uri = first.uri
+    let position = 0
+    let paused = true
+    let loads: string[] = []
+    const warmup = createClipWarmup(
+      warmupDeps({
+        getState: async () => ({ paused, positionMs: position, uri, loading: false }),
+        load: async (next) => {
+          loads.push(next.uri)
+          uri = next.uri
+          position = next.positionMs
+          paused = false
+        },
+        pause: async () => {
+          paused = true
+        },
+        resume: async () => {
+          paused = false
+          position += 30
+        },
+      }),
+    )
+
+    await warmup.prime(first)
+    warmup.invalidate()
+    loads = []
+    await warmup.play(second)
+    expect(loads).toContain(second.uri)
+    expect(uri).toBe(second.uri)
   })
 })
 

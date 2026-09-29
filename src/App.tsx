@@ -534,6 +534,7 @@ export default function App() {
       return
     }
     if (next === 'playing') {
+      warmupRef.current?.invalidate()
       const lastIndex = tracksRef.current.length - 1
       const upcoming = indexRef.current >= lastIndex ? 0 : indexRef.current + 1
       indexRef.current = upcoming
@@ -725,6 +726,10 @@ export default function App() {
       .catch(() => null)
   }
 
+  function invalidateClipWarmup(): void {
+    warmupRef.current?.invalidate()
+  }
+
   function primeShotlessClip(uri: string, positionMs: number): Promise<void> {
     if (!deviceIdRef.current || !playerRef.current) {
       return Promise.resolve()
@@ -896,6 +901,7 @@ export default function App() {
           onResumeClip={resumeCurrentTrack}
           onPauseClip={pauseCurrentTrack}
           onPrimeClip={primeShotlessClip}
+          onInvalidateClip={invalidateClipWarmup}
           onReadPosition={readShotlessPosition}
           onReadPaused={readShotlessPaused}
           onReleaseSilence={releaseShotlessSilence}

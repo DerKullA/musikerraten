@@ -62,6 +62,7 @@ interface ShotlessScreenProps {
   onResumeClip: () => Promise<void>
   onPauseClip: () => Promise<void>
   onPrimeClip?: (uri: string, positionMs: number) => Promise<void>
+  onInvalidateClip?: () => void
   onReadPosition?: () => Promise<BackdropPosition | null>
   onReadPaused?: () => Promise<boolean | null>
   onReleaseSilence?: () => Promise<void>
@@ -78,6 +79,7 @@ export function ShotlessScreen({
   onResumeClip,
   onPauseClip,
   onPrimeClip,
+  onInvalidateClip,
   onReadPosition,
   onReadPaused,
   onReleaseSilence,
@@ -230,6 +232,7 @@ export function ShotlessScreen({
       onResumeClip,
       onPauseClip,
       onPrimeClip,
+      onInvalidateClip,
       onReadPosition,
       onNextBackdropTrack: nextBackdropTrack,
       onPlayback: reportClipPlayback,

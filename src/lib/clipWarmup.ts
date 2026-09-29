@@ -9,6 +9,7 @@ export const PLAYBACK_START_LIMIT = 80
 export const BUFFER_RESET_MS = 350
 export const BUFFER_STABLE_POLLS = 60
 export const BUFFER_WAIT_LIMIT = 220
+export const TRACK_SWITCH_WAIT_LIMIT = 360
 export const PARK_SLOP_MS = 480
 
 export interface ClipCue {
@@ -253,12 +254,22 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
   let primedCue: ClipCue | null = null
   let primingCue: ClipCue | null = null
   let displacedPositionMs: number | null = null
+  let armedUri: string | null = null
   let task: Promise<void> = Promise.resolve()
 
   function begin(next: WarmRequest): number {
     generation += 1
     request = next
     return generation
+  }
+
+  function adoptCue(target: ClipCue): void {
+    if (armedUri !== null && armedUri !== target.uri) {
+      primedCue = null
+      primingCue = null
+      displacedPositionMs = null
+    }
+    armedUri = target.uri
   }
 
   function abortOf(token: number): PrimeAbort {
@@ -410,6 +421,10 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
       if (generation !== token) {
         return false
       }
+      await releaseForeignTrack(target, token)
+      if (generation !== token) {
+        return false
+      }
       await deps.load(target)
       if (generation !== token) {
         return false
@@ -423,14 +438,21 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
         return false
       }
       let after = await deps.getState().catch(() => null)
-      if (!after || !parkedNearCue(target, after) || !cueIsNear(target, after)) {
-        const caught = await catchCue(target, token)
-        if (!caught || generation !== token) {
-          return false
-        }
-        after = await deps.getState().catch(() => null)
+      if (after?.paused && parkedNearCue(target, after) && cueIsNear(target, after)) {
+        return generation === token
       }
-      return Boolean(after && after.paused && parkedNearCue(target, after)) && generation === token
+      const caught = await catchCue(target, token)
+      if (generation !== token) {
+        return false
+      }
+      after = await deps.getState().catch(() => null)
+      if (after?.paused && parkedNearCue(target, after)) {
+        return true
+      }
+      if (after && after.uri !== target.uri) {
+        return false
+      }
+      return caught
     } finally {
       await deps.setVolume(audibleVolume).catch(() => undefined)
       if (suspended && generation === token) {
@@ -439,17 +461,51 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
     }
   }
 
-  async function waitUntilCueBuffered(target: ClipCue, token: number): Promise<void> {
-    let watch = createColdBufferWatch()
-    for (let attempt = 0; attempt < BUFFER_WAIT_LIMIT; attempt += 1) {
+  async function releaseForeignTrack(target: ClipCue, token: number): Promise<void> {
+    for (let attempt = 0; attempt < TRACK_SWITCH_WAIT_LIMIT; attempt += 1) {
       if (generation !== token) {
         return
       }
       const state = await deps.getState().catch(() => null)
-      if (state?.uri === target.uri && state.paused && !state.loading) {
+      if (!state?.uri || state.uri === target.uri) {
+        return
+      }
+      if (state.paused && !state.loading) {
+        return
+      }
+      await deps.pause()
+      await sleep(PLAYBACK_START_POLL_MS)
+    }
+  }
+
+  async function waitUntilCueBuffered(target: ClipCue, token: number): Promise<void> {
+    let watch = createColdBufferWatch()
+    let uncertainPolls = 0
+    let idlePolls = 0
+    let totalPolls = 0
+    while (generation === token) {
+      totalPolls += 1
+      if (totalPolls > TRACK_SWITCH_WAIT_LIMIT + BUFFER_WAIT_LIMIT) {
+        break
+      }
+      const state = await deps.getState().catch(() => null)
+      if (!state || state.uri !== target.uri) {
+        watch = createColdBufferWatch()
+        idlePolls = 0
+        uncertainPolls += 1
+        if (state && !state.paused) {
+          await deps.pause()
+        }
+        if (uncertainPolls >= TRACK_SWITCH_WAIT_LIMIT) {
+          break
+        }
+        await sleep(PLAYBACK_START_POLL_MS)
+        continue
+      }
+      if (state.paused) {
         const atCue = state.positionMs + CUE_POSITION_TOLERANCE_MS >= target.positionMs
         const settled = watch.sawReset || watch.stablePolls >= BUFFER_STABLE_POLLS
-        if (atCue && settled) {
+        if (atCue && settled && !state.loading) {
           return
         }
         await deps.resume()
@@ -461,6 +517,19 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
       watch = noted.watch
       if (noted.ready) {
         return
+      }
+      if (state.loading) {
+        idlePolls = 0
+        uncertainPolls += 1
+        if (uncertainPolls >= TRACK_SWITCH_WAIT_LIMIT) {
+          break
+        }
+      } else {
+        uncertainPolls = 0
+        idlePolls += 1
+        if (idlePolls >= BUFFER_WAIT_LIMIT) {
+          break
+        }
       }
       await sleep(PLAYBACK_START_POLL_MS)
     }
@@ -531,21 +600,32 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
       return false
     }
     await deps.setVolume(audibleVolume)
-    for (let attempt = 0; attempt < PLAYBACK_START_LIMIT; attempt += 1) {
-      if (generation !== token) {
-        return true
-      }
+    let foreignPolls = 0
+    let localPolls = 0
+    while (generation === token) {
       const state = await deps.getState().catch(() => null)
-      if (state?.uri === target.uri && state.paused) {
-        await deps.resume().catch(() => undefined)
-      }
       if (playbackHasStarted(target, state)) {
         void deps.queueFollowing?.(target)?.catch(() => undefined)
         return true
       }
+      if (state?.uri === target.uri && state.paused) {
+        await deps.resume().catch(() => undefined)
+      }
+      if (!state || state.uri !== target.uri) {
+        foreignPolls += 1
+        if (foreignPolls >= TRACK_SWITCH_WAIT_LIMIT) {
+          return false
+        }
+      } else {
+        foreignPolls = 0
+        localPolls += 1
+        if (localPolls >= PLAYBACK_START_LIMIT) {
+          return false
+        }
+      }
       await sleep(PLAYBACK_START_POLL_MS)
     }
-    return false
+    return true
   }
 
   async function startLoadedClip(target: ClipCue, token: number): Promise<void> {
@@ -613,6 +693,7 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
   return {
     prime(cue) {
       const target = normalizeCue(cue)
+      adoptCue(target)
       if (request === 'prime' && primingCue && sameClipCue(primingCue, target)) {
         return task
       }
@@ -630,6 +711,7 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
           const ready = await runPrime(target, token)
           if (generation === token && ready) {
             primedCue = target
+            armedUri = target.uri
           }
         } finally {
           if (generation === token) {
@@ -641,6 +723,7 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
     play(cue) {
       const target = normalizeCue(cue)
       void deps.activate().catch(() => undefined)
+      adoptCue(target)
       if (request === 'prime' && primingCue && sameClipCue(primingCue, target)) {
         return enqueue(async () => {
           const fast = primedCue !== null && sameClipCue(primedCue, target)
@@ -685,6 +768,7 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
       primedCue = null
       primingCue = null
       displacedPositionMs = null
+      armedUri = null
     },
   }
 }
