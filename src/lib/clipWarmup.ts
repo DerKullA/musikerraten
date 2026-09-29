@@ -1,6 +1,12 @@
 // Ein neuer Song wird stumm vorgeladen, bis der Puffer am Einsatz steht.
 // Hörbar wird danach nur die Lautstärke angehoben und fortgesetzt.
 
+import {
+  logPlaybackError,
+  rememberPlaybackLog,
+  type PlaybackLogAction,
+} from './playbackLog.ts'
+
 export const AUDIBLE_VOLUME = 0.8
 export const CUE_POSITION_TOLERANCE_MS = 180
 export const PRIME_LEAD_MS = 240
@@ -10,6 +16,7 @@ export const BUFFER_RESET_MS = 350
 export const BUFFER_STABLE_POLLS = 60
 export const BUFFER_WAIT_LIMIT = 220
 export const TRACK_SWITCH_WAIT_LIMIT = 360
+export const FOREIGN_RELEASE_POLLS = 8
 export const PARK_SLOP_MS = 480
 
 export interface ClipCue {
@@ -55,6 +62,7 @@ export interface ClipWarmupDeps {
   restoreSilence: () => Promise<void>
   sleep?: (delayMs: number) => Promise<void>
   audibleVolume?: number
+  readPhase?: () => string
 }
 
 export interface ClipWarmup {
@@ -462,25 +470,43 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
   }
 
   async function releaseForeignTrack(target: ClipCue, token: number): Promise<void> {
-    for (let attempt = 0; attempt < TRACK_SWITCH_WAIT_LIMIT; attempt += 1) {
+    if (generation !== token) {
+      return
+    }
+    const state = await deps.getState().catch(() => null)
+    if (!state?.uri || state.uri === target.uri || state.paused) {
+      return
+    }
+    await deps.pause()
+    for (let attempt = 0; attempt < FOREIGN_RELEASE_POLLS; attempt += 1) {
       if (generation !== token) {
         return
       }
-      const state = await deps.getState().catch(() => null)
-      if (!state?.uri || state.uri === target.uri) {
+      const next = await deps.getState().catch(() => null)
+      if (!next?.uri || next.uri === target.uri || next.paused) {
         return
       }
-      if (state.paused && !state.loading) {
-        return
-      }
-      await deps.pause()
       await sleep(PLAYBACK_START_POLL_MS)
     }
+  }
+
+  function failBufferedStart(target: ClipCue, step: string): never {
+    const action: PlaybackLogAction = request === 'prime' ? 'prime' : 'play'
+    const error = new Error('Der Song hat nicht gestartet.')
+    logPlaybackError(error.message, {
+      uri: target.uri,
+      action,
+      phase: deps.readPhase?.(),
+      step,
+    })
+    rememberPlaybackLog(error)
+    throw error
   }
 
   async function waitUntilCueBuffered(target: ClipCue, token: number): Promise<void> {
     let watch = createColdBufferWatch()
     let uncertainPolls = 0
+    let loadingPolls = 0
     let idlePolls = 0
     let totalPolls = 0
     while (generation === token) {
@@ -492,20 +518,19 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
       if (!state || state.uri !== target.uri) {
         watch = createColdBufferWatch()
         idlePolls = 0
+        loadingPolls = 0
         uncertainPolls += 1
-        if (state && !state.paused) {
-          await deps.pause()
-        }
         if (uncertainPolls >= TRACK_SWITCH_WAIT_LIMIT) {
           break
         }
         await sleep(PLAYBACK_START_POLL_MS)
         continue
       }
-      if (state.paused) {
+      uncertainPolls = 0
+      if (state.paused && !state.loading) {
         const atCue = state.positionMs + CUE_POSITION_TOLERANCE_MS >= target.positionMs
         const settled = watch.sawReset || watch.stablePolls >= BUFFER_STABLE_POLLS
-        if (atCue && settled && !state.loading) {
+        if (atCue && settled) {
           return
         }
         await deps.resume()
@@ -520,12 +545,12 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
       }
       if (state.loading) {
         idlePolls = 0
-        uncertainPolls += 1
-        if (uncertainPolls >= TRACK_SWITCH_WAIT_LIMIT) {
+        loadingPolls += 1
+        if (loadingPolls >= TRACK_SWITCH_WAIT_LIMIT) {
           break
         }
       } else {
-        uncertainPolls = 0
+        loadingPolls = 0
         idlePolls += 1
         if (idlePolls >= BUFFER_WAIT_LIMIT) {
           break
@@ -534,7 +559,7 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
       await sleep(PLAYBACK_START_POLL_MS)
     }
     if (generation === token) {
-      throw new Error('Der Song hat nicht gestartet.')
+      failBufferedStart(target, 'buffer')
     }
   }
 
@@ -634,7 +659,7 @@ export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
       return
     }
     if (!parked) {
-      throw new Error('Der Song hat nicht gestartet.')
+      failBufferedStart(target, 'park')
     }
     await deps.resume()
   }

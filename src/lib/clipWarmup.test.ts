@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   AUDIBLE_VOLUME,
   BUFFER_STABLE_POLLS,
   BUFFER_WAIT_LIMIT,
+  FOREIGN_RELEASE_POLLS,
   createClipWarmup,
   createColdBufferWatch,
   cueReached,
@@ -283,7 +284,13 @@ describe('createClipWarmup play', () => {
       }),
     )
 
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     await expect(warmup.play(cue)).rejects.toThrow('Der Song hat nicht gestartet.')
+    const line = JSON.stringify(logged.mock.calls)
+    expect(line).toContain(cue.uri)
+    expect(line).toContain('play')
+    expect(line).toContain('buffer')
+    logged.mockRestore()
   })
 
   it('springt zum vorgemerkten Folgesong, ohne ihn neu zu laden', async () => {
@@ -406,18 +413,26 @@ describe('createClipWarmup play', () => {
     expect(paused).toBe(false)
   })
 
-  it('setzt einen pausiert ladenden Folgesong fort', async () => {
+  it('lässt den Puffer laden, bevor ein pausierter Folgesong fortgesetzt wird', async () => {
     const second = { uri: 'spotify:track:b', positionMs: 12_000 }
     let uri = 'spotify:track:a'
     let position = 2_000
     let paused = true
     let loading = false
+    let pollsOnSecond = 0
+    let resumesWhileLoading = 0
     let resumes = 0
     const warmup = createClipWarmup(
       warmupDeps({
         getState: async () => {
-          if (uri === second.uri && !loading && !paused && position < second.positionMs) {
-            position = Math.min(second.positionMs, position + 500)
+          if (uri === second.uri) {
+            pollsOnSecond += 1
+            if (pollsOnSecond > 4) {
+              loading = false
+            }
+            if (!loading && !paused && position < second.positionMs) {
+              position = Math.min(second.positionMs, position + 500)
+            }
           }
           return { paused, positionMs: position, uri, loading }
         },
@@ -428,13 +443,12 @@ describe('createClipWarmup play', () => {
           loading = true
         },
         resume: async () => {
-          resumes += 1
-          if (uri === second.uri && loading) {
-            loading = false
-            paused = false
-          } else if (uri === second.uri) {
-            paused = false
+          if (loading) {
+            resumesWhileLoading += 1
+            return
           }
+          resumes += 1
+          paused = false
         },
         pause: async () => {
           paused = true
@@ -448,9 +462,53 @@ describe('createClipWarmup play', () => {
     )
 
     await warmup.play(second)
+    expect(resumesWhileLoading).toBe(0)
     expect(resumes).toBeGreaterThan(0)
     expect(uri).toBe(second.uri)
     expect(paused).toBe(false)
+  })
+
+  it('pausiert den gehaltenen Track nur zum Freigeben, nicht in jedem Puffertakt', async () => {
+    const target = { uri: 'spotify:track:b', positionMs: 12_000 }
+    let polls = 0
+    let pauses = 0
+    let loaded = false
+    let paused = false
+    let position = 0
+    const switchAfter = 40
+    const warmup = createClipWarmup(
+      warmupDeps({
+        getState: async () => {
+          polls += 1
+          if (!loaded || polls <= switchAfter) {
+            return { paused: false, positionMs: 3_000, uri: 'spotify:track:a', loading: false }
+          }
+          if (!paused && position < target.positionMs) {
+            position = Math.min(target.positionMs, position + 800)
+          }
+          return { paused, positionMs: position, uri: target.uri, loading: false }
+        },
+        load: async () => {
+          loaded = true
+          position = 0
+        },
+        pause: async () => {
+          pauses += 1
+          paused = true
+        },
+        resume: async () => {
+          paused = false
+        },
+        seek: async (positionMs) => {
+          position = positionMs
+          paused = false
+        },
+      }),
+    )
+
+    await warmup.play(target)
+    expect(loaded).toBe(true)
+    expect(pauses).toBeLessThan(FOREIGN_RELEASE_POLLS)
   })
 
   it('wartet den langsamen Folgesong ab, statt ihn neu zu laden', async () => {

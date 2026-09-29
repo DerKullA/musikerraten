@@ -26,6 +26,7 @@ import {
   type ClipWarmup,
 } from './lib/clipWarmup.ts'
 import { createSilenceWatch, type SilenceWatch } from './lib/silenceWatch.ts'
+import { logPlaybackError, rememberPlaybackLog, wasPlaybackLogged, type PlaybackLogAction } from './lib/playbackLog.ts'
 import {
   fetchTracksForPlaylists,
   fetchUserPlaylists,
@@ -401,8 +402,28 @@ export default function App() {
       },
       suspendSilence: () => silence().suspend(),
       restoreSilence: () => silence().arm(),
+      readPhase: () => (screenRef.current === 'shotless' ? 'shotless' : phaseRef.current),
     })
     return warmupRef.current
+  }
+
+  function notePlaybackFailure(cause: unknown, action: PlaybackLogAction, uri: string | null): void {
+    if (wasPlaybackLogged(cause)) {
+      return
+    }
+    const message = cause instanceof Error && cause.message ? cause.message : 'Wiedergabe fehlgeschlagen.'
+    logPlaybackError(message, {
+      uri,
+      action,
+      phase: screenRef.current === 'shotless' ? 'shotless' : phaseRef.current,
+    })
+    if (cause instanceof Error) {
+      rememberPlaybackLog(cause)
+    }
+  }
+
+  function currentTrackUri(): string | null {
+    return tracksRef.current[indexRef.current]?.uri ?? null
   }
 
   async function openAudiblePlayback(start: () => Promise<void>): Promise<void> {
@@ -554,6 +575,7 @@ export default function App() {
       await applyPhaseAudio(next)
       playbackStarted = true
     } catch (cause) {
+      notePlaybackFailure(cause, 'play', currentTrackUri())
       setError(formatSpotifyUserError(cause))
     }
     if (playbackStarted && phaseRef.current === next && next === 'playing') {
@@ -598,6 +620,7 @@ export default function App() {
       await playCurrentTrack()
       playbackStarted = true
     } catch (cause) {
+      notePlaybackFailure(cause, 'play', currentTrackUri())
       setError(formatSpotifyUserError(cause))
     }
     if (playbackStarted && phaseRef.current === 'playing') {
@@ -628,6 +651,7 @@ export default function App() {
       await playCurrentTrack()
       playbackStarted = true
     } catch (cause) {
+      notePlaybackFailure(cause, 'play', currentTrackUri())
       setError(formatSpotifyUserError(cause))
     }
     if (playbackStarted && phaseRef.current === 'playing') {
@@ -747,6 +771,7 @@ export default function App() {
       }
       await openAudiblePlayback(() => clipWarmup().play({ uri, positionMs }))
     } catch (cause) {
+      notePlaybackFailure(cause, 'play', uri)
       throw new Error(formatSpotifyUserError(cause))
     }
   }
@@ -809,6 +834,7 @@ export default function App() {
       try {
         await resumeCurrentTrack()
       } catch (cause) {
+        notePlaybackFailure(cause, 'restore', currentTrackUri())
         setError(formatSpotifyUserError(cause))
       }
     }
