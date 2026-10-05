@@ -1,9 +1,4 @@
 import {
-  logPlaybackError,
-  rememberPlaybackLog,
-  type PlaybackLogAction,
-} from './playbackLog.ts'
-import {
   BUFFER_STABLE_POLLS,
   BUFFER_WAIT_LIMIT,
   CUE_POSITION_TOLERANCE_MS,
@@ -82,17 +77,8 @@ export function createWarmBuffer(runtime: WarmRuntime) {
     }
   }
 
-  function failBufferedStart(target: ClipCue, step: string): never {
-    const action: PlaybackLogAction = runtime.request === 'prime' ? 'prime' : 'play'
-    const error = new Error('Der Song hat nicht gestartet.')
-    logPlaybackError(error.message, {
-      uri: target.uri,
-      action,
-      phase: runtime.deps.readPhase?.(),
-      step,
-    })
-    rememberPlaybackLog(error)
-    throw error
+  function failBufferedStart(): never {
+    throw new Error('Der Song hat nicht gestartet.')
   }
 
   async function waitUntilCueBuffered(target: ClipCue, token: number): Promise<void> {
@@ -151,7 +137,7 @@ export function createWarmBuffer(runtime: WarmRuntime) {
       await runtime.sleep(PLAYBACK_START_POLL_MS)
     }
     if (runtime.generation === token) {
-      failBufferedStart(target, 'buffer')
+      failBufferedStart()
     }
   }
 

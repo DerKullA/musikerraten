@@ -13,7 +13,6 @@ import {
   type ActivePlaybackDevice,
   type PlaybackClaimResult,
 } from './playbackDevice.ts'
-import { logPlaybackError, reportPlaybackFailure, type PlaybackLogContext } from './playbackLog.ts'
 import { getValidAccessToken } from './spotifyAuth.ts'
 
 const API = 'https://api.spotify.com/v1'
@@ -50,11 +49,7 @@ interface SpotifyItem {
   }
 }
 
-export async function spotifyRequest<T>(
-  path: string,
-  init: RequestInit = {},
-  log?: PlaybackLogContext | false,
-): Promise<T> {
+export async function spotifyRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = await getValidAccessToken()
   const response = await fetch(`${API}${path}`, {
     ...init,
@@ -70,34 +65,9 @@ export async function spotifyRequest<T>(
   if (!response.ok) {
     const text = await response.text()
     const message = text || `Spotify-Fehler ${response.status}`
-    const failure = playbackRequestFailure(path, init.method, log)
-    if (failure) {
-      throw reportPlaybackFailure(message, failure)
-    }
     throw new Error(message)
   }
   return (await response.json()) as T
-}
-
-function playbackRequestFailure(
-  path: string,
-  method: string | undefined,
-  log: PlaybackLogContext | false | undefined,
-): PlaybackLogContext | null {
-  if (log === false) {
-    return null
-  }
-  const route = path.split('?')[0] ?? path
-  if (!route.startsWith('/me/player')) {
-    return null
-  }
-  const transfer = route === '/me/player' && (method ?? 'GET').toUpperCase() === 'PUT'
-  return {
-    uri: log?.uri,
-    phase: log?.phase,
-    action: log?.action ?? (transfer ? 'transfer' : 'api'),
-    step: log?.step ?? (transfer ? 'transfer' : route),
-  }
 }
 
 export async function fetchUserPlaylists(): Promise<Playlist[]> {
@@ -200,14 +170,11 @@ export async function startPlayback(
       method: 'PUT',
       body: JSON.stringify(playbackRequestBody(uri, positionMs, followingUri)),
     },
-    { action: 'api', step: '/me/player/play', uri },
   )
   void ensureLinearPlayback(deviceId)
 }
 
 export interface PlaybackDeviceClaimContext {
-  uri?: string | null
-  phase?: string
   mute?: () => Promise<void>
   nowMs?: number
   sleep?: (delayMs: number) => Promise<void>
@@ -234,18 +201,9 @@ function clearConfirmedPlaybackDevice(): void {
   confirmedPlaybackDeviceAtMs = 0
 }
 
-function transferLog(context: PlaybackDeviceClaimContext): PlaybackLogContext {
-  return {
-    uri: context.uri,
-    phase: context.phase,
-    action: 'transfer',
-    step: 'transfer',
-  }
-}
-
 async function readActivePlaybackDevice(): Promise<ActivePlaybackDevice> {
   try {
-    const playback = await spotifyRequest<SpotifyPlayerPayload | undefined>('/me/player', {}, false)
+    const playback = await spotifyRequest<SpotifyPlayerPayload | undefined>('/me/player')
     return { known: true, deviceId: readActiveDeviceId(playback) }
   } catch {
     return { known: false, deviceId: null }
@@ -253,7 +211,7 @@ async function readActivePlaybackDevice(): Promise<ActivePlaybackDevice> {
 }
 
 async function pauseForeignPlayback(deviceId: string): Promise<void> {
-  await spotifyRequest<void>(`/me/player/pause?device_id=${encodeURIComponent(deviceId)}`, { method: 'PUT' }, false)
+  await spotifyRequest<void>(`/me/player/pause?device_id=${encodeURIComponent(deviceId)}`, { method: 'PUT' })
 }
 
 export async function ensurePlaybackOnDevice(
@@ -295,7 +253,6 @@ export async function ensurePlaybackOnDevice(
         method: 'PUT',
         body: JSON.stringify(transferPlaybackBody(deviceId)),
       },
-      transferLog(context),
     )
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : ''
@@ -323,7 +280,6 @@ export async function ensurePlaybackOnDevice(
   if (playbackTransferStillForeign(seenDeviceId, deviceId)) {
     playbackTransferFailed = true
     clearConfirmedPlaybackDevice()
-    logPlaybackError('Die Wiedergabe liegt noch auf einem anderen Gerät.', transferLog(context))
     return 'transferred'
   }
 

@@ -219,7 +219,7 @@ export function createWarmRun(runtime: WarmRuntime) {
       return
     }
     if (!parked) {
-      failBufferedStart(target, 'park')
+      failBufferedStart()
     }
     await runtime.deps.resume()
   }
