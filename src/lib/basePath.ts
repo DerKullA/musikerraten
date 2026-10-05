@@ -1,4 +1,3 @@
-export const PAGES_BASE_PATH = '/musikerraten/'
 export const ROOT_BASE_PATH = '/'
 
 export function normalizeBasePath(base: string | undefined): string {

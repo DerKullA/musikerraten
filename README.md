@@ -36,35 +36,26 @@ Die App nutzt **OAuth Authorization Code + PKCE**. Es wird **kein Client Secret*
 2. Die **Client ID** nach `.env.local` als `VITE_SPOTIFY_CLIENT_ID` kopieren.
 3. Unter Redirect URIs genau die Adresse eintragen, auf der die App läuft.
 
-Die Redirect URI ist immer Origin plus Vite-Basis, **mit abschließendem Schrägstrich** — auch an der Seitenwurzel.
+Die Redirect URI ist immer Origin plus Vite-Basis, **mit abschließendem Schrägstrich** — auch an der Seitenwurzel. Die Basis ist `/`.
 
 | Umgebung | Befehl | Redirect URI |
 | --- | --- | --- |
 | Lokal | `npm run dev` | `http://127.0.0.1:43123/` |
-| GitHub Pages (live) | `npm run build:pages` | `https://derkulla.github.io/musikerraten/` |
-| musikerraten.wirsindgeil.com (nach Cutover) | `npm run build:prod` | `https://musikerraten.wirsindgeil.com/` |
-| Vercel / andere Wurzel-Domain | `npm run build` | `https://<deployment>/` |
+| Produktion | `npm run build` | `https://musikerraten.wirsindgeil.com/` |
 
 Die Zeichenkette muss **exakt** mit dem Dashboard übereinstimmen (Schema, Host, Port, Pfad, Schrägstrich). `http://localhost` ist für neue Spotify-Apps nicht zulässig, nutze `127.0.0.1`.
 
-Produktions-Redirects müssen **HTTPS** sein. Pages bleibt auf `https://derkulla.github.io/musikerraten/`, bis der Cutover fertig ist. HTTPS für `https://musikerraten.wirsindgeil.com/` ist live; die Redirect-URI darf ins Dashboard, sobald der Login dort laufen soll. Details und Checkliste: [DEPLOY.md](DEPLOY.md).
+Der Produktions-Redirect ist **HTTPS**. `https://musikerraten.wirsindgeil.com/` ist im Spotify-Dashboard bereits eingetragen; dieses Repository ändert das Dashboard nicht. Details: [DEPLOY.md](DEPLOY.md).
 
-## GitHub Pages
+## Produktion (musikerraten.wirsindgeil.com)
 
-Das Workflow-File `.github/workflows/pages.yml` bleibt bis zum Cutover die Quelle für Pages und baut mit:
+`npm run build` erzeugt `dist/` mit Basis `/` für `https://musikerraten.wirsindgeil.com/`. Asset-Pfade lauten `/assets/…`. Die Client-ID kommt aus `.env.local` als `VITE_SPOTIFY_CLIENT_ID`. Auslieferung über den Symlink `/var/www/musikerraten.wirsindgeil.com/current` steht in [DEPLOY.md](DEPLOY.md). Dieser Stand deployt nicht.
 
-- `npm run build` und `VITE_BASE=/musikerraten/` (gleichwertig zu `npm run build:pages`)
-- `VITE_SPOTIFY_CLIENT_ID` aus dem Repository-Secret `VITE_SPOTIFY_CLIENT_ID`
-
-Unter *Settings → Pages* als Quelle **GitHub Actions** wählen. Im Spotify-Dashboard die Pages-URL inklusive Pfad und Schrägstrich als Redirect URI eintragen.
+GitHub Pages ist abgelöst. Es gibt kein Pages-Workflow mehr.
 
 ## Vercel
 
-`vercel.json` baut nach `dist` und leitet alle Routen auf `/index.html` um. Ohne `VITE_BASE` ist die Basis `/`. Die Redirect URI ist der HTTPS-Origin mit abschließendem Schrägstrich.
-
-## Eigener Server (musikerraten.wirsindgeil.com)
-
-`npm run build:prod` erzeugt `dist/` mit Basis `/` für `https://musikerraten.wirsindgeil.com/`. Die Client-ID kommt aus `.env.local` bzw. dem Secret `VITE_SPOTIFY_CLIENT_ID`. Auslieferung über den Symlink `/var/www/musikerraten.wirsindgeil.com/current` auf ein Release unter `/var/www/musikerraten.wirsindgeil.com/releases/<id>/`. SSH-Alias `webserver` (`christian@10.73.92.1`, WireGuard), Helfer `~/bin/deploy-musikerraten.sh` und die Cutover-Checkliste stehen in [DEPLOY.md](DEPLOY.md). Nginx, Docroot und HTTPS sind live.
+`vercel.json` baut mit `npm run build` nach `dist` und leitet alle Routen auf `/index.html` um. Die Basis ist `/`. Die Redirect URI ist der HTTPS-Origin mit abschließendem Schrägstrich.
 
 ## Umgebungsvariablen
 
@@ -72,8 +63,6 @@ Siehe `.env.example`.
 
 ```
 VITE_SPOTIFY_CLIENT_ID=
-# optional, überschreibt den Basis-Pfad:
-# VITE_BASE=/musikerraten/
 ```
 
 Keine echten Client-IDs und keine `.env`-Dateien ins Repository committen. `VITE_*` landet im Frontend-Bundle.
@@ -81,7 +70,7 @@ Keine echten Client-IDs und keine `.env`-Dateien ins Repository committen. `VITE
 ## Skripte
 
 - `npm run dev` – Entwicklung auf `127.0.0.1:43123` (Basis `/`)
-- `npm run build` – Typecheck und Production-Build, Basis `/` sofern `VITE_BASE` leer ist
-- `npm run build:pages` – Basis `/musikerraten/` für GitHub Pages
-- `npm run build:prod` – Basis `/` für https://musikerraten.wirsindgeil.com/
+- `npm run build` – Typecheck und Production-Build für die Dokumentwurzel `/`
 - `npm run preview` – gebaute App lokal ansehen
+- `npm test` – Vitest
+- `npm run lint` – oxlint
