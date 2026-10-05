@@ -6,6 +6,7 @@ import { clipStartMs, createShotlessRound, stageByIndex, type GuessSuggestion, t
 import type { Track } from '../../types.ts'
 import { useLoserBonus } from '../useLoserBonus.ts'
 import { useShotlessClipPlayback } from '../useShotlessClipPlayback.ts'
+import { useGameDebugWatch } from '../useGameDebug.ts'
 import { shotlessRoundCommands } from './shotlessRoundCommands.ts'
 
 const NO_GUESSES: readonly GuessSuggestion[] = []
@@ -117,6 +118,27 @@ export function useShotlessRound(input: ShotlessRoundInput) {
   const clipActive = started && round.view === 'guessing' && track !== null
   const revealHold = started && round.view === 'reveal' && track !== null
   const openingTrack = tracks[0]
+
+  useGameDebugWatch('shotless.stand', {
+    gestartet: started,
+    modus: mode,
+    ansicht: round.view,
+    stufe: round.stageIndex,
+    index: round.trackIndex,
+    ursprung: round.origin,
+    wiederholung: round.replayNonce,
+    sieger: round.winner,
+    hinweis: round.feedback,
+    aufloesung: round.revealMessage,
+    titel: track?.title ?? null,
+    interpret: track?.artist ?? null,
+    uri: track?.uri ?? null,
+    clip: clipPlaying,
+    fehler: playbackError,
+    bonus: bonusWinner,
+    bonusZu: bonusClosing,
+    wiedergabe: bonusWinner ? 'backdrop' : revealHold ? 'continue' : clipActive ? 'clip' : 'aus',
+  })
 
   useEffect(() => {
     if (started || !openingTrack) {

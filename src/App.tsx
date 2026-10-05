@@ -28,6 +28,9 @@ import {
 } from './lib/clipWarmup.ts'
 import { createSilenceWatch, type SilenceWatch } from './lib/silenceWatch.ts'
 import { reportClientError } from './lib/clientLog.ts'
+import { traceGame } from './lib/gameDebug.ts'
+import { traceSongLoad } from './lib/gameDebugSong.ts'
+import { useGameDebugWatch } from './components/useGameDebug.ts'
 import type { PlaybackClaimResult } from './lib/playbackDevice.ts'
 import {
   ensurePlaybackOnDevice,
@@ -81,6 +84,7 @@ export default function App() {
   const [roundTimings, setRoundTimings] = useState<PhaseTimings>(() => readSessionPhaseTimings())
   const [menuGameId, setMenuGameId] = useState(GUESS_SONG_ID)
   const [shotlessLive, setShotlessLive] = useState(false)
+  const [roundReason, setRoundReason] = useState('start')
 
   const bootstrapped = useRef(false)
   const screenRef = useRef<AppScreen>('login')
@@ -248,13 +252,16 @@ export default function App() {
     try {
       const loaded = await fetchTracksForPlaylists(selectedIds)
       if (epoch !== navigationEpochRef.current) {
+        traceGame('runde', { aktion: 'laden-verworfen', schritt: 'titel' })
         return
       }
       if (loaded.length === 0) {
         throw new Error('Keine abspielbaren Titel gefunden.')
       }
+      traceGame('runde', { aktion: 'geladen', anzahl: loaded.length, modus: menuGameId })
       await ensurePlayer()
       if (epoch !== navigationEpochRef.current) {
+        traceGame('runde', { aktion: 'laden-verworfen', schritt: 'player' })
         return
       }
       const shuffled = shuffleTracks(loaded)
@@ -266,6 +273,7 @@ export default function App() {
       setPhase('idle')
       phaseRef.current = 'idle'
       beginQuizMedia('idle')
+      setRoundReason('bereit')
       if (menuGameId === SHOTLESS_ID) {
         setShotlessLive(false)
         setScreen('shotless')
@@ -274,15 +282,25 @@ export default function App() {
       setScreen('game')
       const opening = shuffled[0]
       if (opening) {
+        noteSongLoad(opening.uri, 0, 'prime')
         void clipWarmup()
           .prime({ uri: opening.uri, positionMs: 0 })
-          .catch(() => undefined)
+          .catch((cause: unknown) => {
+            traceGame('runde', {
+              aktion: 'prime-fehler',
+              uri: opening.uri,
+              fehler: cause instanceof Error && cause.message ? cause.message : 'Prime fehlgeschlagen',
+            })
+          })
       }
     } catch (cause) {
       if (epoch !== navigationEpochRef.current) {
+        traceGame('runde', { aktion: 'laden-verworfen', schritt: 'fehler' })
         return
       }
-      setError(formatSpotifyUserError(cause))
+      const fehler = formatSpotifyUserError(cause)
+      traceGame('runde', { aktion: 'laden-fehler', fehler })
+      setError(fehler)
     } finally {
       if (epoch === navigationEpochRef.current) {
         setLoadingTracks(false)
@@ -463,6 +481,17 @@ export default function App() {
     return tracksRef.current[indexRef.current]?.uri ?? null
   }
 
+  function noteSongLoad(uri: string, positionMs: number, art: 'prime' | 'play'): void {
+    const known = tracksRef.current.find((item) => item.uri === uri)
+    traceSongLoad({
+      art,
+      uri,
+      positionMs,
+      titel: known?.title ?? 'unbekannt',
+      interpret: known?.artist ?? '',
+    })
+  }
+
   async function openAudiblePlayback(start: () => Promise<void>): Promise<void> {
     await silence().release()
     holdQuizMediaSession()
@@ -475,6 +504,7 @@ export default function App() {
     if (!track || !deviceId) {
       return
     }
+    noteSongLoad(track.uri, 0, 'play')
     await openAudiblePlayback(() => clipWarmup().play({ uri: track.uri, positionMs: 0 }))
     if (pausedRef.current) {
       await pauseCurrentTrack()
@@ -588,10 +618,21 @@ export default function App() {
     setRoundTimings(DEFAULT_PHASE_TIMINGS)
   }
 
-  async function enterPhase(next: GamePhase): Promise<void> {
+  async function enterPhase(
+    next: GamePhase,
+    grund: 'timer' | 'naechster' | 'aufloesen' | 'weiter' = 'timer',
+  ): Promise<void> {
     if (!runningRef.current || pausedRef.current) {
+      traceGame('runde', {
+        aktion: 'phase-block',
+        nach: next,
+        grund,
+        phase: phaseRef.current,
+        pause: pausedRef.current,
+      })
       return
     }
+    setRoundReason(grund)
     if (next === 'playing') {
       warmupRef.current?.invalidate()
       const lastIndex = tracksRef.current.length - 1
@@ -641,8 +682,10 @@ export default function App() {
 
   async function handlePlay(): Promise<void> {
     if (tracksRef.current.length === 0) {
+      traceGame('runde', { aktion: 'starten-leer' })
       return
     }
+    setRoundReason('starten')
     setError(null)
     runningRef.current = true
     resetPauseState()
@@ -669,12 +712,15 @@ export default function App() {
 
   async function restartCurrentSnippet(): Promise<void> {
     if (!runningRef.current || tracksRef.current.length === 0) {
+      traceGame('runde', { aktion: 'nochmal-block', phase: phaseRef.current })
       return
     }
     const current = phaseRef.current
     if (current !== 'playing' && current !== 'thinking') {
+      traceGame('runde', { aktion: 'nochmal-block', phase: current })
       return
     }
+    setRoundReason('nochmal')
     setError(null)
     pausedRef.current = false
     setPaused(false)
@@ -700,27 +746,31 @@ export default function App() {
 
   async function skipToNextTrack(): Promise<void> {
     if (!runningRef.current || phaseRef.current !== 'reveal') {
+      traceGame('runde', { aktion: 'naechster-block', phase: phaseRef.current })
       return
     }
     pausedRef.current = false
     setPaused(false)
-    await enterPhase('playing')
+    await enterPhase('playing', 'naechster')
   }
 
   async function revealCurrentTrack(): Promise<void> {
     if (!runningRef.current) {
+      traceGame('runde', { aktion: 'aufloesen-block', phase: phaseRef.current })
       return
     }
     const current = phaseRef.current
     if (current !== 'playing' && current !== 'thinking') {
+      traceGame('runde', { aktion: 'aufloesen-block', phase: current })
       return
     }
     pausedRef.current = false
     setPaused(false)
-    await enterPhase('reveal')
+    await enterPhase('reveal', 'aufloesen')
   }
 
   function stopRound(): void {
+    setRoundReason('stopp')
     runningRef.current = false
     setRunning(false)
     resetPauseState()
@@ -793,15 +843,25 @@ export default function App() {
   }
 
   function primeShotlessClip(uri: string, positionMs: number): Promise<void> {
+    noteSongLoad(uri, positionMs, 'prime')
     if (!deviceIdRef.current || !playerRef.current) {
+      traceGame('runde', { aktion: 'prime-aus', uri, positionMs })
       return Promise.resolve()
     }
     return clipWarmup()
       .prime({ uri, positionMs })
-      .catch(() => undefined)
+      .catch((cause: unknown) => {
+        traceGame('runde', {
+          aktion: 'prime-fehler',
+          uri,
+          positionMs,
+          fehler: cause instanceof Error && cause.message ? cause.message : 'Prime fehlgeschlagen',
+        })
+      })
   }
 
   async function playShotlessClip(uri: string, positionMs: number): Promise<void> {
+    noteSongLoad(uri, positionMs, 'play')
     try {
       const deviceId = deviceIdRef.current
       if (!deviceId) {
@@ -826,19 +886,24 @@ export default function App() {
   }
 
   function handleLeaveShotless(): void {
+    setRoundReason('verlassen')
+    traceGame('runde', { aktion: 'verlassen', modus: 'shotless' })
     void endQuizPlayback()
     handleBackToMenu()
   }
 
   function handleAbort(): void {
+    traceGame('runde', { aktion: 'abbruch', phase: phaseRef.current, index: indexRef.current })
     stopRound()
     setScreen('playlists')
   }
 
   function handlePause(): void {
     if (!runningRef.current || pausedRef.current || phaseRef.current === 'idle') {
+      traceGame('runde', { aktion: 'pause-block', phase: phaseRef.current, pause: pausedRef.current })
       return
     }
+    setRoundReason('pause')
     remainingMsRef.current = remainingFromDeadline()
     deadlineRef.current = null
     clearGameTimer()
@@ -857,15 +922,17 @@ export default function App() {
 
   async function handleResume(): Promise<void> {
     if (!runningRef.current || !pausedRef.current) {
+      traceGame('runde', { aktion: 'weiter-block', phase: phaseRef.current, pause: pausedRef.current })
       return
     }
+    setRoundReason('weiter')
     pausedRef.current = false
     setPaused(false)
     const current = phaseRef.current
     engageQuizMedia(current)
     const remaining = remainingMsRef.current
     if (remaining <= 0) {
-      await enterPhase(nextPhase(current, roundTimingsRef.current))
+      await enterPhase(nextPhase(current, roundTimingsRef.current), 'weiter')
       return
     }
     if (phasePlaysAudio(current)) {
@@ -880,6 +947,23 @@ export default function App() {
   }
 
   const currentTrack = tracks[index] ?? null
+  useGameDebugWatch('spiel', {
+    screen,
+    phase,
+    grund: roundReason,
+    index,
+    anzahl: tracks.length,
+    laufend: running,
+    pause: paused,
+    fehler: error,
+    modus: menuGameId,
+    shotless: shotlessLive,
+    titel: currentTrack?.title ?? null,
+    interpret: currentTrack?.artist ?? null,
+    uri: currentTrack?.uri ?? null,
+    hoerbar: audiblePlay,
+    snippet: snippetReady,
+  })
   const fullBleed = screen === 'game' || (screen === 'shotless' && shotlessLive)
 
   return (
