@@ -1,4 +1,5 @@
 import { AUDIBLE_VOLUME } from './clipWarmup.ts'
+import { clientError } from './clientLog.ts'
 import { getValidAccessToken } from './spotifyAuth.ts'
 import { watchQuizPlayback } from './quizMediaSession.ts'
 
@@ -17,7 +18,7 @@ export function loadSpotifySdk(): Promise<void> {
   sdkPromise = new Promise((resolve, reject) => {
     const timeout = window.setTimeout(() => {
       sdkPromise = null
-      reject(new Error('Spotify Web Playback SDK konnte nicht geladen werden.'))
+      reject(sdkFailure('Spotify Web Playback SDK konnte nicht geladen werden.', 'load'))
     }, READY_TIMEOUT_MS)
 
     const finish = () => {
@@ -27,7 +28,7 @@ export function loadSpotifySdk(): Promise<void> {
         return
       }
       sdkPromise = null
-      reject(new Error('Spotify Web Playback SDK konnte nicht geladen werden.'))
+      reject(sdkFailure('Spotify Web Playback SDK konnte nicht geladen werden.', 'load'))
     }
 
     window.onSpotifyWebPlaybackSDKReady = finish
@@ -47,7 +48,7 @@ export function loadSpotifySdk(): Promise<void> {
     script.onerror = () => {
       window.clearTimeout(timeout)
       sdkPromise = null
-      reject(new Error('Spotify SDK-Skript blockiert oder nicht erreichbar.'))
+      reject(sdkFailure('Spotify SDK-Skript blockiert oder nicht erreichbar.', 'load'))
     }
     document.body.appendChild(script)
   })
@@ -73,7 +74,7 @@ export async function connectSpotifyPlayer(
   await loadSpotifySdk()
   const PlayerCtor = window.Spotify?.Player
   if (!PlayerCtor) {
-    throw new Error('Spotify Player ist nicht verfügbar.')
+    throw sdkFailure('Spotify Player ist nicht verfügbar.', 'connect')
   }
 
   const player = new PlayerCtor(spotifyPlayerOptions(name))
@@ -82,7 +83,7 @@ export async function connectSpotifyPlayer(
   return await new Promise((resolve, reject) => {
     const timer = window.setTimeout(() => {
       player.disconnect()
-      reject(new Error('Spotify-Player antwortet nicht. Premium-Konto und HTTPS prüfen.'))
+      reject(sdkFailure('Spotify-Player antwortet nicht. Premium-Konto und HTTPS prüfen.', 'connect'))
     }, READY_TIMEOUT_MS)
 
     player.addListener('ready', (event) => {
@@ -95,24 +96,29 @@ export async function connectSpotifyPlayer(
     player.addListener('account_error', (event) => {
       window.clearTimeout(timer)
       player.disconnect()
-      reject(new Error(event.message || 'Spotify Premium ist für die Wiedergabe erforderlich.'))
+      reject(sdkFailure(event.message || 'Spotify Premium ist für die Wiedergabe erforderlich.', 'account'))
     })
     player.addListener('authentication_error', (event) => {
       window.clearTimeout(timer)
       player.disconnect()
-      reject(new Error(event.message || 'Spotify-Anmeldung ungültig.'))
+      reject(sdkFailure(event.message || 'Spotify-Anmeldung ungültig.', 'auth'))
     })
     player.addListener('initialization_error', (event) => {
       window.clearTimeout(timer)
       player.disconnect()
-      reject(new Error(event.message || 'Spotify-Player konnte nicht initialisiert werden.'))
+      reject(sdkFailure(event.message || 'Spotify-Player konnte nicht initialisiert werden.', 'init'))
     })
 
     void player.connect().then((ok) => {
       if (!ok) {
         window.clearTimeout(timer)
-        reject(new Error('Verbindung zum Spotify-Player fehlgeschlagen.'))
+        reject(sdkFailure('Verbindung zum Spotify-Player fehlgeschlagen.', 'connect'))
       }
     })
   })
+}
+
+/** Meldet einen SDK-Fehler und gibt ihn zum Ablehnen zurück. */
+function sdkFailure(message: string, step: string): Error {
+  return clientError(message, { source: 'playback', action: 'sdk', step })
 }

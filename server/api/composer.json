@@ -1,0 +1,13 @@
+{
+  "name": "musikerraten/log",
+  "description": "Fehler- und Warn-Log für Musikerraten",
+  "require": {
+    "php": ">=8.2",
+    "monolog/monolog": "^3.9"
+  },
+  "autoload": {
+    "psr-4": {
+      "Musikerraten\\Log\\": "src/"
+    }
+  }
+}

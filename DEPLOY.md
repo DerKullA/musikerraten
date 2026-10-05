@@ -55,6 +55,8 @@ Der Webserver zeigt auf den Symlink `current`. Ein neues Release liegt unter `re
 
 Dieses Repository enthält den Build, nicht den Auslieferungsvorgang. Ein späterer Webhook-Deploy von `main` liegt beim Serveradmin und ist nicht Teil dieser Änderung.
 
+App-Logs liegen außerhalb des Docroots. Nginx für `/api/log.php`, das Verzeichnis und `tail -f` stehen in [LOGGING.md](LOGGING.md). PHP und dieser Nginx-Pfad müssen vor dem Go-live vom Serveradmin aktiviert werden. Ein Deploy der Log-Schnittstelle braucht die Freigabe von Christian. Dieser Stand deployt nicht.
+
 ### Manuelles Kopieren eines fertigen `dist/`
 
 ```bash

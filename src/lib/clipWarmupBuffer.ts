@@ -1,3 +1,4 @@
+import { clientError } from './clientLog.ts'
 import {
   BUFFER_STABLE_POLLS,
   BUFFER_WAIT_LIMIT,
@@ -77,8 +78,15 @@ export function createWarmBuffer(runtime: WarmRuntime) {
     }
   }
 
-  function failBufferedStart(): never {
-    throw new Error('Der Song hat nicht gestartet.')
+  function failBufferedStart(target: ClipCue, step: string): never {
+    const action = runtime.request === 'prime' ? 'prime' : 'play'
+    throw clientError('Der Song hat nicht gestartet.', {
+      source: 'playback',
+      uri: target.uri,
+      action,
+      phase: runtime.deps.readPhase?.() ?? null,
+      step,
+    })
   }
 
   async function waitUntilCueBuffered(target: ClipCue, token: number): Promise<void> {
@@ -137,7 +145,7 @@ export function createWarmBuffer(runtime: WarmRuntime) {
       await runtime.sleep(PLAYBACK_START_POLL_MS)
     }
     if (runtime.generation === token) {
-      failBufferedStart()
+      failBufferedStart(target, 'buffer')
     }
   }
 
