@@ -23,9 +23,11 @@ import {
   createClipWarmup,
   readQueuedTrackUri,
   readWarmPlayback,
+  type ClipCue,
   type ClipWarmup,
 } from './lib/clipWarmup.ts'
 import { createSilenceWatch, type SilenceWatch } from './lib/silenceWatch.ts'
+import { reportClientError } from './lib/clientLog.ts'
 import type { PlaybackClaimResult } from './lib/playbackDevice.ts'
 import {
   ensurePlaybackOnDevice,
@@ -385,7 +387,7 @@ export default function App() {
         await player.nextTrack()
         return true
       },
-      claimDevice: () => claimPlaybackDevice(),
+      claimDevice: (cue) => claimPlaybackDevice(cue),
       queueFollowing: async (next) => {
         const deviceId = deviceIdRef.current
         const player = playerRef.current
@@ -404,20 +406,61 @@ export default function App() {
       },
       suspendSilence: () => silence().suspend(),
       restoreSilence: () => silence().arm(),
+      readPhase: playbackPhase,
     })
     return warmupRef.current
   }
 
-  async function claimPlaybackDevice(): Promise<PlaybackClaimResult> {
+  function playbackPhase(): string {
+    return screenRef.current === 'shotless' ? 'shotless' : phaseRef.current
+  }
+
+  async function claimPlaybackDevice(cue?: ClipCue | null): Promise<PlaybackClaimResult> {
     const deviceId = deviceIdRef.current
     const player = playerRef.current
     if (!deviceId || !player) {
       return 'idle'
     }
-    await player.activateElement().catch(() => undefined)
+    await player.activateElement().catch((cause: unknown) => {
+      const message =
+        cause instanceof Error && cause.message
+          ? cause.message
+          : 'Spotify-Player lässt sich nicht aktivieren.'
+      reportClientError(
+        message,
+        {
+          source: 'playback',
+          uri: cue?.uri ?? null,
+          action: 'transfer',
+          phase: playbackPhase(),
+          step: 'activate',
+        },
+        cause,
+      )
+    })
     return await ensurePlaybackOnDevice(deviceId, {
+      uri: cue?.uri,
+      phase: playbackPhase(),
       mute: () => player.setVolume(0),
     })
+  }
+
+  function notePlaybackFailure(cause: unknown, action: 'play' | 'restore', uri: string | null): void {
+    const message = cause instanceof Error && cause.message ? cause.message : 'Wiedergabe fehlgeschlagen.'
+    reportClientError(
+      message,
+      {
+        source: 'playback',
+        uri,
+        action,
+        phase: playbackPhase(),
+      },
+      cause,
+    )
+  }
+
+  function currentTrackUri(): string | null {
+    return tracksRef.current[indexRef.current]?.uri ?? null
   }
 
   async function openAudiblePlayback(start: () => Promise<void>): Promise<void> {
@@ -570,6 +613,7 @@ export default function App() {
       await applyPhaseAudio(next)
       playbackStarted = true
     } catch (cause) {
+      notePlaybackFailure(cause, 'play', currentTrackUri())
       setError(formatSpotifyUserError(cause))
     }
     if (playbackStarted && phaseRef.current === next && next === 'playing') {
@@ -614,6 +658,7 @@ export default function App() {
       await playCurrentTrack()
       playbackStarted = true
     } catch (cause) {
+      notePlaybackFailure(cause, 'play', currentTrackUri())
       setError(formatSpotifyUserError(cause))
     }
     if (playbackStarted && phaseRef.current === 'playing') {
@@ -644,6 +689,7 @@ export default function App() {
       await playCurrentTrack()
       playbackStarted = true
     } catch (cause) {
+      notePlaybackFailure(cause, 'play', currentTrackUri())
       setError(formatSpotifyUserError(cause))
     }
     if (playbackStarted && phaseRef.current === 'playing') {
@@ -763,6 +809,7 @@ export default function App() {
       }
       await openAudiblePlayback(() => clipWarmup().play({ uri, positionMs }))
     } catch (cause) {
+      notePlaybackFailure(cause, 'play', uri)
       throw new Error(formatSpotifyUserError(cause))
     }
   }
@@ -825,6 +872,7 @@ export default function App() {
       try {
         await resumeCurrentTrack()
       } catch (cause) {
+        notePlaybackFailure(cause, 'restore', currentTrackUri())
         setError(formatSpotifyUserError(cause))
       }
     }

@@ -13,6 +13,7 @@ import {
   type ActivePlaybackDevice,
   type PlaybackClaimResult,
 } from './playbackDevice.ts'
+import { clientError, reportClientError, type ClientLogContext } from './clientLog.ts'
 import { getValidAccessToken } from './spotifyAuth.ts'
 
 const API = 'https://api.spotify.com/v1'
@@ -68,6 +69,14 @@ export async function spotifyRequest<T>(path: string, init: RequestInit = {}): P
     throw new Error(message)
   }
   return (await response.json()) as T
+}
+
+/** Meldet einen fehlgeschlagenen Player-Aufruf und wirft ihn weiter. */
+function playerRequest<T>(path: string, init: RequestInit, context: ClientLogContext): Promise<T> {
+  return spotifyRequest<T>(path, init).catch((cause: unknown) => {
+    const message = cause instanceof Error && cause.message ? cause.message : 'Spotify-Fehler'
+    throw clientError(message, { ...context, source: 'playback' })
+  })
 }
 
 export async function fetchUserPlaylists(): Promise<Playlist[]> {
@@ -164,17 +173,20 @@ export async function startPlayback(
   positionMs = 0,
   followingUri?: string,
 ): Promise<void> {
-  await spotifyRequest<void>(
+  await playerRequest<void>(
     `/me/player/play?device_id=${encodeURIComponent(deviceId)}`,
     {
       method: 'PUT',
       body: JSON.stringify(playbackRequestBody(uri, positionMs, followingUri)),
     },
+    { action: 'api', step: '/me/player/play', uri },
   )
   void ensureLinearPlayback(deviceId)
 }
 
 export interface PlaybackDeviceClaimContext {
+  uri?: string | null
+  phase?: string
   mute?: () => Promise<void>
   nowMs?: number
   sleep?: (delayMs: number) => Promise<void>
@@ -247,12 +259,13 @@ export async function ensurePlaybackOnDevice(
   }
 
   try {
-    await spotifyRequest<void>(
+    await playerRequest<void>(
       '/me/player',
       {
         method: 'PUT',
         body: JSON.stringify(transferPlaybackBody(deviceId)),
       },
+      { action: 'transfer', step: 'transfer', uri: context.uri, phase: context.phase },
     )
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : ''
@@ -280,6 +293,13 @@ export async function ensurePlaybackOnDevice(
   if (playbackTransferStillForeign(seenDeviceId, deviceId)) {
     playbackTransferFailed = true
     clearConfirmedPlaybackDevice()
+    reportClientError('Die Wiedergabe liegt noch auf einem anderen Gerät.', {
+      source: 'playback',
+      action: 'transfer',
+      step: 'transfer',
+      uri: context.uri,
+      phase: context.phase,
+    })
     return 'transferred'
   }
 
@@ -301,19 +321,27 @@ export async function queuePlayback(deviceId: string, uri: string): Promise<void
     uri,
     device_id: deviceId,
   })
-  await spotifyRequest<void>(`/me/player/queue?${params.toString()}`, { method: 'POST' })
+  await playerRequest<void>(
+    `/me/player/queue?${params.toString()}`,
+    { method: 'POST' },
+    { action: 'api', step: '/me/player/queue', uri },
+  )
 }
 
 export async function pausePlayback(deviceId: string): Promise<void> {
-  await spotifyRequest<void>(`/me/player/pause?device_id=${encodeURIComponent(deviceId)}`, {
-    method: 'PUT',
-  })
+  await playerRequest<void>(
+    `/me/player/pause?device_id=${encodeURIComponent(deviceId)}`,
+    { method: 'PUT' },
+    { action: 'api', step: '/me/player/pause' },
+  )
 }
 
 export async function resumePlayback(deviceId: string): Promise<void> {
-  await spotifyRequest<void>(`/me/player/play?device_id=${encodeURIComponent(deviceId)}`, {
-    method: 'PUT',
-  })
+  await playerRequest<void>(
+    `/me/player/play?device_id=${encodeURIComponent(deviceId)}`,
+    { method: 'PUT' },
+    { action: 'api', step: '/me/player/play' },
+  )
 }
 
 async function fetchPlaylistItemPage(
@@ -333,8 +361,16 @@ async function ensureLinearPlayback(deviceId: string): Promise<void> {
   linearPlaybackReady = true
   const device = encodeURIComponent(deviceId)
   try {
-    await spotifyRequest<void>(`/me/player/shuffle?state=false&device_id=${device}`, { method: 'PUT' })
-    await spotifyRequest<void>(`/me/player/repeat?state=off&device_id=${device}`, { method: 'PUT' })
+    await playerRequest<void>(
+      `/me/player/shuffle?state=false&device_id=${device}`,
+      { method: 'PUT' },
+      { action: 'api', step: '/me/player/shuffle' },
+    )
+    await playerRequest<void>(
+      `/me/player/repeat?state=off&device_id=${device}`,
+      { method: 'PUT' },
+      { action: 'api', step: '/me/player/repeat' },
+    )
   } catch {
     // Ein fehlgeschlagener Moduswechsel darf den nächsten Song nicht blockieren.
   }

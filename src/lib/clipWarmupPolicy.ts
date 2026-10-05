@@ -59,6 +59,7 @@ export interface ClipWarmupDeps {
   restoreSilence: () => Promise<void>
   sleep?: (delayMs: number) => Promise<void>
   audibleVolume?: number
+  readPhase?: () => string
 }
 
 export interface ClipWarmup {

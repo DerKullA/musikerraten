@@ -49,7 +49,7 @@ Der Produktions-Redirect ist **HTTPS**. `https://musikerraten.wirsindgeil.com/` 
 
 ## Produktion (musikerraten.wirsindgeil.com)
 
-`npm run build` erzeugt `dist/` mit Basis `/` für `https://musikerraten.wirsindgeil.com/`. Asset-Pfade lauten `/assets/…`. Die Client-ID kommt aus `.env.local` als `VITE_SPOTIFY_CLIENT_ID`. Auslieferung über den Symlink `/var/www/musikerraten.wirsindgeil.com/current` steht in [DEPLOY.md](DEPLOY.md). Dieser Stand deployt nicht.
+`npm run build` erzeugt `dist/` mit Basis `/` für `https://musikerraten.wirsindgeil.com/`. Asset-Pfade lauten `/assets/…`. Die Client-ID kommt aus `.env.local` als `VITE_SPOTIFY_CLIENT_ID`. Auslieferung über den Symlink `/var/www/musikerraten.wirsindgeil.com/current` steht in [DEPLOY.md](DEPLOY.md). Browser-Fehler gehen an `/api/log.php`; Einrichtung und Logs lesen steht in [LOGGING.md](LOGGING.md). Dieser Stand deployt nicht.
 
 GitHub Pages ist abgelöst. Es gibt kein Pages-Workflow mehr.
 
