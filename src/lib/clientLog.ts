@@ -1,5 +1,6 @@
 import { readAppVersion } from './appVersion.ts'
 import { redactSecrets, redactUrl } from './clientLogRedact.ts'
+import { traceGame } from './gameDebug.ts'
 
 const CLIENT_LOG_URL = '/api/log.php'
 const DEDUP_MS = 2_000
@@ -142,6 +143,15 @@ function dispatchClientLog(
   if (error) {
     reportedErrors.add(error)
   }
+  traceGame('fehler', {
+    stufe: level,
+    meldung: text,
+    quelle: context.source ?? null,
+    aktion: context.action ?? null,
+    phase: context.phase ?? null,
+    schritt: context.step ?? null,
+    uri: context.uri ?? null,
+  })
   if (!takeSlot(`${level}\n${text}`)) {
     return
   }

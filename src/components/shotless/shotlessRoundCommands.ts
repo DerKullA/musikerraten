@@ -9,6 +9,7 @@ import {
   type ShotlessGuessTarget,
   type ShotlessRound,
 } from '../../lib/shotlessRules.ts'
+import { traceGame, type GameDebugDetail } from '../../lib/gameDebug.ts'
 import type { Track } from '../../types.ts'
 
 export interface ShotlessCommandContext {
@@ -55,6 +56,21 @@ function restartsGuessingClip(current: ShotlessRound, next: ShotlessRound): bool
 function clearGuessDraft(ctx: ShotlessCommandContext): void {
   ctx.setQuery('')
   ctx.setArtistQuery('')
+}
+
+function traceShotlessAction(ctx: ShotlessCommandContext, aktion: string, extra: GameDebugDetail = {}): void {
+  const round = ctx.roundRef.current
+  const track = ctx.tracksRef.current[round.trackIndex]
+  traceGame('shotless', {
+    aktion,
+    ansicht: round.view,
+    stufe: round.stageIndex,
+    index: round.trackIndex,
+    ursprung: round.origin,
+    titel: track?.title ?? null,
+    interpret: track?.artist ?? null,
+    ...extra,
+  })
 }
 
 function markClipPlaying(ctx: ShotlessCommandContext, playing: boolean): void {
@@ -104,9 +120,11 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
     },
     advanceAfterReveal(): void {
       if (ctx.blockAdvanceRef.current) {
+        traceShotlessAction(ctx, 'weiter-block', { bonus: true })
         ctx.queuedAdvanceRef.current = true
         return
       }
+      traceShotlessAction(ctx, 'weiter-automatisch')
       ctx.setPlaybackError(null)
       clearGuessDraft(ctx)
       ctx.setRound((current) => {
@@ -122,8 +140,10 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
     },
     async dismissBonusAndMaybeAdvance(): Promise<void> {
       if (ctx.handoffRef.current) {
+        traceShotlessAction(ctx, 'bonus-block')
         return
       }
+      traceShotlessAction(ctx, 'bonus-weg')
       ctx.handoffRef.current = true
       ctx.setBonusClosing(true)
       const origin = pickClipOrigin()
@@ -142,7 +162,9 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
           wait: waitForGuessPause,
         })
       } catch (cause) {
-        ctx.setPlaybackError(cause instanceof Error && cause.message ? cause.message : 'Wiedergabe fehlgeschlagen.')
+        const fehler = cause instanceof Error && cause.message ? cause.message : 'Wiedergabe fehlgeschlagen.'
+        traceShotlessAction(ctx, 'bonus-fehler', { fehler })
+        ctx.setPlaybackError(fehler)
       }
       ctx.suppressPauseRef.current = true
       try {
@@ -166,6 +188,7 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
       return pickBackdropTrack(ctx.playedRef.current, finishedUri, Math.random)
     },
     beginRound(): void {
+      traceShotlessAction(ctx, 'start')
       ctx.setPlaybackError(null)
       clearGuessDraft(ctx)
       markClipPlaying(ctx, true)
@@ -174,25 +197,32 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
       ctx.setRound(createShotlessRound(ctx.openingOrigin))
     },
     onSkip(): void {
+      traceShotlessAction(ctx, 'skip')
       commitRound(ctx, reduceShotlessRound(ctx.roundRef.current, { type: 'skip' }))
     },
     onListen(): void {
       if (ctx.clipPlayingRef.current || ctx.roundRef.current.view !== 'guessing') {
+        traceShotlessAction(ctx, 'nochmal-block', { clip: ctx.clipPlayingRef.current })
         return
       }
+      traceShotlessAction(ctx, 'nochmal')
       ctx.setPlaybackError(null)
       commitRound(ctx, reduceShotlessRound(ctx.roundRef.current, { type: 'replay' }))
     },
     onClaim(): void {
+      traceShotlessAction(ctx, 'claim')
       applyRound(ctx, reduceShotlessRound(ctx.roundRef.current, { type: 'claim' }))
     },
     onNobody(): void {
+      traceShotlessAction(ctx, 'niemand')
       applyRound(ctx, reduceShotlessRound(ctx.roundRef.current, { type: 'nobody' }))
     },
     onAssign(name: string): void {
+      traceShotlessAction(ctx, 'zuweisen', { name })
       applyRound(ctx, reduceShotlessRound(ctx.roundRef.current, { type: 'assign', name }))
     },
     onNext(): void {
+      traceShotlessAction(ctx, 'weiter')
       ctx.setPlaybackError(null)
       commitRound(
         ctx,
@@ -207,6 +237,13 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
       const current = ctx.roundRef.current
       const currentTrack = ctx.tracksRef.current[current.trackIndex] ?? null
       const target = ctx.guessTargetRef.current
+      traceShotlessAction(ctx, 'tipp', {
+        tipp: ctx.query,
+        interpretTipp: target === 'both' ? ctx.artistQuery : '',
+        ziel: target,
+        loesungTitel: currentTrack?.title ?? '',
+        loesungInterpret: currentTrack?.artist ?? '',
+      })
       clearGuessDraft(ctx)
       applyRound(
         ctx,
@@ -223,6 +260,7 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
     onPickSuggestion(suggestion: GuessSuggestion): void {
       const target = ctx.guessTargetRef.current
       if (target === 'both') {
+        traceShotlessAction(ctx, 'vorschlag', { feld: suggestion.field, text: suggestion.label })
         if (suggestion.field === 'artist') {
           ctx.setArtistQuery(suggestion.label)
           return
@@ -232,6 +270,12 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
       }
       const current = ctx.roundRef.current
       const currentTrack = ctx.tracksRef.current[current.trackIndex] ?? null
+      traceShotlessAction(ctx, 'tipp', {
+        tipp: suggestion.label,
+        ziel: target,
+        loesungTitel: currentTrack?.title ?? '',
+        loesungInterpret: currentTrack?.artist ?? '',
+      })
       clearGuessDraft(ctx)
       applyRound(
         ctx,
