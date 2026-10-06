@@ -1,6 +1,9 @@
-import { playbackHasStarted, primeSeekMs, choosePrimeAction, chooseWarmStart, CUE_POSITION_TOLERANCE_MS, PLAYBACK_START_LIMIT, PLAYBACK_START_POLL_MS, TRACK_SWITCH_WAIT_LIMIT, positionedAtCue, cueIsNear, parkedNearCue, type ClipCue, type WarmStart } from './clipWarmupPolicy.ts'
+import { primeSeekMs, choosePrimeAction, chooseWarmStart, CUE_POSITION_TOLERANCE_MS, PARK_SETTLE_MS, positionedAtCue, cueIsNear, parkedNearCue, type ClipCue, type WarmStart } from './clipWarmupPolicy.ts'
 import { createWarmBuffer } from './clipWarmupBuffer.ts'
 import type { WarmRuntime } from './clipWarmupRuntime.ts'
+import { traceGame } from './gameDebug.ts'
+
+type ParkAttempt = 'parked' | 'loose' | 'stalled'
 
 export function createWarmRun(runtime: WarmRuntime) {
   const {
@@ -118,7 +121,14 @@ export function createWarmRun(runtime: WarmRuntime) {
     await waitUntilFirstPlayReady(target, token)
   }
 
-  async function parkIncomingTrack(target: ClipCue, token: number): Promise<boolean> {
+  // Der Wechsel bleibt stumm, bis der Puffer am Einsatz steht. Das gilt auch
+  // für den Sprung über die Warteschlange, sonst ruckelt der kalte Start hörbar.
+  async function parkIncomingTrack(
+    target: ClipCue,
+    token: number,
+    queued = false,
+    quick = false,
+  ): Promise<boolean> {
     let suspended = false
     await runtime.deps.setVolume(0)
     try {
@@ -128,17 +138,26 @@ export function createWarmRun(runtime: WarmRuntime) {
       if (runtime.generation !== token) {
         return false
       }
-      await releaseForeignTrack(target, token)
+      if (queued) {
+        if (!(await runtime.deps.handoff?.(target))) {
+          return false
+        }
+      } else {
+        await releaseForeignTrack(target, token)
+        if (runtime.generation !== token) {
+          return false
+        }
+        await runtime.deps.load(target)
+      }
       if (runtime.generation !== token) {
         return false
       }
-      await runtime.deps.load(target)
+      await waitUntilCueBuffered(target, token, quick)
       if (runtime.generation !== token) {
         return false
       }
-      await waitUntilCueBuffered(target, token)
-      if (runtime.generation !== token) {
-        return false
+      if (queued) {
+        void runtime.deps.queueFollowing?.(target)?.catch(() => undefined)
       }
       await pauseUntilHeld(token)
       if (runtime.generation !== token) {
@@ -168,60 +187,75 @@ export function createWarmRun(runtime: WarmRuntime) {
     }
   }
 
-  async function startQueuedHandoff(target: ClipCue, token: number): Promise<boolean> {
-    if (!runtime.deps.handoff || target.positionMs !== 0) {
-      return false
-    }
-    let accepted = false
-    try {
-      accepted = await runtime.deps.handoff(target)
-    } catch {
-      return runtime.generation !== token
-    }
-    if (runtime.generation !== token) {
-      return true
-    }
-    if (!accepted) {
-      return false
-    }
-    await runtime.deps.setVolume(runtime.audibleVolume)
-    let foreignPolls = 0
-    let localPolls = 0
-    while (runtime.generation === token) {
-      const state = await runtime.deps.getState().catch(() => null)
-      if (playbackHasStarted(target, state)) {
-        void runtime.deps.queueFollowing?.(target)?.catch(() => undefined)
-        return true
+  async function startLoadedClip(target: ClipCue, token: number, queued = false): Promise<void> {
+    let attempt: ParkAttempt = 'loose'
+    if (queued && runtime.deps.handoff && target.positionMs === 0) {
+      attempt = await tryPark(target, token, true)
+      if (runtime.generation !== token) {
+        return
       }
-      if (state?.uri === target.uri && state.paused) {
-        await runtime.deps.resume().catch(() => undefined)
+    }
+    if (attempt === 'stalled' || (attempt === 'loose' && !(await isCurrentTrack(target)))) {
+      attempt = await tryPark(target, token, false)
+      if (runtime.generation !== token) {
+        return
       }
-      if (!state || state.uri !== target.uri) {
-        foreignPolls += 1
-        if (foreignPolls >= TRACK_SWITCH_WAIT_LIMIT) {
-          return false
-        }
-      } else {
-        foreignPolls = 0
-        localPolls += 1
-        if (localPolls >= PLAYBACK_START_LIMIT) {
-          return false
+      if (attempt === 'stalled') {
+        // Zweiter Ladeversuch mit voller Geduld; erst der meldet den Fehler.
+        attempt = (await parkIncomingTrack(target, token)) ? 'parked' : 'loose'
+        if (runtime.generation !== token) {
+          return
         }
       }
-      await runtime.sleep(PLAYBACK_START_POLL_MS)
     }
-    return true
+    const parked = attempt === 'parked'
+    if (!parked) {
+      // Der Song ist geladen, steht aber nicht am Einsatz: stumm hinspringen.
+      if (!(await isCurrentTrack(target))) {
+        failBufferedStart(target, 'park')
+      }
+      await runtime.deps.setVolume(0)
+      try {
+        await runtime.deps.seek(target.positionMs)
+      } finally {
+        await runtime.deps.setVolume(runtime.audibleVolume).catch(() => undefined)
+      }
+      if (runtime.generation !== token) {
+        return
+      }
+    } else {
+      await runtime.sleep(PARK_SETTLE_MS)
+      if (runtime.generation !== token) {
+        return
+      }
+    }
+    await traceStart(target, parked)
+    await runtime.deps.resume()
   }
 
-  async function startLoadedClip(target: ClipCue, token: number): Promise<void> {
-    const parked = await parkIncomingTrack(target, token)
-    if (runtime.generation !== token) {
-      return
+  async function traceStart(target: ClipCue, parked: boolean): Promise<void> {
+    const state = await runtime.deps.getState().catch(() => null)
+    traceGame('warmup', {
+      aktion: 'start',
+      geparkt: parked,
+      ziel: target.positionMs,
+      position: state?.positionMs ?? null,
+      pausiert: state?.paused ?? null,
+      laedt: state?.loading ?? null,
+    })
+  }
+
+  async function tryPark(target: ClipCue, token: number, queued: boolean): Promise<ParkAttempt> {
+    try {
+      return (await parkIncomingTrack(target, token, queued, true)) ? 'parked' : 'loose'
+    } catch {
+      return 'stalled'
     }
-    if (!parked) {
-      failBufferedStart(target, 'park')
-    }
-    await runtime.deps.resume()
+  }
+
+  async function isCurrentTrack(target: ClipCue): Promise<boolean> {
+    const state = await runtime.deps.getState().catch(() => null)
+    return state?.uri === target.uri
   }
 
   async function startWarm(
@@ -231,13 +265,7 @@ export function createWarmRun(runtime: WarmRuntime) {
     fromTransfer = false,
   ): Promise<void> {
     if (kind === 'load') {
-      if (!fromTransfer) {
-        const handedOff = await startQueuedHandoff(target, token)
-        if (handedOff || runtime.generation !== token) {
-          return
-        }
-      }
-      await startLoadedClip(target, token)
+      await startLoadedClip(target, token, !fromTransfer)
       return
     }
     try {

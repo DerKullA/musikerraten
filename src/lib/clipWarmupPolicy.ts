@@ -12,8 +12,12 @@ export const BUFFER_RESET_MS = 350
 export const BUFFER_STABLE_POLLS = 60
 export const BUFFER_WAIT_LIMIT = 220
 export const TRACK_SWITCH_WAIT_LIMIT = 360
+// Der erste Ladeversuch gibt früher auf, damit ein zweiter den Song noch holt.
+export const BUFFER_RETRY_LIMIT = 100
 export const FOREIGN_RELEASE_POLLS = 8
 export const PARK_SLOP_MS = 480
+// Frisch geparkt braucht der Player einen Moment, bis der Ton sofort kommt.
+export const PARK_SETTLE_MS = 600
 
 export interface ClipCue {
   uri: string
@@ -36,11 +40,26 @@ interface SdkPlaybackState {
   position?: number
   loading?: boolean
   track_window?: {
-    current_track?: {
-      uri?: string
-    } | null
-    next_tracks?: Array<{ uri?: string } | null> | null
+    current_track?: SdkTrack | null
+    next_tracks?: Array<SdkTrack | null> | null
   } | null
+}
+
+interface SdkTrack {
+  uri?: string
+  linked_from?: { uri?: string | null } | null
+  linked_from_uri?: string | null
+}
+
+// Spotify ersetzt manche Titel durch eine regionale Fassung mit anderer URI.
+// Das Spiel kennt nur die angefragte URI, die dann in `linked_from` steht.
+export function readRequestedTrackUri(track: SdkTrack | null | undefined): string | null {
+  const linked = track?.linked_from?.uri ?? track?.linked_from_uri
+  if (typeof linked === 'string' && linked.length > 0) {
+    return linked
+  }
+  const uri = track?.uri
+  return typeof uri === 'string' && uri.length > 0 ? uri : null
 }
 
 export interface ClipWarmupDeps {
@@ -227,8 +246,8 @@ export function shouldPrimeParkedClip(
 }
 
 export function readQueuedTrackUri(state: SdkPlaybackState | null): string | null {
-  const uri = state?.track_window?.next_tracks?.[0]?.uri
-  if (typeof uri !== 'string' || !uri.startsWith('spotify:track:')) {
+  const uri = readRequestedTrackUri(state?.track_window?.next_tracks?.[0])
+  if (uri === null || !uri.startsWith('spotify:track:')) {
     return null
   }
   return uri
@@ -242,11 +261,10 @@ export function readWarmPlayback(state: SdkPlaybackState | null): WarmPlaybackSt
     typeof state.position === 'number' && Number.isFinite(state.position)
       ? Math.max(0, Math.round(state.position))
       : 0
-  const uri = state.track_window?.current_track?.uri
   return {
     paused: state.paused,
     positionMs,
-    uri: typeof uri === 'string' && uri.length > 0 ? uri : null,
+    uri: readRequestedTrackUri(state.track_window?.current_track),
     loading: state.loading === true,
   }
 }

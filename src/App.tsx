@@ -25,6 +25,7 @@ import {
   readWarmPlayback,
   type ClipCue,
   type ClipWarmup,
+  type WarmPlaybackState,
 } from './lib/clipWarmup.ts'
 import { createSilenceWatch, type SilenceWatch } from './lib/silenceWatch.ts'
 import { reportClientError } from './lib/clientLog.ts'
@@ -103,6 +104,12 @@ export default function App() {
   const navigationEpochRef = useRef(0)
   const silenceRef = useRef<SilenceWatch | null>(null)
   const warmupRef = useRef<ClipWarmup | null>(null)
+  const loadedUriRef = useRef<{
+    requested: string
+    before: string | null
+    actual: string | null
+    settled: boolean
+  } | null>(null)
   screenRef.current = screen
 
   useEffect(() => {
@@ -348,7 +355,7 @@ export default function App() {
           return null
         }
         try {
-          return readWarmPlayback(await player.getCurrentState())
+          return adoptLoadedUri(readWarmPlayback(await player.getCurrentState()))
         } catch {
           return null
         }
@@ -388,6 +395,8 @@ export default function App() {
           throw new Error('Spotify-Player nicht bereit.')
         }
         const following = next.positionMs === 0 ? (trackAfter(next.uri) ?? undefined) : undefined
+        const before = readWarmPlayback(await playerRef.current?.getCurrentState().catch(() => null) ?? null)
+        loadedUriRef.current = { requested: next.uri, before: before?.uri ?? null, actual: null, settled: false }
         await startPlayback(deviceId, next.uri, next.positionMs, following)
       },
       handoff: async (next) => {
@@ -402,6 +411,7 @@ export default function App() {
         if (readQueuedTrackUri(state) !== next.uri) {
           return false
         }
+        loadedUriRef.current = null
         await player.nextTrack()
         return true
       },
@@ -427,6 +437,24 @@ export default function App() {
       readPhase: playbackPhase,
     })
     return warmupRef.current
+  }
+
+  // Manche Titel spielt Spotify unter einer anderen URI ab, ohne die angefragte
+  // mitzuliefern. Der erste neue Titel nach einem Ladebefehl gilt als der geladene.
+  function adoptLoadedUri(state: WarmPlaybackState | null): WarmPlaybackState | null {
+    const loaded = loadedUriRef.current
+    if (!state?.uri || !loaded) {
+      return state
+    }
+    if (state.uri === loaded.requested) {
+      loaded.settled = true
+      return state
+    }
+    if (!loaded.settled && loaded.actual === null && state.uri !== loaded.before) {
+      loaded.actual = state.uri
+      traceGame('warmup', { aktion: 'andere-uri', soll: loaded.requested, aktuell: state.uri })
+    }
+    return state.uri === loaded.actual ? { ...state, uri: loaded.requested } : state
   }
 
   function playbackPhase(): string {
@@ -829,7 +857,7 @@ export default function App() {
     return player
       .getCurrentState()
       .then((state) => {
-        const warm = readWarmPlayback(state)
+        const warm = adoptLoadedUri(readWarmPlayback(state))
         if (!warm) {
           return null
         }
