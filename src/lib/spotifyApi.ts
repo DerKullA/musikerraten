@@ -23,6 +23,7 @@ interface PlaylistPage {
     id: string
     name: string
     owner?: { display_name?: string }
+    images?: AlbumImage[] | null
     tracks?: { total?: number }
     items?: { total?: number }
   }>
@@ -108,6 +109,7 @@ export async function fetchUserPlaylists(): Promise<Playlist[]> {
         name: item.name,
         trackCount: item.items?.total ?? item.tracks?.total ?? 0,
         ownerName: item.owner?.display_name ?? '',
+        imageUrl: pickAlbumImageUrl(item.images ?? undefined),
       })
     }
     offset += page.items.length

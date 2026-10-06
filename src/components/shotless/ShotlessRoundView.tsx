@@ -1,7 +1,9 @@
-import { memo } from 'react'
+import { memo, useEffect } from 'react'
+import { pulseReveal } from '../../lib/haptics.ts'
 import { POST_REVEAL_PLAY_MS } from '../../lib/phaseTimings.ts'
 import {
   SHOTLESS_STAGES,
+  formatClipLength,
   guessTargetRevealLine,
   isLastShotlessStage,
   penaltyTone,
@@ -15,6 +17,7 @@ import {
 } from '../../lib/shotlessRules.ts'
 import type { Track } from '../../types.ts'
 import { AppMenu } from '../AppMenu.tsx'
+import { RoundProgress } from '../RoundProgress.tsx'
 import { SkipTrackButton } from '../SkipTrackButton.tsx'
 import { GuessComposer } from './GuessComposer.tsx'
 import { PlayerPick, ShotlessGuessDock, ClipMeter } from './ShotlessStageParts.tsx'
@@ -77,18 +80,22 @@ export function ShotlessRoundView({
   const revealed = round.view === 'reveal'
   const lastStage = isLastShotlessStage(round.stageIndex)
 
+  useEffect(() => {
+    if (revealed) {
+      pulseReveal()
+    }
+  }, [revealed])
+
   return (
     <section className="panel game shotless with-menu">
-      <header className="panel-head">
-        <div>
-          <p className="eyebrow">Shotless</p>
-          <h1>{mode === 'party' ? 'Party' : 'Tippen'}</h1>
-        </div>
-        <div className="panel-head-meta">
-          <AppMenu onLogout={onLogout} onLeaveRound={onLeave} leaveLabel="Zurück zum Hauptmenü" />
+      <header className="game-bar">
+        <div className="game-bar-info">
+          <span className="game-bar-label">Shotless · {mode === 'party' ? 'Party' : 'Tippen'}</span>
           <p className="counter">{trackCount === 0 ? '0 / 0' : `${round.trackIndex + 1} / ${trackCount}`}</p>
         </div>
+        <AppMenu onLogout={onLogout} onLeaveRound={onLeave} leaveLabel="Zurück zum Hauptmenü" />
       </header>
+      <RoundProgress current={trackCount === 0 ? 0 : round.trackIndex + 1} total={trackCount} />
       {error ? <p className="banner error">{error}</p> : null}
       <div className="game-stage">
         <ShotlessStageBody
@@ -105,6 +112,7 @@ export function ShotlessRoundView({
             target={guessTarget}
             query={query}
             artistQuery={artistQuery}
+            disabled={clipPlaying}
             suggestions={suggestions}
             artistSuggestions={artistSuggestions}
             onQuery={onQuery}
@@ -166,7 +174,7 @@ const ShotlessStageBody = memo(function ShotlessStageBody({
 
   return (
     <>
-      <p className="phase-pill playing" aria-live="polite">
+      <p className="sr-only" aria-live="polite">
         {stageStatusLabel(stage)}
       </p>
       {import.meta.env.DEV ? (
@@ -174,20 +182,27 @@ const ShotlessStageBody = memo(function ShotlessStageBody({
           {origin}
         </p>
       ) : null}
-      <ol className="stage-rail">
+      <ol className="stage-rail" aria-label="Strafstufen">
         {SHOTLESS_STAGES.map((entry) => (
-          <li key={entry.index} className={entry.index === stage.index ? 'is-current' : undefined}>
+          <li
+            key={entry.index}
+            className={
+              entry.index === stage.index ? 'is-current' : entry.index < stage.index ? 'is-past' : undefined
+            }
+            aria-current={entry.index === stage.index ? 'step' : undefined}
+          >
             <span>{entry.penalty}</span>
+            <small>{formatClipLength(entry.durationMs)}</small>
           </li>
         ))}
       </ol>
       {revealed ? (
         <div className="reveal-card is-reveal">
+          {revealMessage ? <p className="shotless-reveal-message">{revealMessage}</p> : null}
           {track.albumImageUrl ? <img className="shotless-cover" src={track.albumImageUrl} alt="" /> : null}
           <p className="shotless-rule">{guessTargetRevealLine(guessTarget)}</p>
           <p className="artist">{artistLead ? track.title : track.artist}</p>
           <h2 className="title">{artistLead ? track.artist : track.title}</h2>
-          {revealMessage ? <p className="shotless-reveal-message">{revealMessage}</p> : null}
         </div>
       ) : (
         <div className="shotless-stage">

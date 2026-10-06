@@ -50,10 +50,15 @@ export function ShotlessSetup({
       </header>
       <div className="fit-scroll">
         <p className="lede">
-          Kurze Schnipsel, jedes Mal an einer anderen Stelle im Song. Wer länger hören muss, trinkt weniger. Wer
-          richtig liegt, lässt die anderen trinken. Niemand oder Aufgeben: alle einen Shot. Nur Ansagen auf dem
-          Bildschirm.
+          Kurze Schnipsel an wechselnden Stellen im Song. Wer länger hören muss, trinkt weniger. Wer richtig
+          liegt, lässt die anderen trinken.
         </p>
+        <details className="rules">
+          <summary>Alle Regeln</summary>
+          <p>
+            Niemand oder Aufgeben: alle einen Shot. Nur Ansagen auf dem Bildschirm.
+          </p>
+        </details>
         {error ? <p className="banner error">{error}</p> : null}
         <div className="shotless-modes">
           <button
@@ -91,7 +96,6 @@ export function ShotlessSetup({
             </button>
           ))}
         </div>
-        <p className="muted">Beim Tippen wird das geprüft. In der Party entscheidet ihr per Zuruf.</p>
         {mode === 'party' ? (
           <PlayerRoster
             players={players}

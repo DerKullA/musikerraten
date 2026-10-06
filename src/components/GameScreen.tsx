@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { revealAlbumArtUrl } from '../lib/albumArt.ts'
 import { centerTransportCue, type TransportIconName } from '../lib/centerTransport.ts'
+import { pulseReveal } from '../lib/haptics.ts'
 import { formatTrackDuration, isTitleHidden, phaseDuration, phaseLabel } from '../lib/gameLoop.ts'
 import type { PhaseTimings } from '../lib/phaseTimings.ts'
 import type { GamePhase, Track } from '../types.ts'
 import { AppMenu } from './AppMenu.tsx'
+import { RoundProgress } from './RoundProgress.tsx'
 import { SkipTrackButton } from './SkipTrackButton.tsx'
 
 interface GameScreenProps {
@@ -68,6 +70,12 @@ export function GameScreen({
     syncListenLock(snippetPlaying)
   }, [snippetPlaying])
 
+  useEffect(() => {
+    if (running && phase === 'reveal') {
+      pulseReveal()
+    }
+  }, [running, phase])
+
   function syncListenLock(locked: boolean): void {
     listenLockedRef.current = locked
     setListenLocked(locked)
@@ -96,23 +104,19 @@ export function GameScreen({
 
   return (
     <section className="panel game with-menu">
-      <header className="panel-head">
-        <div>
-          <p className="eyebrow">Spotify-Wiedergabe</p>
-          <h1>Musikerraten</h1>
+      <header className="game-bar">
+        <div className="game-bar-info">
+          <span className="game-bar-label">Song erraten</span>
+          <p className="counter">{total === 0 ? '0 / 0' : `${index + 1} / ${total}`}</p>
         </div>
-        <div className="panel-head-meta">
-          <AppMenu
-            timings={savedTimings}
-            onSaveTimings={onSaveTimings}
-            onLogout={onLogout}
-            onLeaveRound={onAbort}
-          />
-          <p className="counter">
-            {total === 0 ? '0 / 0' : `${index + 1} / ${total}`}
-          </p>
-        </div>
+        <AppMenu
+          timings={savedTimings}
+          onSaveTimings={onSaveTimings}
+          onLogout={onLogout}
+          onLeaveRound={onAbort}
+        />
       </header>
+      <RoundProgress current={total === 0 ? 0 : index + 1} total={total} />
       {error ? <p className="banner error">{error}</p> : null}
       <div className="game-stage">
         <p className={`phase-pill ${paused ? 'paused' : phase}`} aria-live="polite">
