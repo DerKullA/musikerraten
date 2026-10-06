@@ -16,6 +16,7 @@ export interface Playlist {
   name: string
   trackCount: number
   ownerName: string
+  imageUrl?: string
 }
 
 export interface TokenSet {

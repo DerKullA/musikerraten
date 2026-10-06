@@ -99,6 +99,15 @@ function applyRound(ctx: ShotlessCommandContext, next: ShotlessRound): void {
   ctx.setRound(next)
 }
 
+// Solange der Clip läuft, bleiben die Rate-Aktionen gesperrt.
+function blockedByClip(ctx: ShotlessCommandContext, aktion: string): boolean {
+  if (!ctx.clipPlayingRef.current || ctx.roundRef.current.view !== 'guessing') {
+    return false
+  }
+  traceShotlessAction(ctx, `${aktion}-block`, { clip: true })
+  return true
+}
+
 function commitRound(ctx: ShotlessCommandContext, next: ShotlessRound): void {
   if (restartsGuessingClip(ctx.roundRef.current, next)) {
     markClipPlaying(ctx, true)
@@ -197,6 +206,9 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
       ctx.setRound(createShotlessRound(ctx.openingOrigin))
     },
     onSkip(): void {
+      if (blockedByClip(ctx, 'skip')) {
+        return
+      }
       traceShotlessAction(ctx, 'skip')
       commitRound(ctx, reduceShotlessRound(ctx.roundRef.current, { type: 'skip' }))
     },
@@ -210,10 +222,16 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
       commitRound(ctx, reduceShotlessRound(ctx.roundRef.current, { type: 'replay' }))
     },
     onClaim(): void {
+      if (blockedByClip(ctx, 'claim')) {
+        return
+      }
       traceShotlessAction(ctx, 'claim')
       applyRound(ctx, reduceShotlessRound(ctx.roundRef.current, { type: 'claim' }))
     },
     onNobody(): void {
+      if (blockedByClip(ctx, 'niemand')) {
+        return
+      }
       traceShotlessAction(ctx, 'niemand')
       applyRound(ctx, reduceShotlessRound(ctx.roundRef.current, { type: 'nobody' }))
     },
@@ -234,6 +252,9 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
       )
     },
     onSubmitGuess(): void {
+      if (blockedByClip(ctx, 'tipp')) {
+        return
+      }
       const current = ctx.roundRef.current
       const currentTrack = ctx.tracksRef.current[current.trackIndex] ?? null
       const target = ctx.guessTargetRef.current
@@ -266,6 +287,9 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
           return
         }
         ctx.setQuery(suggestion.label)
+        return
+      }
+      if (blockedByClip(ctx, 'tipp')) {
         return
       }
       const current = ctx.roundRef.current

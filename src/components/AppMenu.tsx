@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { readAppVersion } from '../lib/appVersion.ts'
 import type { PhaseTimings } from '../lib/phaseTimings.ts'
 import { SettingsDialog } from './SettingsDialog.tsx'
 
@@ -140,6 +141,7 @@ export function AppMenu({
         >
           Abmelden
         </button>
+        <p className="menu-version">{readAppVersion()}</p>
       </div>
       {settingsOpen && timings && onSaveTimings ? (
         <SettingsDialog timings={timings} onSave={onSaveTimings} onClose={closeSettings} />

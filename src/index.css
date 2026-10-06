@@ -8,6 +8,11 @@
   --rose: #d36b5a;
   --muted: #b7c0ae;
   --line: rgba(243, 234, 216, 0.14);
+  --panel-bg: color-mix(in srgb, var(--ink-soft) 88%, black);
+  --tap: 48px;
+  --dock-btn: clamp(54px, 7.4dvh, 66px);
+  --dock-cta: clamp(62px, 8.8dvh, 76px);
+  --radius-card: 22px;
   --sans: 'Manrope', 'Segoe UI', sans-serif;
   --display: 'Fraunces', Georgia, serif;
 }
@@ -109,12 +114,6 @@ button {
   min-height: 0;
 }
 
-.app-game .app-footer {
-  margin-top: 0;
-  padding: 2px 12px calc(6px + env(safe-area-inset-bottom, 0px));
-  background: var(--ink);
-}
-
 .glow {
   position: absolute;
   inset: 80px 8% auto;
@@ -125,7 +124,7 @@ button {
 }
 
 .panel {
-  background: color-mix(in srgb, var(--ink-soft) 88%, black);
+  background: var(--panel-bg);
   border: 1px solid var(--line);
   border-radius: 28px;
   padding: 36px 32px 32px;
@@ -236,6 +235,13 @@ h1 {
   cursor: not-allowed;
 }
 
+.btn.primary:disabled {
+  opacity: 1;
+  color: var(--muted);
+  background: rgba(243, 234, 216, 0.08);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
 .btn.primary {
   background: var(--lime);
 }
@@ -331,28 +337,34 @@ h1 {
   flex: none;
   position: relative;
   z-index: 1;
+  gap: 12px;
 }
 
 .game-dock .btn,
 .shotless-actions .btn,
 .guess-field .btn {
   width: 100%;
-  min-height: 52px;
+  min-height: 50px;
   padding: 14px 18px;
   font-size: 1.08rem;
   font-weight: 700;
   white-space: normal;
 }
 
+.game-dock .btn {
+  min-height: var(--dock-btn);
+  font-size: 1.15rem;
+}
+
 .game-dock .btn.cta {
-  min-height: 58px;
-  font-size: clamp(1.15rem, 0.95rem + 1vw, 1.4rem);
+  min-height: var(--dock-cta);
+  font-size: clamp(1.25rem, 1rem + 1vw, 1.5rem);
 }
 
 .dock-pair {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
 }
 
 .dock-pair .btn:only-child {
@@ -361,7 +373,19 @@ h1 {
 
 .dock-pair .btn {
   padding-inline: 12px;
-  font-size: 1rem;
+  font-size: 1.05rem;
+}
+
+.game-dock.is-guessing {
+  gap: 10px;
+}
+
+.game-dock.is-guessing .btn {
+  padding-block: 14px;
+}
+
+.game-dock > .meter {
+  margin: 0 0 2px;
 }
 
 .btn.compact {
@@ -565,7 +589,8 @@ h1 {
 }
 
 .player-row input,
-.guess-field input {
+.guess-field input,
+.playlist-search input {
   width: 100%;
   min-width: 0;
   border-radius: 18px;
@@ -587,7 +612,25 @@ h1 {
 }
 
 .guess-field input {
+  min-height: 50px;
+  padding-block: 12px;
   text-align: left;
+}
+
+.guess-field.is-single {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+}
+
+.guess-field.is-single .btn {
+  width: auto;
+  min-height: 50px;
+  padding-inline: 18px;
+  font-size: 1rem;
+}
+
+.guess-field.is-single .suggestions {
+  grid-column: 1 / -1;
 }
 
 .player-chips,
@@ -617,14 +660,34 @@ h1 {
 }
 
 .suggestions {
-  display: grid;
+  display: flex;
   gap: 8px;
+  padding-bottom: 2px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.suggestions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.suggestions::-webkit-scrollbar {
+  display: none;
+}
+
+.suggestions li {
+  flex: none;
 }
 
 .suggestions button {
-  width: 100%;
-  border-radius: 14px;
-  text-align: left;
+  max-width: 78vw;
+  min-height: 44px;
+  padding: 10px 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stage-rail {
@@ -632,23 +695,36 @@ h1 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   width: min(100%, 36rem);
-  margin: 0;
 }
 
 .stage-rail li {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
-  padding: 8px 6px;
-  border-radius: 16px;
+  gap: 1px;
+  min-height: 46px;
+  padding: 6px 4px;
+  border-radius: 14px;
   color: var(--muted);
   background: rgba(243, 234, 216, 0.06);
-  font-size: 0.92rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.12;
   text-align: center;
+  text-wrap: balance;
   overflow-wrap: break-word;
+}
+
+.stage-rail li small {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+
+.stage-rail li.is-past {
+  opacity: 0.5;
 }
 
 .stage-rail li.is-current {
@@ -677,12 +753,17 @@ h1 {
   font-weight: 700;
 }
 
+.shotless-stage .shotless-prompt {
+  font-size: clamp(1.15rem, 4.6vw, 1.6rem);
+}
+
 .shotless-penalty {
   margin: 0;
   font-family: var(--display);
   font-weight: 560;
-  font-size: clamp(2.6rem, min(16vw, 14dvh), 7.2rem);
+  font-size: clamp(2.8rem, min(22vw, 12dvh), 8rem);
   line-height: 0.88;
+  text-wrap: balance;
   letter-spacing: -0.03em;
   overflow-wrap: break-word;
 }
@@ -829,7 +910,7 @@ code {
   padding:
     calc(clamp(0.6rem, 1.6dvh, 1.15rem) + env(safe-area-inset-top, 0px))
     max(clamp(0.85rem, 4vw, 1.5rem), env(safe-area-inset-right, 0px))
-    clamp(0.25rem, 0.8dvh, 0.55rem)
+    calc(clamp(0.5rem, 1.4dvh, 0.9rem) + env(safe-area-inset-bottom, 0px))
     max(clamp(0.85rem, 4vw, 1.5rem), env(safe-area-inset-left, 0px));
 }
 
@@ -1455,7 +1536,7 @@ code {
 
 @media (max-height: 740px) {
   .shotless-penalty {
-    font-size: clamp(2.1rem, 11dvh, 3.4rem);
+    font-size: clamp(2.4rem, 12dvh, 4.2rem);
   }
 
   .shotless-cover {
@@ -1467,8 +1548,15 @@ code {
     gap: 0.4rem;
   }
 
-  .game-dock .btn,
-  .game-dock .btn.cta,
+  .game-dock .btn {
+    min-height: 54px;
+    padding: 10px 14px;
+  }
+
+  .game-dock .btn.cta {
+    min-height: 60px;
+  }
+
   .shotless-actions .btn {
     min-height: 48px;
     padding: 10px 14px;
@@ -1598,6 +1686,275 @@ code {
   height: 4.75rem;
   transform: translate(-50%, -50%);
   padding: 0;
+}
+
+/* Kompakter Spielkopf */
+.game-bar {
+  position: relative;
+  z-index: 4;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--tap);
+  text-align: left;
+}
+
+.game-bar-info {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.game-bar-label {
+  overflow: hidden;
+  color: var(--lime);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.panel.with-menu .game-bar .counter {
+  margin: 0;
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  text-align: left;
+}
+
+.round-progress {
+  flex: none;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(243, 234, 216, 0.1);
+}
+
+.round-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--lime);
+  transition: width 0.4s ease;
+}
+
+.menu-version {
+  margin: 4px 0 2px;
+  padding: 6px 14px 4px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+}
+
+/* Shotless: Auflösung zuerst, Titel passt sich der Höhe an */
+.panel.shotless .reveal-card.is-reveal {
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+}
+
+.panel.shotless .shotless-reveal-message {
+  padding: 10px 16px;
+  border-radius: 16px;
+  background: rgba(211, 107, 90, 0.18);
+  color: #ffc8be;
+  font-size: clamp(1.25rem, min(5.6vw, 3.4dvh), 1.7rem);
+  line-height: 1.15;
+}
+
+.panel.shotless .shotless-cover {
+  width: min(30vw, 14dvh, 140px);
+  margin: 4px 0 0;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+}
+
+.panel.shotless .reveal-card.is-reveal .artist {
+  font-size: clamp(1.25rem, min(5.6vw, 3.4dvh), 1.8rem);
+}
+
+.panel.shotless .reveal-card.is-reveal .title {
+  margin-top: 0;
+  font-size: clamp(1.9rem, min(9.5vw, 5.2dvh), 3.4rem);
+  line-height: 1.05;
+}
+
+/* Tastatur offen: Strafe und Dock schrumpfen, Eingabe bleibt sichtbar */
+.game-stage:has(.guess-field:focus-within) .shotless-prompt,
+.game-stage:has(.guess-field:focus-within) .stage-rail {
+  display: none;
+}
+
+.game-stage:has(.guess-field:focus-within) .shotless-penalty {
+  font-size: clamp(1.8rem, 8dvh, 2.6rem);
+}
+
+.game-stage:has(.guess-field:focus-within) {
+  gap: 0.4rem;
+}
+
+.guess-field:focus-within input:not(:focus) + .suggestions {
+  display: none;
+}
+
+.panel.shotless:has(.guess-field:focus-within) .game-dock.is-guessing > .meter {
+  display: none;
+}
+
+.panel.shotless:has(.guess-field:focus-within) .game-dock.is-guessing .btn,
+.panel.shotless:has(.guess-field:focus-within) .game-dock.is-guessing .btn.cta {
+  min-height: 44px;
+  padding-block: 8px;
+  font-size: 1rem;
+}
+
+/* Setup, Login, Playlists */
+.rules {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.rules summary {
+  min-height: 32px;
+  padding: 4px 0;
+  cursor: pointer;
+  color: var(--paper-dim);
+  font-weight: 700;
+}
+
+.rules p {
+  margin: 4px 0 0;
+}
+
+.panel.login .fit-scroll {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.playlist-search {
+  margin-top: 8px;
+}
+
+.playlist-search input {
+  min-height: 48px;
+  padding: 12px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(16, 22, 14, 0.45);
+  color: var(--paper);
+  font-size: 1.05rem;
+}
+
+.playlist {
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 14px;
+}
+
+.playlist-cover {
+  display: block;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: rgba(243, 234, 216, 0.08);
+}
+
+.playlist-text strong {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+/* Hinweis auf weiteren Inhalt in scrollbaren Panels */
+@media (max-width: 720px) {
+  .fit-screen > .fit-scroll {
+    background:
+      linear-gradient(var(--panel-bg) 30%, transparent) top / 100% 36px no-repeat local,
+      linear-gradient(transparent, var(--panel-bg) 70%) bottom / 100% 36px no-repeat local,
+      radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.3), transparent) top / 100% 12px no-repeat scroll,
+      radial-gradient(farthest-side at 50% 100%, rgba(0, 0, 0, 0.3), transparent) bottom / 100% 12px no-repeat scroll;
+    scrollbar-width: none;
+  }
+
+  .fit-screen > .fit-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mode-card {
+    padding: 14px 16px 12px;
+  }
+
+  .guess-target {
+    min-height: 52px;
+  }
+}
+
+@media (max-width: 340px) {
+  .dock-pair .btn,
+  .game-dock.is-guessing .dock-pair .btn {
+    padding-inline: 8px;
+    font-size: 0.9rem;
+  }
+
+  .btn.stage-skip {
+    gap: 6px;
+  }
+}
+
+/* Querformat: Dock in zwei Spalten, Stufenleiste weg */
+@media (max-height: 460px) and (orientation: landscape) {
+  .game-dock.is-guessing {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .game-dock.is-guessing > .meter,
+  .game-dock.is-guessing > .btn.cta,
+  .game-dock.is-guessing > .btn.erraten {
+    grid-column: 1 / -1;
+  }
+
+  .game-dock.is-guessing .dock-pair {
+    display: contents;
+  }
+
+  .game-dock.is-guessing .btn,
+  .game-dock.is-guessing .btn.cta {
+    min-height: 48px;
+    padding-block: 8px;
+  }
+
+  .game-stage .stage-rail {
+    display: none;
+  }
+
+  .game-bar .counter {
+    font-size: 1.1rem;
+  }
+}
+
+/* Übergang in die Auflösung */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal-card.is-reveal {
+    animation: reveal-in 0.32s ease-out;
+  }
+
+  @keyframes reveal-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

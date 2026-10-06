@@ -5,6 +5,7 @@ interface GuessComposerProps {
   target: ShotlessGuessTarget
   query: string
   artistQuery: string
+  disabled: boolean
   suggestions: readonly GuessSuggestion[]
   artistSuggestions: readonly GuessSuggestion[]
   onQuery: (value: string) => void
@@ -17,6 +18,7 @@ export function GuessComposer({
   target,
   query,
   artistQuery,
+  disabled,
   suggestions,
   artistSuggestions,
   onQuery,
@@ -28,12 +30,25 @@ export function GuessComposer({
   const ready = both ? query.trim().length > 0 && artistQuery.trim().length > 0 : query.trim().length > 0
   const fieldLabel = guessFieldLabel(target)
 
+  const inputProps = {
+    autoComplete: 'off',
+    autoCorrect: 'off',
+    autoCapitalize: 'off',
+    spellCheck: false,
+    enterKeyHint: 'send',
+  } as const
+  const submit = (
+    <button type="submit" className="btn primary" disabled={!ready || disabled}>
+      Tipp abgeben
+    </button>
+  )
+
   return (
     <form
-      className="guess-field"
+      className={both ? 'guess-field' : 'guess-field is-single'}
       onSubmit={(event) => {
         event.preventDefault()
-        if (ready) {
+        if (ready && !disabled) {
           onSubmitGuess()
         }
       }}
@@ -45,12 +60,16 @@ export function GuessComposer({
         id="shotless-guess"
         value={query}
         placeholder={both ? 'Songtitel' : fieldLabel}
-        autoComplete="off"
-        autoCorrect="off"
-        spellCheck={false}
+        {...inputProps}
         onChange={(event) => onQuery(event.target.value)}
       />
-      <GuessSuggestions label="Vorschläge" suggestions={suggestions} onPickSuggestion={onPickSuggestion} />
+      {both ? null : submit}
+      <GuessSuggestions
+        label="Vorschläge"
+        suggestions={suggestions}
+        disabled={disabled && !both}
+        onPickSuggestion={onPickSuggestion}
+      />
       {both ? (
         <>
           <label className="sr-only" htmlFor="shotless-artist">
@@ -60,21 +79,18 @@ export function GuessComposer({
             id="shotless-artist"
             value={artistQuery}
             placeholder="Interpret"
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
+            {...inputProps}
             onChange={(event) => onArtistQuery(event.target.value)}
           />
           <GuessSuggestions
             label="Interpretenvorschläge"
             suggestions={artistSuggestions}
+            disabled={false}
             onPickSuggestion={onPickSuggestion}
           />
+          {submit}
         </>
       ) : null}
-      <button type="submit" className="btn primary" disabled={!ready}>
-        Tipp abgeben
-      </button>
     </form>
   )
 }
@@ -82,12 +98,14 @@ export function GuessComposer({
 interface GuessSuggestionsProps {
   label: string
   suggestions: readonly GuessSuggestion[]
+  disabled: boolean
   onPickSuggestion: (suggestion: GuessSuggestion) => void
 }
 
 const GuessSuggestions = memo(function GuessSuggestions({
   label,
   suggestions,
+  disabled,
   onPickSuggestion,
 }: GuessSuggestionsProps) {
   if (suggestions.length === 0) {
@@ -97,7 +115,7 @@ const GuessSuggestions = memo(function GuessSuggestions({
     <ul className="suggestions" role="listbox" aria-label={label}>
       {suggestions.map((entry) => (
         <li key={`${entry.field}:${entry.label}`}>
-          <button type="button" role="option" onClick={() => onPickSuggestion(entry)}>
+          <button type="button" role="option" disabled={disabled} onClick={() => onPickSuggestion(entry)}>
             {entry.label}
           </button>
         </li>

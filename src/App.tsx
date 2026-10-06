@@ -1085,7 +1085,7 @@ export default function App() {
           onLiveChange={setShotlessLive}
         />
       ) : null}
-      <AppFooter />
+      {fullBleed ? null : <AppFooter />}
     </main>
   )
 }

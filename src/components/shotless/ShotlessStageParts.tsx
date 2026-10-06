@@ -29,32 +29,37 @@ export const ShotlessGuessDock = memo(function ShotlessGuessDock({
   onSkip,
 }: ShotlessGuessDockProps) {
   return (
-    <div className="game-dock">
+    <div className="game-dock is-guessing">
       <ClipMeter key={meterKey} durationMs={durationMs} running={firstPlayReady} />
       <button type="button" className="btn primary cta" disabled={clipPlaying} onClick={onListen}>
         Nochmal anhören
       </button>
       {mode === 'party' ? (
-        <button type="button" className="btn erraten" onClick={onClaim}>
+        <button type="button" className="btn erraten" disabled={clipPlaying} onClick={onClaim}>
           Erraten!
-        </button>
-      ) : !lastStage ? (
-        <button type="button" className="btn aufgeben" onClick={onNobody}>
-          Aufgeben
         </button>
       ) : null}
       <div className="dock-pair">
-        <button
-          type="button"
-          className={lastStage ? 'btn aufgeben stage-skip' : 'btn outline stage-skip'}
-          onClick={onSkip}
-        >
-          <StageSkipIcon />
-          {skipLabel}
-        </button>
+        {!lastStage ? (
+          <button type="button" className="btn outline stage-skip" disabled={clipPlaying} onClick={onSkip}>
+            <StageSkipIcon />
+            {skipLabel}
+          </button>
+        ) : null}
         {mode === 'party' && !lastStage ? (
-          <button type="button" className="btn ghost" onClick={onNobody}>
+          <button type="button" className="btn ghost" disabled={clipPlaying} onClick={onNobody}>
             Niemand
+          </button>
+        ) : null}
+        {mode === 'tippen' && !lastStage ? (
+          <button type="button" className="btn aufgeben" disabled={clipPlaying} onClick={onNobody}>
+            Aufgeben
+          </button>
+        ) : null}
+        {lastStage ? (
+          <button type="button" className="btn aufgeben stage-skip" disabled={clipPlaying} onClick={onSkip}>
+            <StageSkipIcon />
+            {skipLabel}
           </button>
         ) : null}
       </div>

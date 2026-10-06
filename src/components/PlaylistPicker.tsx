@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { PhaseTimings } from '../lib/phaseTimings.ts'
 import type { Playlist } from '../types.ts'
 import { AppMenu } from './AppMenu.tsx'
@@ -33,6 +34,10 @@ export function PlaylistPicker({
 }: PlaylistPickerProps) {
   const selectedCount = selectedIds.length
   const allSelected = playlists.length > 0 && selectedCount === playlists.length
+  const [filter, setFilter] = useState('')
+  const needle = filter.trim().toLocaleLowerCase('de')
+  const visible = needle ? playlists.filter((playlist) => playlist.name.toLocaleLowerCase('de').includes(needle)) : playlists
+  const searchable = playlists.length > 8
 
   return (
     <section className="panel with-menu fit-screen">
@@ -58,17 +63,38 @@ export function PlaylistPicker({
       {loading ? <p className="muted">Playlists werden geladen …</p> : null}
       {!loading ? (
         <div className="toolbar">
-          <button type="button" className="btn ghost compact" onClick={onToggleAll}>
-            {allSelected ? 'Auswahl aufheben' : 'Alle auswählen'}
-          </button>
-          <span className="muted">{selectedCount} ausgewählt</span>
+          {needle ? null : (
+            <button type="button" className="btn ghost compact" onClick={onToggleAll}>
+              {allSelected ? 'Auswahl aufheben' : 'Alle auswählen'}
+            </button>
+          )}
+          <span className="muted" aria-live="polite">
+            {selectedCount} ausgewählt
+          </span>
         </div>
       ) : null}
+      {!loading && searchable ? (
+        <div className="playlist-search">
+          <label className="sr-only" htmlFor="playlist-filter">
+            Playlists durchsuchen
+          </label>
+          <input
+            id="playlist-filter"
+            type="search"
+            value={filter}
+            placeholder="Playlists durchsuchen"
+            autoComplete="off"
+            enterKeyHint="search"
+            onChange={(event) => setFilter(event.target.value)}
+          />
+        </div>
+      ) : null}
+      {!loading && needle && visible.length === 0 ? <p className="muted">Keine Playlist passt zur Suche.</p> : null}
       {!loading && playlists.length === 0 ? (
         <p className="muted">Keine Playlists gefunden. Lege in Spotify eine eigene Playlist an.</p>
       ) : null}
       <ul className="playlist-list">
-        {playlists.map((playlist) => {
+        {visible.map((playlist) => {
           const checked = selectedIds.includes(playlist.id)
           return (
             <li key={playlist.id}>
@@ -78,7 +104,12 @@ export function PlaylistPicker({
                   checked={checked}
                   onChange={() => onToggle(playlist.id)}
                 />
-                <span>
+                {playlist.imageUrl ? (
+                  <img className="playlist-cover" src={playlist.imageUrl} alt="" loading="lazy" decoding="async" />
+                ) : (
+                  <span className="playlist-cover is-empty" aria-hidden="true" />
+                )}
+                <span className="playlist-text">
                   <strong>{playlist.name}</strong>
                   <small>
                     {playlist.trackCount} Titel
@@ -98,7 +129,11 @@ export function PlaylistPicker({
           onClick={onStart}
           disabled={loadingTracks || selectedCount === 0}
         >
-          {loadingTracks ? 'Titel werden geladen …' : 'Spiel starten'}
+          {loadingTracks
+            ? 'Titel werden geladen …'
+            : selectedCount > 0
+              ? `Spiel starten · ${selectedCount} ${selectedCount === 1 ? 'Playlist' : 'Playlists'}`
+              : 'Spiel starten'}
         </button>
         <button type="button" className="btn ghost back" onClick={onBack} aria-label="Zurück zum Hauptmenü">
           Zurück

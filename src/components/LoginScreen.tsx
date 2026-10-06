@@ -16,24 +16,24 @@ export function LoginScreen({
   const redirectUri = getRedirectUri()
 
   return (
-    <section className="panel hero fit-screen">
+    <section className="panel hero login fit-screen">
       <div className="fit-scroll">
       <p className="eyebrow">Playlist-Quiz</p>
       <h1>Musikerraten</h1>
       <p className="lede">
-        Ein kurzer Ausschnitt, drei Sekunden nachdenken, dann die Auflösung. Danach kommt automatisch
-        der nächste Titel.
+        Ein kurzer Ausschnitt, drei Sekunden nachdenken, dann die Auflösung. Danach kommt automatisch der nächste
+        Titel.
       </p>
       {error ? <p className="banner error">{error}</p> : null}
       <aside className="notes">
         <p>
-          Die Wiedergabe über das Spotify Web Playback SDK braucht ein <strong>Spotify-Premium</strong>
-          -Konto und funktioniert zuverlässig in <strong>Chrome</strong> (Chromium, Desktop).
+          Du brauchst ein <strong>Spotify-Premium</strong>-Konto. Am besten läuft es in <strong>Chrome</strong>.
         </p>
-        <p>
-          Redirect-URI für das Spotify-Dashboard:{' '}
-          <code>{redirectUri}</code>
-        </p>
+        {import.meta.env.DEV ? (
+          <p>
+            Redirect-URI für das Spotify-Dashboard: <code>{redirectUri}</code>
+          </p>
+        ) : null}
         {!clientIdPresent ? (
           <p className="warn">
             Keine Client-ID gefunden. Lege <code>VITE_SPOTIFY_CLIENT_ID</code> an, um Spotify zu nutzen.
