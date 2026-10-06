@@ -275,35 +275,41 @@ export async function ensurePlaybackOnDevice(
     await pauseForeignPlayback(active.deviceId).catch(() => undefined)
   }
 
-  try {
-    await playerRequest<void>(
-      '/me/player',
-      {
-        method: 'PUT',
-        body: JSON.stringify(transferPlaybackBody(deviceId)),
-      },
-      { action: 'transfer', step: 'transfer', uri: context.uri, phase: context.phase },
-    )
-  } catch (cause) {
-    const message = cause instanceof Error ? cause.message : ''
-    playbackTransferFailed = !isInactivePlaybackTransfer(message)
-    if (playbackTransferFailed) {
-      clearConfirmedPlaybackDevice()
-    }
-    return 'transferred'
-  }
-
   const sleep = context.sleep ?? wait
   let seenDeviceId: string | null = null
-  for (let attempt = 0; attempt < PLAYBACK_TRANSFER_CONFIRM_POLLS; attempt += 1) {
-    const snapshot = await readActivePlaybackDevice()
-    seenDeviceId = snapshot.deviceId
-    if (playbackDeviceMatches(snapshot.deviceId, deviceId)) {
-      rememberConfirmedPlaybackDevice(deviceId)
+  // Ein ruhender Web-Player ignoriert den stummen Transfer oft; dann erzwingt ein
+  // zweiter Versuch mit play=true (Lautstärke ist schon auf 0) die Übernahme.
+  for (const play of [false, true]) {
+    try {
+      await playerRequest<void>(
+        '/me/player',
+        {
+          method: 'PUT',
+          body: JSON.stringify(transferPlaybackBody(deviceId, play)),
+        },
+        { action: 'transfer', step: 'transfer', uri: context.uri, phase: context.phase },
+      )
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : ''
+      playbackTransferFailed = !isInactivePlaybackTransfer(message)
+      if (playbackTransferFailed) {
+        clearConfirmedPlaybackDevice()
+      }
       return 'transferred'
     }
-    if (attempt < PLAYBACK_TRANSFER_CONFIRM_POLLS - 1) {
-      await sleep(PLAYBACK_TRANSFER_CONFIRM_MS)
+    for (let attempt = 0; attempt < PLAYBACK_TRANSFER_CONFIRM_POLLS; attempt += 1) {
+      const snapshot = await readActivePlaybackDevice()
+      seenDeviceId = snapshot.deviceId
+      if (playbackDeviceMatches(snapshot.deviceId, deviceId)) {
+        rememberConfirmedPlaybackDevice(deviceId)
+        return 'transferred'
+      }
+      if (attempt < PLAYBACK_TRANSFER_CONFIRM_POLLS - 1) {
+        await sleep(PLAYBACK_TRANSFER_CONFIRM_MS)
+      }
+    }
+    if (!playbackTransferStillForeign(seenDeviceId, deviceId)) {
+      break
     }
   }
 

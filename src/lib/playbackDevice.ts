@@ -64,8 +64,8 @@ export function playbackDeviceClaimIsFresh(
   return ageMs >= 0 && ageMs < freshMs
 }
 
-export function transferPlaybackBody(deviceId: string): { device_ids: string[]; play: false } {
-  return { device_ids: [deviceId], play: false }
+export function transferPlaybackBody(deviceId: string, play = false): { device_ids: string[]; play: boolean } {
+  return { device_ids: [deviceId], play }
 }
 
 export function isInactivePlaybackTransfer(message: string): boolean {
