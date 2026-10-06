@@ -434,7 +434,11 @@ export default function App() {
         await playerRef.current?.activateElement()
       },
       suspendSilence: () => silence().suspend(),
-      restoreSilence: () => silence().arm(),
+      // Nach dem Verlassen ist der Wächter versiegelt; ein neues Vorladen braucht ihn wieder.
+      restoreSilence: async () => {
+        await silence().release()
+        await silence().arm()
+      },
       readPhase: playbackPhase,
     })
     return warmupRef.current

@@ -150,6 +150,7 @@ export function createWarmRun(runtime: WarmRuntime) {
         }
         await runtime.deps.load(target)
       }
+      await runtime.deps.setVolume(0).catch(() => undefined)
       if (runtime.generation !== token) {
         return false
       }
@@ -188,6 +189,17 @@ export function createWarmRun(runtime: WarmRuntime) {
       const priming = runtime.abortOf(token) !== 'yield'
       if (priming && !parked) {
         await runtime.deps.pause().catch(() => undefined)
+      }
+      if (priming) {
+        const state = await runtime.deps.getState().catch(() => null)
+        traceGame('warmup', {
+          aktion: 'vorgeladen',
+          geparkt: parked,
+          aktuell: runtime.generation === token,
+          ziel: target.positionMs,
+          position: state?.positionMs ?? null,
+          pausiert: state?.paused ?? null,
+        })
       }
       await runtime.deps.setVolume(runtime.audibleVolume).catch(() => undefined)
       if (suspended && runtime.generation === token) {
