@@ -241,6 +241,9 @@ export function useShotlessRound(input: ShotlessRoundInput) {
   const onNext = useCallback(() => {
     readyCommands().onNext()
   }, [])
+  const onForceSkip = useCallback(() => {
+    readyCommands().onForceSkip()
+  }, [])
   const onSubmitGuess = useCallback(() => {
     readyCommands().onSubmitGuess()
   }, [])
@@ -272,6 +275,7 @@ export function useShotlessRound(input: ShotlessRoundInput) {
     onNobody,
     onAssign,
     onNext,
+    onForceSkip,
     onSubmitGuess,
     onPickSuggestion,
     onDismissBonus,

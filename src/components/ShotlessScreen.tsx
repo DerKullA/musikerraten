@@ -13,6 +13,7 @@ interface ShotlessScreenProps {
   error: string | null
   onLogout: () => void
   onLeave: () => void
+  onBackToPlaylists: () => void
   onPlayClip: (uri: string, positionMs: number) => Promise<void>
   onResumeClip: () => Promise<void>
   onPauseClip: () => Promise<void>
@@ -30,6 +31,7 @@ export function ShotlessScreen({
   error,
   onLogout,
   onLeave,
+  onBackToPlaylists,
   onPlayClip,
   onResumeClip,
   onPauseClip,
@@ -69,6 +71,7 @@ export function ShotlessScreen({
         error={error}
         onLogout={onLogout}
         onLeave={onLeave}
+        onBackToPlaylists={onBackToPlaylists}
         guessTarget={lobby.guessTarget}
         onSelectMode={lobby.selectMode}
         onSelectGuessTarget={lobby.selectGuessTarget}
@@ -96,6 +99,8 @@ export function ShotlessScreen({
         error={round.playbackError ?? error}
         onLogout={onLogout}
         onLeave={onLeave}
+        onBackToPlaylists={onBackToPlaylists}
+        onForceSkip={round.onForceSkip}
         onQuery={round.setQuery}
         onArtistQuery={round.setArtistQuery}
         onSubmitGuess={round.onSubmitGuess}

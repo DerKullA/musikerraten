@@ -11,6 +11,7 @@ interface ShotlessSetupProps {
   error: string | null
   onLogout: () => void
   onLeave: () => void
+  onBackToPlaylists: () => void
   onSelectMode: (mode: ShotlessMode) => void
   onSelectGuessTarget: (target: ShotlessGuessTarget) => void
   onNameDraft: (value: string) => void
@@ -28,6 +29,7 @@ export function ShotlessSetup({
   error,
   onLogout,
   onLeave,
+  onBackToPlaylists,
   onSelectMode,
   onSelectGuessTarget,
   onNameDraft,
@@ -45,7 +47,12 @@ export function ShotlessSetup({
           <h1>Shotless</h1>
         </div>
         <div className="panel-head-meta">
-          <AppMenu onLogout={onLogout} onLeaveRound={onLeave} leaveLabel="Zurück zum Hauptmenü" />
+          <AppMenu
+            onLogout={onLogout}
+            onBackToPlaylists={onBackToPlaylists}
+            onLeaveRound={onLeave}
+            leaveLabel="Zurück zum Hauptmenü"
+          />
         </div>
       </header>
       <div className="fit-scroll">

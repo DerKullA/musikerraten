@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { readAppVersion } from '../lib/appVersion.ts'
+import { readAppVersionLabel } from '../lib/appVersion.ts'
 import type { PhaseTimings } from '../lib/phaseTimings.ts'
 import { SettingsDialog } from './SettingsDialog.tsx'
 
@@ -8,6 +8,8 @@ interface AppMenuProps {
   onSaveTimings?: (timings: PhaseTimings) => void
   onLogout: () => void
   onLeaveRound?: () => void
+  onForceSkip?: () => void
+  onBackToPlaylists?: () => void
   leaveLabel?: string
 }
 
@@ -16,13 +18,15 @@ export function AppMenu({
   onSaveTimings,
   onLogout,
   onLeaveRound,
+  onForceSkip,
+  onBackToPlaylists,
   leaveLabel = 'Zurück',
 }: AppMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const burgerRef = useRef<HTMLButtonElement>(null)
-  const firstItemRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   const closeSettings = useCallback(() => {
     setSettingsOpen(false)
@@ -34,7 +38,7 @@ export function AppMenu({
       return
     }
     const frame = window.requestAnimationFrame(() => {
-      firstItemRef.current?.focus({ preventScroll: true })
+      panelRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus({ preventScroll: true })
     })
     function handlePointerDown(event: PointerEvent): void {
       const target = event.target
@@ -77,6 +81,16 @@ export function AppMenu({
     onLogout()
   }
 
+  function forceSkip(): void {
+    setMenuOpen(false)
+    onForceSkip?.()
+  }
+
+  function backToPlaylists(): void {
+    setMenuOpen(false)
+    onBackToPlaylists?.()
+  }
+
   function leaveRound(): void {
     setMenuOpen(false)
     onLeaveRound?.()
@@ -102,6 +116,7 @@ export function AppMenu({
       </button>
       <div
         id="app-menu-panel"
+        ref={panelRef}
         className="menu-popover"
         role="menu"
         aria-label="Spielmenü"
@@ -112,7 +127,6 @@ export function AppMenu({
       >
         {showPhaseSettings ? (
           <button
-            ref={firstItemRef}
             type="button"
             role="menuitem"
             className="menu-item"
@@ -121,9 +135,28 @@ export function AppMenu({
             Einstellungen
           </button>
         ) : null}
+        {onForceSkip ? (
+          <button
+            type="button"
+            role="menuitem"
+            className="menu-item"
+            onClick={forceSkip}
+          >
+            Force-Skip (Song überspringen)
+          </button>
+        ) : null}
+        {onBackToPlaylists ? (
+          <button
+            type="button"
+            role="menuitem"
+            className="menu-item menu-item-leave"
+            onClick={backToPlaylists}
+          >
+            Zurück zur Playlistauswahl
+          </button>
+        ) : null}
         {onLeaveRound ? (
           <button
-            ref={showPhaseSettings ? undefined : firstItemRef}
             type="button"
             role="menuitem"
             className="menu-item menu-item-leave"
@@ -133,7 +166,6 @@ export function AppMenu({
           </button>
         ) : null}
         <button
-          ref={showPhaseSettings || onLeaveRound ? undefined : firstItemRef}
           type="button"
           role="menuitem"
           className="menu-item menu-item-danger"
@@ -141,7 +173,7 @@ export function AppMenu({
         >
           Abmelden
         </button>
-        <p className="menu-version">{readAppVersion()}</p>
+        <p className="menu-version">{readAppVersionLabel()}</p>
       </div>
       {settingsOpen && timings && onSaveTimings ? (
         <SettingsDialog timings={timings} onSave={onSaveTimings} onClose={closeSettings} />

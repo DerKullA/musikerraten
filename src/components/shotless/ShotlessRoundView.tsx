@@ -36,6 +36,8 @@ interface ShotlessRoundViewProps {
   error: string | null
   onLogout: () => void
   onLeave: () => void
+  onBackToPlaylists: () => void
+  onForceSkip: () => void
   onQuery: (value: string) => void
   onArtistQuery: (value: string) => void
   onSubmitGuess: () => void
@@ -64,6 +66,8 @@ export function ShotlessRoundView({
   error,
   onLogout,
   onLeave,
+  onBackToPlaylists,
+  onForceSkip,
   onQuery,
   onArtistQuery,
   onSubmitGuess,
@@ -93,7 +97,13 @@ export function ShotlessRoundView({
           <span className="game-bar-label">Shotless · {mode === 'party' ? 'Party' : 'Tippen'}</span>
           <p className="counter">{trackCount === 0 ? '0 / 0' : `${round.trackIndex + 1} / ${trackCount}`}</p>
         </div>
-        <AppMenu onLogout={onLogout} onLeaveRound={onLeave} leaveLabel="Zurück zum Hauptmenü" />
+        <AppMenu
+          onLogout={onLogout}
+          onForceSkip={onForceSkip}
+          onBackToPlaylists={onBackToPlaylists}
+          onLeaveRound={onLeave}
+          leaveLabel="Zurück zum Hauptmenü"
+        />
       </header>
       <RoundProgress current={trackCount === 0 ? 0 : round.trackIndex + 1} total={trackCount} />
       {error ? <p className="banner error">{error}</p> : null}

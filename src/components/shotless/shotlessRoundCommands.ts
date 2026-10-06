@@ -9,6 +9,7 @@ import {
   type ShotlessGuessTarget,
   type ShotlessRound,
 } from '../../lib/shotlessRules.ts'
+import { reportClientWarning } from '../../lib/clientLog.ts'
 import { traceGame, type GameDebugDetail } from '../../lib/gameDebug.ts'
 import type { Track } from '../../types.ts'
 
@@ -245,6 +246,34 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
       commitRound(
         ctx,
         reduceShotlessRound(ctx.roundRef.current, {
+          type: 'next',
+          trackCount: ctx.tracksRef.current.length,
+          origin: pickClipOrigin(),
+        }),
+      )
+    },
+    onForceSkip(): void {
+      const round = ctx.roundRef.current
+      const track = ctx.tracksRef.current[round.trackIndex]
+      traceShotlessAction(ctx, 'force-skip')
+      reportClientWarning(
+        `Force-Skip: ${track ? `${track.artist} – ${track.title}` : 'unbekannter Titel'}`,
+        {
+          source: 'force-skip',
+          uri: track?.uri ?? null,
+          action: 'force-skip',
+          phase: round.view,
+          step: `stufe=${round.stageIndex} index=${round.trackIndex} ursprung=${round.origin}`,
+        },
+      )
+      ctx.blockAdvanceRef.current = false
+      ctx.queuedAdvanceRef.current = false
+      ctx.revealDeadlineRef.current = null
+      ctx.dismissBonusRef.current()
+      ctx.setPlaybackError(null)
+      commitRound(
+        ctx,
+        reduceShotlessRound(round, {
           type: 'next',
           trackCount: ctx.tracksRef.current.length,
           origin: pickClipOrigin(),

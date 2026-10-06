@@ -28,8 +28,8 @@ import {
   type WarmPlaybackState,
 } from './lib/clipWarmup.ts'
 import { createSilenceWatch, type SilenceWatch } from './lib/silenceWatch.ts'
-import { reportClientError } from './lib/clientLog.ts'
-import { traceGame } from './lib/gameDebug.ts'
+import { reportClientError, reportClientWarning } from './lib/clientLog.ts'
+import { formatGameDebugLog, traceGame } from './lib/gameDebug.ts'
 import { traceSongLoad } from './lib/gameDebugSong.ts'
 import { useGameDebugWatch } from './components/useGameDebug.ts'
 import type { PlaybackClaimResult } from './lib/playbackDevice.ts'
@@ -91,6 +91,7 @@ export default function App() {
   const screenRef = useRef<AppScreen>('login')
   const playerRef = useRef<SpotifyPlayer | null>(null)
   const deviceIdRef = useRef<string | null>(null)
+  const phaseEntryRef = useRef(0)
   const timerRef = useRef<number | null>(null)
   const runningRef = useRef(false)
   const pausedRef = useRef(false)
@@ -660,6 +661,8 @@ export default function App() {
       })
       return
     }
+    phaseEntryRef.current += 1
+    const entry = phaseEntryRef.current
     setRoundReason(grund)
     if (next === 'playing') {
       warmupRef.current?.invalidate()
@@ -690,6 +693,9 @@ export default function App() {
     }
     if (phaseRef.current === next && next === 'thinking') {
       markSnippetReady(true)
+    }
+    if (entry !== phaseEntryRef.current) {
+      return
     }
     scheduleFollowingPhase(next, timings)
   }
@@ -779,6 +785,30 @@ export default function App() {
     }
     pausedRef.current = false
     setPaused(false)
+    await enterPhase('playing', 'naechster')
+  }
+
+  async function forceSkipTrack(): Promise<void> {
+    if (!runningRef.current) {
+      traceGame('runde', { aktion: 'force-skip-block', phase: phaseRef.current })
+      return
+    }
+    const track = tracksRef.current[indexRef.current]
+    reportClientWarning(
+      `Force-Skip: ${track ? `${track.artist} – ${track.title}` : 'unbekannter Titel'}${error ? ` (Fehler: ${error})` : ''}`,
+      {
+        source: 'force-skip',
+        uri: track?.uri ?? null,
+        action: 'force-skip',
+        phase: phaseRef.current,
+        step: formatGameDebugLog().split('\n').slice(-6).join(' | '),
+      },
+    )
+    traceGame('runde', { aktion: 'force-skip', phase: phaseRef.current, index: indexRef.current })
+    clearGameTimer()
+    pausedRef.current = false
+    setPaused(false)
+    setError(null)
     await enterPhase('playing', 'naechster')
   }
 
@@ -918,6 +948,15 @@ export default function App() {
     traceGame('runde', { aktion: 'verlassen', modus: 'shotless' })
     void endQuizPlayback()
     handleBackToMenu()
+  }
+
+  function handleShotlessToPlaylists(): void {
+    setRoundReason('verlassen')
+    traceGame('runde', { aktion: 'zur-playlistauswahl', modus: 'shotless' })
+    void endQuizPlayback()
+    setShotlessLive(false)
+    setError(null)
+    setScreen('playlists')
   }
 
   function handleAbort(): void {
@@ -1063,6 +1102,9 @@ export default function App() {
           onSkipNext={() => {
             void skipToNextTrack()
           }}
+          onForceSkip={() => {
+            void forceSkipTrack()
+          }}
           onAbort={handleAbort}
           onLogout={handleLogout}
         />
@@ -1073,6 +1115,7 @@ export default function App() {
           error={error}
           onLogout={handleLogout}
           onLeave={handleLeaveShotless}
+          onBackToPlaylists={handleShotlessToPlaylists}
           onPlayClip={playShotlessClip}
           onResumeClip={resumeCurrentTrack}
           onPauseClip={pauseCurrentTrack}

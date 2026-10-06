@@ -28,6 +28,7 @@ interface GameScreenProps {
   onReplay: () => void
   onReveal: () => void
   onSkipNext: () => void
+  onForceSkip: () => void
   onAbort: () => void
   onLogout: () => void
 }
@@ -51,6 +52,7 @@ export function GameScreen({
   onReplay,
   onReveal,
   onSkipNext,
+  onForceSkip,
   onAbort,
   onLogout,
 }: GameScreenProps) {
@@ -114,6 +116,8 @@ export function GameScreen({
           onSaveTimings={onSaveTimings}
           onLogout={onLogout}
           onLeaveRound={onAbort}
+          onForceSkip={onForceSkip}
+          leaveLabel="Zurück zur Playlistauswahl"
         />
       </header>
       <RoundProgress current={total === 0 ? 0 : index + 1} total={total} />
