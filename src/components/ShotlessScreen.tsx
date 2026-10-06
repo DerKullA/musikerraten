@@ -1,4 +1,5 @@
 import { LoserBonusOverlay } from './LoserBonusOverlay.tsx'
+import { WrongGuessDialog } from './WrongGuessDialog.tsx'
 import { ShotlessRoundView } from './shotless/ShotlessRoundView.tsx'
 import { ShotlessSetup } from './shotless/ShotlessSetup.tsx'
 import { useShotlessLobby } from './shotless/useShotlessLobby.ts'
@@ -109,11 +110,15 @@ export function ShotlessScreen({
         onListen={round.onListen}
         onClaim={round.onClaim}
         onAssign={round.onAssign}
+        onWrongWinner={round.onWrongWinner}
         onNobody={round.onNobody}
         clipPlaying={round.clipPlaying}
         firstPlayReady={round.firstPlayReady}
         onNext={round.onNext}
       />
+      {round.wrongPopup ? (
+        <WrongGuessDialog name={round.wrongPopup.name} penalty={round.wrongPopup.penalty} />
+      ) : null}
       {round.bonusWinner ? (
         <LoserBonusOverlay winner={round.bonusWinner} closing={round.bonusClosing} onDismiss={round.onDismissBonus} />
       ) : null}

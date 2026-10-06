@@ -17,6 +17,10 @@ export function wrongDrinkMessage(penalty: string): string {
   return `Falsch — du trinkst: ${penalty}`
 }
 
+export function wrongWinnerMessage(name: string, penalty: string): string {
+  return `${name} lag falsch — ${name} trinkt: ${penalty}`
+}
+
 export function everyoneShotMessage(): string {
   return EVERYONE_SHOT_MESSAGE
 }
@@ -37,6 +41,9 @@ export function createShotlessRound(origin: ClipOrigin = 'mitte'): ShotlessRound
 export function reduceShotlessRound(round: ShotlessRound, command: ShotlessCommand): ShotlessRound {
   if (command.type === 'next') {
     return advanceTrack(round, command.trackCount, command.origin)
+  }
+  if (command.type === 'wrong-winner') {
+    return revokeWinner(round)
   }
   if (round.view === 'reveal') {
     return round
@@ -168,4 +175,16 @@ function assignGuesser(round: ShotlessRound, name: string): ShotlessRound {
     return round
   }
   return revealCorrect(round, guesser)
+}
+
+function revokeWinner(round: ShotlessRound): ShotlessRound {
+  if (round.view !== 'reveal' || round.winner === null) {
+    return round
+  }
+  const penalty = stageByIndex(round.stageIndex).penalty
+  return {
+    ...round,
+    revealMessage: wrongWinnerMessage(round.winner, penalty),
+    winner: null,
+  }
 }

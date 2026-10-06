@@ -62,6 +62,7 @@ export type ShotlessCommand =
   | { type: 'claim' }
   | { type: 'assign'; name: string }
   | { type: 'nobody' }
+  | { type: 'wrong-winner' }
   | { type: 'replay' }
   | { type: 'next'; trackCount: number; origin: ClipOrigin }
 
@@ -233,6 +234,7 @@ export {
   correctDrinkMessage,
   wrongDrinkMessage,
   everyoneShotMessage,
+  wrongWinnerMessage,
   createShotlessRound,
   reduceShotlessRound,
 } from './shotlessReducer.ts'

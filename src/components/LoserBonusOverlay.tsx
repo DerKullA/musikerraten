@@ -142,7 +142,7 @@ function WheelSegment({ index, title }: { index: number; title: string }) {
   )
 }
 
-function GameDialog({
+export function GameDialog({
   labelledBy,
   onCancel,
   children,
