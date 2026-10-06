@@ -80,6 +80,16 @@ export function createWarmBuffer(runtime: WarmRuntime) {
     }
   }
 
+  // Spotify kann die Lautstärke zurücksetzen, sobald das Gerät aktiv wird.
+  async function holdMute(): Promise<void> {
+    const volume = await runtime.deps.getVolume().catch(() => null)
+    if (volume === null || volume <= 0) {
+      return
+    }
+    traceGame('warmup', { aktion: 'stumm-erneut', lautstaerke: volume })
+    await runtime.deps.setVolume(0).catch(() => undefined)
+  }
+
   function failBufferedStart(target: ClipCue, step: string): never {
     const action = runtime.request === 'prime' ? 'prime' : 'play'
     throw clientError('Der Song hat nicht gestartet.', {
@@ -107,6 +117,7 @@ export function createWarmBuffer(runtime: WarmRuntime) {
       if (totalPolls > switchLimit + idleLimit) {
         break
       }
+      await holdMute()
       const state = await runtime.deps.getState().catch(() => null)
       last = state
       if (!state || state.uri !== target.uri) {
@@ -191,6 +202,7 @@ export function createWarmBuffer(runtime: WarmRuntime) {
         if (runtime.generation !== token) {
           return false
         }
+        await holdMute()
         const state = await runtime.deps.getState().catch(() => null)
         const moved =
           state?.uri === target.uri &&
