@@ -7,7 +7,7 @@ import type { Track } from '../../types.ts'
 import { useLoserBonus } from '../useLoserBonus.ts'
 import { useShotlessClipPlayback } from '../useShotlessClipPlayback.ts'
 import { useGameDebugWatch } from '../useGameDebug.ts'
-import { shotlessRoundCommands } from './shotlessRoundCommands.ts'
+import { shotlessRoundCommands, type WrongPopup } from './shotlessRoundCommands.ts'
 
 const NO_GUESSES: readonly GuessSuggestion[] = []
 
@@ -38,7 +38,8 @@ export function useShotlessRound(input: ShotlessRoundInput) {
   const [readyClipKey, setReadyClipKey] = useState<string | null>(null)
   const [revealHoldMs, setRevealHoldMs] = useState(POST_REVEAL_PLAY_MS)
   const [bonusClosing, setBonusClosing] = useState(false)
-  const { bonusWinner, noteLoserBonusOutcome, dismissLoserBonus } = useLoserBonus()
+  const [wrongPopup, setWrongPopup] = useState<WrongPopup | null>(null)
+  const { bonusWinner, noteLoserBonusOutcome, dismissLoserBonus, revokeLoserBonusOutcome } = useLoserBonus()
 
   const onPrimeClipRef = useRef(input.onPrimeClip)
   const onPauseClipRef = useRef(input.onPauseClip)
@@ -58,6 +59,7 @@ export function useShotlessRound(input: ShotlessRoundInput) {
   const guessTargetRef = useRef(guessTarget)
   const noteOutcomeRef = useRef(noteLoserBonusOutcome)
   const dismissBonusRef = useRef(dismissLoserBonus)
+  const revokeOutcomeRef = useRef(revokeLoserBonusOutcome)
 
   const commandsRef = useRef<ReturnType<typeof shotlessRoundCommands> | null>(null)
 
@@ -67,6 +69,7 @@ export function useShotlessRound(input: ShotlessRoundInput) {
     guessTargetRef.current = guessTarget
     noteOutcomeRef.current = noteLoserBonusOutcome
     dismissBonusRef.current = dismissLoserBonus
+    revokeOutcomeRef.current = revokeLoserBonusOutcome
     commandsRef.current = shotlessRoundCommands({
       query,
       artistQuery,
@@ -88,6 +91,8 @@ export function useShotlessRound(input: ShotlessRoundInput) {
       onPlaybackRef,
       noteOutcomeRef,
       dismissBonusRef,
+      revokeOutcomeRef,
+      setWrongPopup,
       setRound,
       setQuery,
       setArtistQuery,
@@ -235,6 +240,9 @@ export function useShotlessRound(input: ShotlessRoundInput) {
   const onNobody = useCallback(() => {
     readyCommands().onNobody()
   }, [])
+  const onWrongWinner = useCallback(() => {
+    readyCommands().onWrongWinner()
+  }, [])
   const onAssign = useCallback((name: string) => {
     readyCommands().onAssign(name)
   }, [])
@@ -266,6 +274,7 @@ export function useShotlessRound(input: ShotlessRoundInput) {
     firstPlayReady,
     bonusWinner,
     bonusClosing,
+    wrongPopup,
     setQuery,
     setArtistQuery,
     beginRound,
@@ -274,6 +283,7 @@ export function useShotlessRound(input: ShotlessRoundInput) {
     onClaim,
     onNobody,
     onAssign,
+    onWrongWinner,
     onNext,
     onForceSkip,
     onSubmitGuess,

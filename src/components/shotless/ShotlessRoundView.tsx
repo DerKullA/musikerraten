@@ -48,6 +48,7 @@ interface ShotlessRoundViewProps {
   firstPlayReady: boolean
   onClaim: () => void
   onAssign: (name: string) => void
+  onWrongWinner: () => void
   onNobody: () => void
   onNext: () => void
 }
@@ -78,6 +79,7 @@ export function ShotlessRoundView({
   firstPlayReady,
   onClaim,
   onAssign,
+  onWrongWinner,
   onNobody,
   onNext,
 }: ShotlessRoundViewProps) {
@@ -153,6 +155,11 @@ export function ShotlessRoundView({
       {revealed ? (
         <div className="game-dock">
           <ClipMeter key={`${round.trackIndex}-${round.replayNonce}`} durationMs={POST_REVEAL_PLAY_MS} />
+          {mode === 'party' && round.winner ? (
+            <button type="button" className="btn aufgeben" onClick={onWrongWinner}>
+              {round.winner} lag falsch!
+            </button>
+          ) : null}
           <SkipTrackButton onSkip={onNext} />
         </div>
       ) : null}

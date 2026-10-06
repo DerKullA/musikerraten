@@ -3,6 +3,7 @@ import { prepareGuessHandoff, pickBackdropTrack, type BackdropTrack } from '../.
 import { POST_REVEAL_PLAY_MS } from '../../lib/phaseTimings.ts'
 import {
   createShotlessRound,
+  stageByIndex,
   pickClipOrigin,
   reduceShotlessRound,
   type GuessSuggestion,
@@ -12,6 +13,13 @@ import {
 import { reportClientWarning } from '../../lib/clientLog.ts'
 import { traceGame, type GameDebugDetail } from '../../lib/gameDebug.ts'
 import type { Track } from '../../types.ts'
+
+const WRONG_POPUP_MS = 4_000
+
+export interface WrongPopup {
+  name: string
+  penalty: string
+}
 
 export interface ShotlessCommandContext {
   query: string
@@ -34,6 +42,8 @@ export interface ShotlessCommandContext {
   onPlaybackRef: MutableRefObject<(state: 'playing' | 'paused') => void>
   noteOutcomeRef: MutableRefObject<(winner: string | null) => boolean>
   dismissBonusRef: MutableRefObject<() => void>
+  revokeOutcomeRef: MutableRefObject<() => void>
+  setWrongPopup: Dispatch<SetStateAction<WrongPopup | null>>
   setRound: Dispatch<SetStateAction<ShotlessRound>>
   setQuery: Dispatch<SetStateAction<string>>
   setArtistQuery: Dispatch<SetStateAction<string>>
@@ -123,7 +133,7 @@ function waitForGuessPause(delayMs: number): Promise<void> {
 }
 
 export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
-  return {
+  const commands = {
     reportClipPlayback(state: 'playing' | 'paused'): void {
       markClipPlaying(ctx, state === 'playing')
       ctx.onPlaybackRef.current(state)
@@ -240,6 +250,27 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
       traceShotlessAction(ctx, 'zuweisen', { name })
       applyRound(ctx, reduceShotlessRound(ctx.roundRef.current, { type: 'assign', name }))
     },
+    onWrongWinner(): void {
+      const current = ctx.roundRef.current
+      if (current.view !== 'reveal' || current.winner === null) {
+        return
+      }
+      traceShotlessAction(ctx, 'lag-falsch', { name: current.winner })
+      ctx.revokeOutcomeRef.current()
+      applyRound(ctx, reduceShotlessRound(current, { type: 'wrong-winner' }))
+      // Der nächste Song startet erst, wenn das Popup weg ist.
+      ctx.blockAdvanceRef.current = true
+      ctx.setWrongPopup({ name: current.winner, penalty: stageByIndex(current.stageIndex).penalty })
+      window.setTimeout(commands.closeWrongPopup, WRONG_POPUP_MS)
+    },
+    closeWrongPopup(): void {
+      ctx.setWrongPopup(null)
+      ctx.blockAdvanceRef.current = false
+      if (ctx.queuedAdvanceRef.current) {
+        ctx.queuedAdvanceRef.current = false
+        commands.advanceAfterReveal()
+      }
+    },
     onNext(): void {
       traceShotlessAction(ctx, 'weiter')
       ctx.setPlaybackError(null)
@@ -343,4 +374,5 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
       )
     },
   }
+  return commands
 }
