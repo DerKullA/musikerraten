@@ -1,5 +1,6 @@
 import { clientError } from './clientLog.ts'
 import {
+  BUFFER_RETRY_LIMIT,
   BUFFER_STABLE_POLLS,
   BUFFER_WAIT_LIMIT,
   CUE_POSITION_TOLERANCE_MS,
@@ -18,6 +19,7 @@ import {
   type WarmPlaybackState,
 } from './clipWarmupPolicy.ts'
 import type { WarmRuntime } from './clipWarmupRuntime.ts'
+import { traceGame } from './gameDebug.ts'
 
 export function createWarmBuffer(runtime: WarmRuntime) {
   async function waitUntilFirstPlayReady(target: ClipCue, token: number): Promise<void> {
@@ -89,7 +91,12 @@ export function createWarmBuffer(runtime: WarmRuntime) {
     })
   }
 
-  async function waitUntilCueBuffered(target: ClipCue, token: number): Promise<void> {
+  // `quick` gibt früh auf und wirft ohne Meldung, damit der Aufrufer neu lädt.
+  async function waitUntilCueBuffered(target: ClipCue, token: number, quick = false): Promise<void> {
+    const switchLimit = quick ? BUFFER_RETRY_LIMIT : TRACK_SWITCH_WAIT_LIMIT
+    const idleLimit = quick ? BUFFER_RETRY_LIMIT : BUFFER_WAIT_LIMIT
+    let last: WarmPlaybackState | null = null
+    let grund = 'gesamt'
     let watch = createColdBufferWatch()
     let uncertainPolls = 0
     let loadingPolls = 0
@@ -97,16 +104,18 @@ export function createWarmBuffer(runtime: WarmRuntime) {
     let totalPolls = 0
     while (runtime.generation === token) {
       totalPolls += 1
-      if (totalPolls > TRACK_SWITCH_WAIT_LIMIT + BUFFER_WAIT_LIMIT) {
+      if (totalPolls > switchLimit + idleLimit) {
         break
       }
       const state = await runtime.deps.getState().catch(() => null)
+      last = state
       if (!state || state.uri !== target.uri) {
         watch = createColdBufferWatch()
         idlePolls = 0
         loadingPolls = 0
         uncertainPolls += 1
-        if (uncertainPolls >= TRACK_SWITCH_WAIT_LIMIT) {
+        if (uncertainPolls >= switchLimit) {
+          grund = state ? 'anderer-song' : 'kein-zustand'
           break
         }
         await runtime.sleep(PLAYBACK_START_POLL_MS)
@@ -132,21 +141,39 @@ export function createWarmBuffer(runtime: WarmRuntime) {
       if (state.loading) {
         idlePolls = 0
         loadingPolls += 1
-        if (loadingPolls >= TRACK_SWITCH_WAIT_LIMIT) {
+        if (loadingPolls >= switchLimit) {
+          grund = 'laedt'
           break
         }
       } else {
         loadingPolls = 0
         idlePolls += 1
-        if (idlePolls >= BUFFER_WAIT_LIMIT) {
+        if (idlePolls >= idleLimit) {
+          grund = state.paused ? 'pausiert' : 'nicht-am-einsatz'
           break
         }
       }
       await runtime.sleep(PLAYBACK_START_POLL_MS)
     }
-    if (runtime.generation === token) {
-      failBufferedStart(target, 'buffer')
+    if (runtime.generation !== token) {
+      return
     }
+    traceGame('warmup', {
+      aktion: 'puffer-fehler',
+      grund,
+      erneut: quick,
+      ziel: target.positionMs,
+      position: last?.positionMs ?? null,
+      pausiert: last?.paused ?? null,
+      laedt: last?.loading ?? null,
+      fremd: last ? last.uri !== target.uri : null,
+      aktuell: last?.uri ?? null,
+      soll: target.uri,
+    })
+    if (quick) {
+      throw new Error('Puffer steht noch nicht.')
+    }
+    failBufferedStart(target, 'buffer')
   }
 
   async function catchCue(target: ClipCue, token: number): Promise<boolean> {

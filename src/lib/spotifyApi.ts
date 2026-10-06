@@ -68,7 +68,22 @@ export async function spotifyRequest<T>(path: string, init: RequestInit = {}): P
     const message = text || `Spotify-Fehler ${response.status}`
     throw new Error(message)
   }
-  return (await response.json()) as T
+  const body = await response.text()
+  if (isPlayerCommand(init) && !looksLikeJson(body)) {
+    // Spotify bestätigt Player-Befehle mit 200 und einer Kennung statt JSON.
+    return undefined as T
+  }
+  return JSON.parse(body) as T
+}
+
+function isPlayerCommand(init: RequestInit): boolean {
+  const method = init.method?.toUpperCase() ?? 'GET'
+  return method !== 'GET'
+}
+
+function looksLikeJson(body: string): boolean {
+  const first = body.trimStart().charAt(0)
+  return first === '{' || first === '['
 }
 
 /** Meldet einen fehlgeschlagenen Player-Aufruf und wirft ihn weiter. */
