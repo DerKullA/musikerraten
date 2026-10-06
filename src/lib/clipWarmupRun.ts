@@ -130,6 +130,7 @@ export function createWarmRun(runtime: WarmRuntime) {
     quick = false,
   ): Promise<boolean> {
     let suspended = false
+    let parked = false
     await runtime.deps.setVolume(0)
     try {
       await runtime.claimPlayback(target)
@@ -165,7 +166,8 @@ export function createWarmRun(runtime: WarmRuntime) {
       }
       let after = await runtime.deps.getState().catch(() => null)
       if (after?.paused && parkedNearCue(target, after) && cueIsNear(target, after)) {
-        return runtime.generation === token
+        parked = runtime.generation === token
+        return parked
       }
       const caught = await catchCue(target, token)
       if (runtime.generation !== token) {
@@ -173,16 +175,24 @@ export function createWarmRun(runtime: WarmRuntime) {
       }
       after = await runtime.deps.getState().catch(() => null)
       if (after?.paused && parkedNearCue(target, after)) {
+        parked = true
         return true
       }
       if (after && after.uri !== target.uri) {
         return false
       }
+      parked = caught
       return caught
     } finally {
+      // Beim Vorladen darf nichts hörbar weiterlaufen: erst anhalten, dann laut.
+      const priming = runtime.abortOf(token) !== 'yield'
+      if (priming && !parked) {
+        await runtime.deps.pause().catch(() => undefined)
+      }
       await runtime.deps.setVolume(runtime.audibleVolume).catch(() => undefined)
       if (suspended && runtime.generation === token) {
-        await runtime.deps.suspendSilence().catch(() => undefined)
+        const settle = runtime.request === 'prime' ? runtime.deps.restoreSilence() : runtime.deps.suspendSilence()
+        await settle.catch(() => undefined)
       }
     }
   }
