@@ -3,6 +3,7 @@ import {
   debugScreenName,
   isClipGameScreen,
   isFullBleedScreen,
+  requiresSpotify,
   selectableGameId,
   toggleAllPlaylistIds,
   togglePlaylistId,
@@ -17,6 +18,8 @@ import type { Playlist } from '@/types.ts'
 // Die Epoche verwirft Antworten, die nach einem Zurück/Verlassen eintreffen.
 export function useNavigation() {
   const [screen, setScreen] = useState<AppScreen>('login')
+  // Nach dem Spotify-Login true. Ohne Login laufen nur Spiele ohne Spotify, Zurück führt dann zum Login.
+  const [signedIn, setSignedIn] = useState(false)
   const [gameId, setGameId] = useState(DEFAULT_GAME_ID)
   const [gameLive, setGameLive] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -29,8 +32,10 @@ export function useNavigation() {
 
   const game = findGame(gameId)
 
+  /** Nach dem Spotify-Login: Hauptmenü zeigen. */
   function showMainMenu(): void {
     setError(null)
+    setSignedIn(true)
     setScreen('menu')
   }
 
@@ -39,16 +44,22 @@ export function useNavigation() {
     setLoadingPlaylists(false)
     setLoadingTracks(false)
     setGameLive(false)
-    showMainMenu()
+    setError(null)
+    setScreen(signedIn ? 'menu' : 'login')
   }
 
   function selectGame(id: string): void {
     const selected = selectableGameId(id)
-    if (selected === null) {
+    if (selected === null || (!signedIn && requiresSpotify(selected))) {
       return
     }
     setGameId(selected)
     setGameLive(false)
+    if (!requiresSpotify(selected)) {
+      setError(null)
+      setScreen('game')
+      return
+    }
     void openPlaylistScreen()
   }
 
@@ -102,6 +113,7 @@ export function useNavigation() {
   }
 
   function resetForLogout(): void {
+    setSignedIn(false)
     setGameLive(false)
     setPlaylists([])
     setSelectedIds([])
@@ -113,6 +125,7 @@ export function useNavigation() {
 
   return {
     screen,
+    signedIn,
     gameId,
     game,
     gameLive,

@@ -5,7 +5,7 @@ import { MainMenu } from '@/ui/MainMenu.tsx'
 import { PlaylistPicker } from '@/ui/PlaylistPicker.tsx'
 import { useNavigation } from '@/app/useNavigation.ts'
 import { useSpotifySession } from '@/app/useSpotifySession.ts'
-import { GAMES } from '@/games/registry.ts'
+import { GAMES, TANGERA_ID } from '@/games/registry.ts'
 import { shuffleTracks } from '@/platform/spotify/mixTracks.ts'
 import { usePlaybackEngine } from '@/platform/playback/usePlaybackEngine.ts'
 import { traceGame } from '@/platform/diagnostics/gameDebug.ts'
@@ -85,7 +85,9 @@ export default function App() {
 
   function handleLeaveGame(): void {
     traceGame('runde', { aktion: 'verlassen', modus: navigation.gameId })
-    void playback.end()
+    if (navigation.game?.requiresSpotify) {
+      void playback.end()
+    }
     navigation.backToMenu()
   }
 
@@ -117,6 +119,7 @@ export default function App() {
           onSpotifyLogin={() => {
             void session.login()
           }}
+          onPlayWithoutSpotify={() => navigation.selectGame(TANGERA_ID)}
         />
       ) : null}
       {screen === 'menu' ? (
@@ -148,6 +151,7 @@ export default function App() {
       ) : null}
       {screen === 'game' && GameScreen ? (
         <GameScreen
+          signedIn={navigation.signedIn}
           tracks={tracks}
           error={error}
           playback={playback}

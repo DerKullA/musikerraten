@@ -1,19 +1,24 @@
 // Stylesheets der Spiele. Die Reihenfolge ist Teil der Kaskade: base.css (main.tsx) zuerst,
-// dann Song erraten, dann Shotless. Neue Spiele hinten anhängen.
+// dann Song erraten, dann Shotless, dann Tangera. Neue Spiele hinten anhängen.
 import '@/games/guess-song/guess-song.css'
 import '@/games/shotless/shotless.css'
+import '@/games/tangera/tangera.css'
 import type { ComponentType } from 'react'
 import { GuessSongGame } from '@/games/guess-song/GuessSongGame.tsx'
 import { ShotlessScreen } from '@/games/shotless/ShotlessScreen.tsx'
 import { clearShotlessSession } from '@/games/shotless/logic/session.ts'
+import { TangeraScreen } from '@/games/tangera/TangeraScreen.tsx'
 import type { PlaybackApi } from '@/platform/playback/usePlaybackEngine.ts'
 import type { Track } from '@/types.ts'
 
 export const GUESS_SONG_ID = 'guess-song'
+export const TANGERA_ID = 'tangera'
 export const DEFAULT_GAME_ID = GUESS_SONG_ID
 
 // Gemeinsamer Vertrag: Die App rendert ein Spiel nur über diese Props.
 export interface GameScreenProps {
+  /** Ist ein Spotify-Konto angemeldet? Ohne Anmeldung laufen nur Spiele ohne Spotify. */
+  signedIn: boolean
   tracks: Track[]
   error: string | null
   playback: PlaybackApi
@@ -40,6 +45,8 @@ export interface GameModule {
   kicker: string
   label: string
   available: boolean
+  /** Braucht das Spiel Spotify (Login, Playlists, Wiedergabe)? Ohne startet es direkt. */
+  requiresSpotify: boolean
   entry: GameEntry
   /** Zusätzliche CSS-Klasse des Menüeintrags. */
   menuVariant?: string
@@ -59,6 +66,7 @@ export const GAMES: readonly GameModule[] = [
     kicker: 'Spiel',
     label: 'Song erraten',
     available: true,
+    requiresSpotify: true,
     entry: { kind: 'component', Screen: GuessSongGame },
     clipPlayback: false,
     fullBleed: 'always',
@@ -69,6 +77,7 @@ export const GAMES: readonly GameModule[] = [
     kicker: 'Trinkspiel',
     label: 'Shotless',
     available: true,
+    requiresSpotify: true,
     entry: { kind: 'component', Screen: ShotlessScreen },
     menuVariant: 'is-shotless',
     clipPlayback: true,
@@ -77,10 +86,23 @@ export const GAMES: readonly GameModule[] = [
     clearSession: clearShotlessSession,
   },
   {
+    id: TANGERA_ID,
+    kicker: 'Trinkspiel',
+    label: 'Tangera',
+    available: true,
+    requiresSpotify: false,
+    entry: { kind: 'component', Screen: TangeraScreen },
+    menuVariant: 'is-tangera',
+    clipPlayback: false,
+    fullBleed: 'live',
+    debugScreen: 'tangera',
+  },
+  {
     id: 'placeholder-2',
     kicker: 'Platzhalter',
     label: 'Bald verfügbar',
     available: false,
+    requiresSpotify: true,
     entry: { kind: 'none' },
     clipPlayback: false,
     fullBleed: 'live',

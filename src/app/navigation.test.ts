@@ -3,6 +3,7 @@ import {
   debugScreenName,
   isClipGameScreen,
   isFullBleedScreen,
+  requiresSpotify,
   selectableGameId,
   toggleAllPlaylistIds,
   togglePlaylistId,
@@ -21,11 +22,24 @@ describe('selectableGameId', () => {
   it('lässt verfügbare Spiele zu', () => {
     expect(selectableGameId('guess-song')).toBe('guess-song')
     expect(selectableGameId('shotless')).toBe('shotless')
+    expect(selectableGameId('tangera')).toBe('tangera')
   })
 
   it('ignoriert Platzhalter und Unbekanntes', () => {
     expect(selectableGameId('placeholder-2')).toBeNull()
     expect(selectableGameId('nope')).toBeNull()
+  })
+})
+
+describe('requiresSpotify', () => {
+  it('Tangera startet ohne Spotify, die Musikspiele nicht', () => {
+    expect(requiresSpotify('tangera')).toBe(false)
+    expect(requiresSpotify('guess-song')).toBe(true)
+    expect(requiresSpotify('shotless')).toBe(true)
+  })
+
+  it('behandelt Unbekanntes sicherheitshalber als Spotify-Spiel', () => {
+    expect(requiresSpotify('nope')).toBe(true)
   })
 })
 

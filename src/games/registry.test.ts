@@ -2,10 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_GAME_ID, GAMES, findGame, findPlayableGame, isPlayableGame, type GameModule } from './registry.ts'
 
 describe('Spiele-Registry', () => {
-  it('führt Song erraten, Shotless und den Platzhalter in Menüreihenfolge', () => {
-    expect(GAMES.map((game) => game.id)).toEqual(['guess-song', 'shotless', 'placeholder-2'])
-    expect(GAMES.map((game) => game.label)).toEqual(['Song erraten', 'Shotless', 'Bald verfügbar'])
-    expect(GAMES.map((game) => game.kicker)).toEqual(['Spiel', 'Trinkspiel', 'Platzhalter'])
+  it('führt Song erraten, Shotless, Tangera und den Platzhalter in Menüreihenfolge', () => {
+    expect(GAMES.map((game) => game.id)).toEqual(['guess-song', 'shotless', 'tangera', 'placeholder-2'])
+    expect(GAMES.map((game) => game.label)).toEqual(['Song erraten', 'Shotless', 'Tangera', 'Bald verfügbar'])
+    expect(GAMES.map((game) => game.kicker)).toEqual(['Spiel', 'Trinkspiel', 'Trinkspiel', 'Platzhalter'])
+  })
+
+  it('braucht Spotify nur dort, wo Wiedergabe gebraucht wird; Tangera läuft ohne', () => {
+    expect(findGame('guess-song')?.requiresSpotify).toBe(true)
+    expect(findGame('shotless')?.requiresSpotify).toBe(true)
+    expect(findGame('tangera')?.requiresSpotify).toBe(false)
   })
 
   it('hat eindeutige Ids und ein spielbares Standardspiel', () => {
@@ -28,13 +34,14 @@ describe('Spiele-Registry', () => {
   it('macht nur verfügbare Spiele spielbar', () => {
     expect(isPlayableGame('guess-song')).toBe(true)
     expect(isPlayableGame('shotless')).toBe(true)
+    expect(isPlayableGame('tangera')).toBe(true)
     expect(isPlayableGame('placeholder-2')).toBe(false)
     expect(isPlayableGame('gibt-es-nicht')).toBe(false)
     expect(findPlayableGame('placeholder-2')).toBeNull()
   })
 
   it('akzeptiert eine eigene Spieleliste', () => {
-    const only: GameModule[] = [{ ...GAMES[0]!, id: 'x' }, { ...GAMES[2]!, id: 'y' }]
+    const only: GameModule[] = [{ ...GAMES[0]!, id: 'x' }, { ...GAMES[3]!, id: 'y' }]
     expect(isPlayableGame('x', only)).toBe(true)
     expect(isPlayableGame('y', only)).toBe(false)
     expect(isPlayableGame('shotless', only)).toBe(false)
