@@ -2,23 +2,25 @@ import { useState } from 'react'
 import { Coin, type CoinSide } from '@/games/tangera/components/Coin.tsx'
 import { EventFrame } from '@/games/tangera/components/EventFrame.tsx'
 import { Wheel } from '@/games/tangera/components/Wheel.tsx'
-import { DARES, TRUTHS, contentPool, type WheelCard } from '@/games/tangera/logic/content.ts'
+import { DARES, TRUTHS, contentPool, type ContentKind, type WheelCard } from '@/games/tangera/logic/content.ts'
 import { LOSER_SIPS, RANK_EVENTS, sipsText } from '@/games/tangera/logic/rules.ts'
-import { pickWheelItems } from '@/games/tangera/logic/wheel.ts'
+import { refillWheel } from '@/games/tangera/logic/wheel.ts'
 import { revealResult } from './reveal.ts'
 import type { EventProps } from './types.ts'
 
-const WHEEL_SIZE = 8
-
-export function TruthOrDareEvent({ player, spicy, onDone }: EventProps) {
+export function TruthOrDareEvent({ player, spicy, used, wheels, onDone }: EventProps) {
   const [side, setSide] = useState<CoinSide | null>(null)
   const [items, setItems] = useState<WheelCard[]>([])
   const [picked, setPicked] = useState<WheelCard | null>(null)
   const event = RANK_EVENTS['6']
+  const kind: ContentKind = side === 'wahrheit' ? 'truth' : 'dare'
+  const spin = picked ? { kind, wheel: items.map((item) => item.title), picked: picked.title } : undefined
 
   function chooseSide(result: CoinSide): void {
     setSide(result)
-    setItems(pickWheelItems(contentPool(result === 'wahrheit' ? TRUTHS : DARES, spicy), WHEEL_SIZE))
+    const pool = contentPool(result === 'wahrheit' ? TRUTHS : DARES, spicy)
+    const drawn = result === 'wahrheit' ? 'truth' : 'dare'
+    setItems(refillWheel(pool, wheels[drawn], used[drawn], (item) => item.title))
   }
 
   return (
@@ -43,13 +45,13 @@ export function TruthOrDareEvent({ player, spicy, onDone }: EventProps) {
                 {picked.text}
               </p>
               <div className="tangera-footer">
-                <button type="button" className="btn primary cta" onClick={() => onDone()}>
+                <button type="button" className="btn primary cta" onClick={() => onDone({ spin })}>
                   Erledigt
                 </button>
                 <button
                   type="button"
                   className="btn ghost"
-                  onClick={() => onDone({ sips: { [player]: LOSER_SIPS } })}
+                  onClick={() => onDone({ spin, sips: { [player]: LOSER_SIPS } })}
                 >
                   Verweigert: {sipsText(LOSER_SIPS)}
                 </button>

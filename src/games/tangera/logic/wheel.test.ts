@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { indexAtPointer, pickSegment, pickWheelItems, segmentAngle, spinTo, wheelLabelLines } from './wheel.ts'
+import { indexAtPointer, pickSegment, refillWheel, segmentAngle, spinTo, wheelLabelLines } from './wheel.ts'
 
 describe('Glücksrad', () => {
   it('teilt 360 Grad gleichmäßig auf', () => {
@@ -32,12 +32,30 @@ describe('Glücksrad', () => {
     expect(pickSegment(8, () => 0.5)).toBe(4)
   })
 
-  it('zieht verschiedene Einträge für das Rad', () => {
-    const pool = Array.from({ length: 20 }, (_, index) => index)
-    const picked = pickWheelItems(pool, 8, () => 0.4)
-    expect(picked).toHaveLength(8)
-    expect(new Set(picked).size).toBe(8)
-    expect(pickWheelItems([1, 2, 3], 8)).toHaveLength(3)
+  const same = (item: string): string => item
+  const pool = Array.from({ length: 20 }, (_, index) => `E${index}`)
+
+  it('zieht für ein neues Rad verschiedene Einträge', () => {
+    const wheel = refillWheel(pool, [], [], same, 8, () => 0.4)
+    expect(wheel).toHaveLength(8)
+    expect(new Set(wheel).size).toBe(8)
+    expect(refillWheel(pool, [], [], same)).toHaveLength(14)
+    expect(refillWheel(['a', 'b', 'c'], [], [], same, 8)).toHaveLength(3)
+  })
+
+  it('ersetzt nur das gedrehte Feld durch ein frisches und lässt die übrigen an ihrem Platz', () => {
+    const before = ['E0', 'E1', 'E2', 'E3']
+    const wheel = refillWheel(pool, before, ['E2', 'E7'], same, 4)
+    expect(wheel).toHaveLength(4)
+    expect([wheel[0], wheel[1], wheel[3]]).toEqual(['E0', 'E1', 'E3'])
+    expect(['E0', 'E1', 'E2', 'E3', 'E7']).not.toContain(wheel[2])
+    expect(new Set(wheel).size).toBe(4)
+  })
+
+  it('füllt mit schon gedrehten auf, wenn keine frischen mehr da sind', () => {
+    const wheel = refillWheel(['a', 'b', 'c', 'd'], ['a', 'b', 'c'], ['c', 'd'], same, 3)
+    expect(wheel.slice(0, 2)).toEqual(['a', 'b'])
+    expect(['c', 'd']).toContain(wheel[2])
   })
 })
 
