@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 import { ROOT_BASE_PATH } from './src/lib/basePath.ts'
@@ -48,6 +49,11 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(readBuildVersion()),
   },
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   server: {
     host: '127.0.0.1',
     port: 43123,
