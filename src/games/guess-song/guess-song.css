@@ -1,0 +1,145 @@
+/* Song erraten (Mitteltransport, Phasen-Pill, Titelzeile). Wird nach base.css geladen. */
+.panel.game .game-center-control {
+  margin-top: 0;
+}
+
+.game-readout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.55rem, 1.4dvh, 0.9rem);
+  width: min(100%, 36rem);
+}
+
+.game-center-control {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: clamp(7.5rem, min(52vw, 32dvh), 20rem);
+  height: clamp(7.5rem, min(52vw, 32dvh), 20rem);
+}
+
+.center-transport {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--ink);
+  background: var(--lime);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
+  touch-action: manipulation;
+}
+
+.center-transport.is-paused {
+  background: var(--paper);
+}
+
+.center-transport:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.center-transport:focus-visible {
+  outline: 3px solid var(--paper);
+  outline-offset: 4px;
+}
+
+.center-transport:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.center-transport.has-cover {
+  color: var(--paper);
+  background: #12170f;
+  box-shadow:
+    inset 0 0 0 2px rgba(243, 234, 216, 0.38),
+    0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.transport-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.transport-scrim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle,
+    rgba(8, 10, 6, 0.62) 0%,
+    rgba(8, 10, 6, 0.28) 52%,
+    rgba(8, 10, 6, 0.5) 100%
+  );
+  pointer-events: none;
+}
+
+.transport-icon {
+  position: relative;
+  z-index: 1;
+  width: 34%;
+  height: 34%;
+  display: block;
+}
+
+.transport-icon.is-play {
+  transform: translateX(7%);
+}
+
+.center-transport.has-cover .transport-icon {
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.75));
+}
+
+.phase-pill {
+  display: inline-block;
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  background: rgba(243, 234, 216, 0.08);
+}
+
+.phase-pill.playing {
+  color: var(--lime);
+}
+
+.phase-pill.thinking {
+  color: var(--amber);
+}
+
+.phase-pill.reveal {
+  color: #9be7c4;
+}
+
+.phase-pill.paused {
+  color: var(--paper-dim);
+}
+
+.track-duration {
+  margin: 14px 0 0;
+  color: var(--lime);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  font-size: clamp(1rem, 3.4vw, 1.2rem);
+}
+
+@media (max-height: 520px) {
+  .game-center-control {
+    width: clamp(4.25rem, 26dvh, 7rem);
+    height: clamp(4.25rem, 26dvh, 7rem);
+  }
+}
