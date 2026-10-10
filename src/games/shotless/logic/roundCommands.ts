@@ -1,15 +1,14 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
-import { prepareGuessHandoff, pickBackdropTrack, type BackdropTrack } from '@/lib/bonusBackdrop.ts'
+import { prepareGuessHandoff, pickBackdropTrack, type BackdropTrack } from './bonusBackdrop.ts'
 import { POST_REVEAL_PLAY_MS } from '@/ui/phaseTimings.ts'
+import { createShotlessRound, reduceShotlessRound } from './reducer.ts'
 import {
-  createShotlessRound,
   stageByIndex,
   pickClipOrigin,
-  reduceShotlessRound,
   type GuessSuggestion,
   type ShotlessGuessTarget,
   type ShotlessRound,
-} from '@/lib/shotlessRules.ts'
+} from './rules.ts'
 import { reportClientWarning } from '@/platform/diagnostics/clientLog.ts'
 import { traceGame, type GameDebugDetail } from '@/platform/diagnostics/gameDebug.ts'
 import type { Track } from '@/types.ts'

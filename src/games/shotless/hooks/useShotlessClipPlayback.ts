@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from 'react'
-import { runBackdropPlayback, type BackdropPosition, type BackdropTrack } from '@/lib/bonusBackdrop.ts'
+import { runBackdropPlayback, type BackdropPosition, type BackdropTrack } from '@/games/shotless/logic/bonusBackdrop.ts'
 import { shouldPrimeParkedClip } from '@/platform/playback/clipWarmup/index.ts'
 import { createCancellableDelay, holdPlaybackThen, runBoundedClip } from '@/platform/playback/clipPlayback.ts'
 

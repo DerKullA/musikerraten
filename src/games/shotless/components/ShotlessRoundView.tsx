@@ -14,7 +14,7 @@ import {
   type ShotlessGuessTarget,
   type ShotlessMode,
   type ShotlessRound,
-} from '@/lib/shotlessRules.ts'
+} from '@/games/shotless/logic/rules.ts'
 import type { Track } from '@/types.ts'
 import { AppMenu } from '@/ui/AppMenu.tsx'
 import { RoundProgress } from '@/ui/RoundProgress.tsx'

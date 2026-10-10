@@ -6,8 +6,8 @@ import {
   reduceShotlessRound,
   wrongDrinkMessage,
   wrongWinnerMessage,
-} from './shotlessReducer.ts'
-import { EVERYONE_SHOT_MESSAGE, type ShotlessCommand, type ShotlessRound } from './shotlessRules.ts'
+} from './reducer.ts'
+import { EVERYONE_SHOT_MESSAGE, type ShotlessCommand, type ShotlessRound } from './rules.ts'
 
 function guess(text: string, overrides: Partial<Extract<ShotlessCommand, { type: 'submit-guess' }>> = {}): ShotlessCommand {
   return {

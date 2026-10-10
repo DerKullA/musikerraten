@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { rememberPlayedTrack, type BackdropPosition, type BackdropTrack } from '@/lib/bonusBackdrop.ts'
+import { rememberPlayedTrack, type BackdropPosition, type BackdropTrack } from '@/games/shotless/logic/bonusBackdrop.ts'
 import { POST_REVEAL_PLAY_MS } from '@/ui/phaseTimings.ts'
-import { suggestGuesses } from '@/lib/guessSuggestions.ts'
-import { clipStartMs, createShotlessRound, stageByIndex, type GuessSuggestion, type ShotlessGuessTarget, type ShotlessMode, type ShotlessRound } from '@/lib/shotlessRules.ts'
+import { suggestGuesses } from '@/games/shotless/logic/guessSuggestions.ts'
+import { createShotlessRound } from '@/games/shotless/logic/reducer.ts'
+import { clipStartMs, stageByIndex, type GuessSuggestion, type ShotlessGuessTarget, type ShotlessMode, type ShotlessRound } from '@/games/shotless/logic/rules.ts'
 import type { Track } from '@/types.ts'
-import { useLoserBonus } from '@/components/useLoserBonus.ts'
-import { useShotlessClipPlayback } from '@/components/useShotlessClipPlayback.ts'
+import { useLoserBonus } from './useLoserBonus.ts'
+import { useShotlessClipPlayback } from './useShotlessClipPlayback.ts'
 import { useGameDebugWatch } from '@/platform/diagnostics/useGameDebug.ts'
-import { shotlessRoundCommands, type WrongPopup } from './shotlessRoundCommands.ts'
+import { shotlessRoundCommands, type WrongPopup } from '@/games/shotless/logic/roundCommands.ts'
 
 const NO_GUESSES: readonly GuessSuggestion[] = []
 

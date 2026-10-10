@@ -1,13 +1,11 @@
-import { LoserBonusOverlay } from './LoserBonusOverlay.tsx'
-import { WrongGuessDialog } from './WrongGuessDialog.tsx'
-import { ShotlessRoundView } from '@/components/shotless/ShotlessRoundView.tsx'
-import { ShotlessSetup } from '@/components/shotless/ShotlessSetup.tsx'
-import { useShotlessLobby } from '@/components/shotless/useShotlessLobby.ts'
-import { useShotlessRound } from '@/components/shotless/useShotlessRound.ts'
-import type { BackdropPosition } from '@/lib/bonusBackdrop.ts'
+import { LoserBonusOverlay } from '@/games/shotless/components/LoserBonusOverlay.tsx'
+import { WrongGuessDialog } from '@/games/shotless/components/WrongGuessDialog.tsx'
+import { ShotlessRoundView } from '@/games/shotless/components/ShotlessRoundView.tsx'
+import { ShotlessSetup } from '@/games/shotless/components/ShotlessSetup.tsx'
+import { useShotlessLobby } from '@/games/shotless/hooks/useShotlessLobby.ts'
+import { useShotlessRound } from '@/games/shotless/hooks/useShotlessRound.ts'
+import type { BackdropPosition } from '@/games/shotless/logic/bonusBackdrop.ts'
 import type { Track } from '@/types.ts'
-
-export { ShotlessRoundView } from '@/components/shotless/ShotlessRoundView.tsx'
 
 interface ShotlessScreenProps {
   tracks: Track[]

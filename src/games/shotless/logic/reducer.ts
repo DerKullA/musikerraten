@@ -7,7 +7,7 @@ import {
   type ClipOrigin,
   type ShotlessCommand,
   type ShotlessRound,
-} from './shotlessRules.ts'
+} from './rules.ts'
 
 export function correctDrinkMessage(name: string, penalty: string): string {
   return `Alle außer ${name} trinken: ${penalty}`

@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import type { ShotlessMode } from '@/lib/shotlessRules.ts'
+import type { ShotlessMode } from '@/games/shotless/logic/rules.ts'
 
 interface ShotlessGuessDockProps {
   meterKey: string

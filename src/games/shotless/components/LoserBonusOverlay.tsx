@@ -9,7 +9,7 @@ import {
   pickPunishmentIndex,
   wheelLabelPlacement,
   wheelStopRotation,
-} from '@/lib/loserBonus.ts'
+} from '@/games/shotless/logic/loserBonus.ts'
 
 const SEGMENT_COLORS = [
   '#d4e157',

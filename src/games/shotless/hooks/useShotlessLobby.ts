@@ -6,8 +6,8 @@ import {
   readShotlessSession,
   removeShotlessPlayer,
   writeShotlessSession,
-} from '@/lib/shotlessSession.ts'
-import { pickClipOrigin, type ShotlessGuessTarget, type ShotlessMode } from '@/lib/shotlessRules.ts'
+} from '@/games/shotless/logic/session.ts'
+import { pickClipOrigin, type ShotlessGuessTarget, type ShotlessMode } from '@/games/shotless/logic/rules.ts'
 
 export function useShotlessLobby(onLiveChange?: (live: boolean) => void) {
   const stored = readShotlessSession()

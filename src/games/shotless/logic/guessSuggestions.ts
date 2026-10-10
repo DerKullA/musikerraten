@@ -1,4 +1,4 @@
-import { normalizeSongTitle, type GuessSuggestion, type TitleSuggestion } from './shotlessRules.ts'
+import { normalizeSongTitle, type GuessSuggestion, type TitleSuggestion } from './rules.ts'
 
 interface CatalogArtistPart {
   label: string

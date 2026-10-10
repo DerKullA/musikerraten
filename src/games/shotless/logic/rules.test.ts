@@ -16,7 +16,7 @@ import {
   stageByIndex,
   stageStatusLabel,
   titlesMatch,
-} from './shotlessRules.ts'
+} from './rules.ts'
 
 describe('shotlessRules: Stufen', () => {
   it('hat vier Stufen mit wachsender Clip-Länge', () => {

@@ -4,10 +4,10 @@ import { GameScreen } from '@/components/GameScreen.tsx'
 import { LoginScreen } from '@/ui/LoginScreen.tsx'
 import { MainMenu } from '@/ui/MainMenu.tsx'
 import { PlaylistPicker } from '@/ui/PlaylistPicker.tsx'
-import { ShotlessScreen } from '@/components/ShotlessScreen.tsx'
+import { ShotlessScreen } from '@/games/shotless/ShotlessScreen.tsx'
 import { nextPhase, phaseDuration, phasePlaysAudio, shuffleTracks } from '@/lib/gameLoop.ts'
 import { GUESS_SONG_ID, SHOTLESS_ID, isPlayableMenuGame } from '@/lib/mainMenuGames.ts'
-import { clearShotlessSession } from '@/lib/shotlessSession.ts'
+import { clearShotlessSession } from '@/games/shotless/logic/session.ts'
 import {
   clearSessionPhaseTimings,
   DEFAULT_PHASE_TIMINGS,
