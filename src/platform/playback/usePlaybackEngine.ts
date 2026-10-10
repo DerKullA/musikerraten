@@ -37,15 +37,20 @@ export interface ClipPosition {
   positionMs: number
 }
 
-// Was die Wiedergabe vom Spiel braucht, ohne es zu besitzen. Alle Getter lesen
+// Was die Wiedergabe von der Shell braucht, ohne sie zu besitzen. Alle Getter lesen
 // zum Aufrufzeitpunkt den aktuellen Wert (Refs der App), nie einen Render-Stand.
 export interface PlaybackHost {
   // Das aktive Spiel spielt Clips (Shotless) statt Runden-Phasen.
   clipGameActive: () => boolean
-  gamePhase: () => GamePhase
   tracks: () => readonly Track[]
+}
+
+// Song erraten meldet seinen Rundenstand an, solange das Spiel eingehängt ist. Die Getter
+// lesen Refs des Spiels (nie einen Render-Stand).
+export interface PlaybackRound {
+  gamePhase: () => GamePhase
   currentIndex: () => number
-  // Song erraten: die Runde ist pausiert.
+  // Die Runde ist pausiert.
   roundPaused: () => boolean
 }
 
@@ -86,6 +91,9 @@ export interface PlaybackApi {
   syncMedia: (state: MediaPlayback) => void
 
   noteFailure: (cause: unknown, action: 'play' | 'restore', uri: string | null) => void
+
+  /** Song erraten: Rundenstand anmelden (null beim Verlassen). Ohne Runde gilt 'idle', Index 0, nicht pausiert. */
+  bindRound: (round: PlaybackRound | null) => void
 }
 
 export interface PlaybackEngine {
@@ -96,6 +104,7 @@ export interface PlaybackEngine {
 
 export function createPlaybackEngine(initialHost: PlaybackHost): PlaybackEngine {
   let host = initialHost
+  let round: PlaybackRound | null = null
   let player: SpotifyPlayer | null = null
   let deviceId: string | null = null
   let silenceWatch: SilenceWatch | null = null
@@ -237,7 +246,7 @@ export function createPlaybackEngine(initialHost: PlaybackHost): PlaybackEngine 
   }
 
   function playbackPhase(): string {
-    return host.clipGameActive() ? 'shotless' : host.gamePhase()
+    return host.clipGameActive() ? 'shotless' : (round?.gamePhase() ?? 'idle')
   }
 
   async function claimPlaybackDevice(cue?: ClipCue | null): Promise<PlaybackClaimResult> {
@@ -302,14 +311,14 @@ export function createPlaybackEngine(initialHost: PlaybackHost): PlaybackEngine 
   }
 
   async function playCurrent(): Promise<void> {
-    const track = host.tracks()[host.currentIndex()]
+    const track = host.tracks()[round?.currentIndex() ?? 0]
     const device = deviceId
     if (!track || !device) {
       return
     }
     noteSongLoad(track.uri, 0, 'play')
     await openAudiblePlayback(() => clipWarmup().play({ uri: track.uri, positionMs: 0 }))
-    if (host.roundPaused()) {
+    if (round?.roundPaused()) {
       await pause()
     }
   }
@@ -476,6 +485,9 @@ export function createPlaybackEngine(initialHost: PlaybackHost): PlaybackEngine 
     engageMedia,
     syncMedia,
     noteFailure,
+    bindRound: (next) => {
+      round = next
+    },
   }
 
   return {

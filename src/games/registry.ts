@@ -3,6 +3,7 @@
 import '@/games/guess-song/guess-song.css'
 import '@/games/shotless/shotless.css'
 import type { ComponentType } from 'react'
+import { GuessSongGame } from '@/games/guess-song/GuessSongGame.tsx'
 import { ShotlessScreen } from '@/games/shotless/ShotlessScreen.tsx'
 import { clearShotlessSession } from '@/games/shotless/logic/session.ts'
 import type { PlaybackApi } from '@/platform/playback/usePlaybackEngine.ts'
@@ -20,6 +21,10 @@ export interface GameScreenProps {
   /** Spiel verlassen, zurück ins Hauptmenü. */
   onLeave: () => void
   onBackToPlaylists: () => void
+  /** Nur Bildschirmwechsel zur Playlist-Auswahl, ohne Fehler oder Live-Zustand zurückzusetzen (Abbruch). */
+  onShowPlaylists: () => void
+  /** Setzt oder leert die Fehleranzeige der Shell. */
+  onError: (message: string | null) => void
   /** Meldet, ob das Spiel gerade im Vollbild-Rundenmodus läuft (siehe GameModule.fullBleed). */
   onLiveChange: (live: boolean) => void
 }
@@ -27,9 +32,6 @@ export interface GameScreenProps {
 export type GameEntry =
   // Das Spiel bringt seinen Screen und seinen Zustand selbst mit.
   | { kind: 'component'; Screen: ComponentType<GameScreenProps> }
-  // Die App hält die Rundenlogik noch selbst und rendert den Screen (Song erraten, bis Phase 3
-  // die Zustandsmaschine in useGuessSongRound auslagert und der Eintrag zu 'component' wird).
-  | { kind: 'hosted' }
   // Platzhalter ohne Spiel.
   | { kind: 'none' }
 
@@ -57,7 +59,7 @@ export const GAMES: readonly GameModule[] = [
     kicker: 'Spiel',
     label: 'Song erraten',
     available: true,
-    entry: { kind: 'hosted' },
+    entry: { kind: 'component', Screen: GuessSongGame },
     clipPlayback: false,
     fullBleed: 'always',
     debugScreen: 'game',

@@ -12,25 +12,17 @@ import {
   readStoredTokens,
   startSpotifyLogin,
 } from '@/platform/spotify/spotifyAuth.ts'
+import { resetSavedPhaseTimings } from '@/ui/savedPhaseTimings.ts'
 import { stopSpeakerKeepAlive, watchSpeakerKeepAliveGestures } from '@/platform/playback/speakerKeepAlive.ts'
-
-// Was die Sitzung vom laufenden Spiel braucht (Song erraten hält seine Runde noch in der App).
-export interface SessionRound {
-  resetPhaseTimings: () => void
-  stopRound: () => void
-  /** Titelliste der Runde leeren (Logout). */
-  clearTracks: () => void
-  /** Spiel-Timer löschen (Unmount). */
-  clearTimer: () => void
-}
 
 interface SpotifySessionOptions {
   playback: PlaybackApi
   navigation: Navigation
-  round: SessionRound
+  /** Geladene Titelliste der Runde leeren (Logout). */
+  clearTracks: () => void
 }
 
-export function useSpotifySession({ playback, navigation, round }: SpotifySessionOptions) {
+export function useSpotifySession({ playback, navigation, clearTracks }: SpotifySessionOptions) {
   const [busy, setBusy] = useState(false)
   const bootstrapped = useRef(false)
 
@@ -46,7 +38,7 @@ export function useSpotifySession({ playback, navigation, round }: SpotifySessio
       try {
         await exchangeAuthorizationCode(callback.code, callback.state)
         clearAuthCallbackFromUrl()
-        round.resetPhaseTimings()
+        resetSavedPhaseTimings()
         navigation.showMainMenu()
       } catch (cause) {
         navigation.setError(formatSpotifyUserError(cause))
@@ -61,7 +53,7 @@ export function useSpotifySession({ playback, navigation, round }: SpotifySessio
         navigation.showMainMenu()
       } catch {
         clearTokens()
-        round.resetPhaseTimings()
+        resetSavedPhaseTimings()
       }
     }
   }
@@ -82,11 +74,12 @@ export function useSpotifySession({ playback, navigation, round }: SpotifySessio
     for (const game of GAMES) {
       game.clearSession?.()
     }
-    round.resetPhaseTimings()
-    round.stopRound()
+    resetSavedPhaseTimings()
+    // Ein offenes Spiel hat seine Runde vor dem Logout selbst angehalten; hier endet die Wiedergabe.
+    void playback.end()
     playback.disconnect()
     clearTokens()
-    round.clearTracks()
+    clearTracks()
     navigation.resetForLogout()
     setBusy(false)
   }
@@ -95,7 +88,6 @@ export function useSpotifySession({ playback, navigation, round }: SpotifySessio
     void bootstrapAuth()
   })
   const disposeSession = useEffectEvent(() => {
-    round.clearTimer()
     playback.dispose()
   })
 
