@@ -1,5 +1,7 @@
 import { findPlayableGame, type GameModule } from '@/games/registry.ts'
-import type { AppScreen, Playlist } from '@/types.ts'
+import type { Playlist } from '@/types.ts'
+
+export type AppScreen = 'login' | 'menu' | 'playlists' | 'game'
 
 // Reine Navigationsregeln; Zustand und Epochen-Logik liegen in useNavigation.
 

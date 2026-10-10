@@ -6,11 +6,12 @@ import {
   selectableGameId,
   toggleAllPlaylistIds,
   togglePlaylistId,
+  type AppScreen,
 } from '@/app/navigation.ts'
 import { DEFAULT_GAME_ID, findGame } from '@/games/registry.ts'
 import { fetchUserPlaylists } from '@/platform/spotify/spotifyApi.ts'
 import { formatSpotifyUserError } from '@/platform/spotify/spotifyAuth.ts'
-import type { AppScreen, Playlist } from '@/types.ts'
+import type { Playlist } from '@/types.ts'
 
 // Navigationszustand der Shell: Bildschirm, gewähltes Spiel, Fehleranzeige und Playlist-Auswahl.
 // Die Epoche verwirft Antworten, die nach einem Zurück/Verlassen eintreffen.
