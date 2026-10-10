@@ -1,4 +1,4 @@
-import { createShuffledDeck, type Card } from './cards.ts'
+import { createShoe, type Card } from './cards.ts'
 import { MAX_RULE_LENGTH } from './rules.ts'
 
 export type TangeraPhase = 'turn' | 'bitch' | 'event' | 'finished'
@@ -34,10 +34,16 @@ export type TangeraAction =
   /** Effekte anwenden, ohne den Ablauf weiterzuschalten (z. B. Strafschluck). */
   | { type: 'apply'; effects: Effects }
 
-export function createGame(players: readonly string[], rng: () => number = Math.random): TangeraState {
+export interface GameOptions {
+  /** Anzahl der Kartenblätter (je 36 Karten). */
+  decks?: number
+  rng?: () => number
+}
+
+export function createGame(players: readonly string[], options: GameOptions = {}): TangeraState {
   return {
     players: [...players],
-    deck: createShuffledDeck(rng),
+    deck: createShoe(options.decks ?? 1, options.rng),
     drawn: [],
     turn: 0,
     phase: 'turn',
@@ -125,6 +131,11 @@ export function ranking(state: TangeraState): RankingEntry[] {
   return state.players
     .map((player) => ({ player, sips: state.sips[player] ?? 0, shots: state.shots[player] ?? 0 }))
     .sort((left, right) => right.sips - left.sips || right.shots - left.shots)
+}
+
+/** Alle Karten des Spiels, gezogene und übrige. */
+export function totalCards(state: TangeraState): number {
+  return state.deck.length + state.drawn.length
 }
 
 export function cardsLeft(state: TangeraState): number {

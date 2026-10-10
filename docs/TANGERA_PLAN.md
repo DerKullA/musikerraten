@@ -9,6 +9,7 @@ Trinkspiel mit einem Skatblatt (36 Karten: 6 bis Ass in vier Farben). Die Karten
 | Spotify | Tangera braucht kein Spotify. Es startet direkt aus dem Login-Bildschirm („Ohne Spotify spielen“) und ist zusätzlich im Hauptmenü. |
 | Spieler | 2 bis 12 Namen vorab. Die App zeigt, wer dran ist, und merkt sich Quizmaster, Bitch, Regeln und Schlücke. |
 | Verlierer („der Letzte verliert“) | Die Gruppe tippt den Verlierer in der Spielerliste an. Die App zählt die Schlücke mit. |
+| Decks und Spielzeit | Im Setup wählt man 1 bis 4 Decks (je 36 Karten, gemeinsam gemischt). Die App zeigt die geschätzte Spielzeit und die Kartenzahl, die sich mit Decks und Spielerzahl ändern. Die Schätzung steht in `logic/duration.ts` (Minuten je Kartenwert, Weitergeben des Geräts inklusive). |
 | Inhalte | Deutsche Inhalte in einer Datei (`logic/content.ts`). Ein Spicy-/18+-Schalter im Setup fügt härtere Fragen, Aufgaben und Kategorien hinzu. |
 
 ## 2. Festlegungen und Annahmen
@@ -24,7 +25,7 @@ Weitere Annahmen:
 
 5. **10er-Karte**: Herz und Karo (rot) verteilt man 10 Schlücke auf die anderen. Pik und Kreuz (schwarz) trinkt man alle 10 selbst.
 6. **Wasserfall**: Wer zu früh absetzt (Glas nicht leer, nicht der Ass-Zieher), trinkt einen Shot. Shots werden getrennt gezählt.
-7. **Spielende** ist, wenn die 36. Karte abgehandelt wurde. Die Auswertung zählt nur, was die App entscheidet (Verlierer, 10er, Wasserfall-Shots).
+7. **Spielende** ist, wenn die letzte Karte des Stapels abgehandelt wurde. Die Auswertung zählt nur, was die App entscheidet (Verlierer, 10er, Wasserfall-Shots).
 
 ## 3. Spielablauf
 
@@ -93,6 +94,6 @@ src/games/tangera/
 
 ## 6. Tests und Abnahme
 
-- **Vitest** (reine Logik): Deck hat 36 Karten, je vier pro Wert, je Farbe neun. Reducer: Ziehen, Rollenwechsel, Bitch-Zug, Spielende, Effekte. Sieben Tod: 7, 14, 17, 27, 70 sind „Piep“. Rad: jeder Index und jeder Versatz landet unter dem Zeiger. Namen: Grenzen und Duplikate. Inhalte: genug Einträge für ein 8er-Rad, keine doppelten Titel.
+- **Vitest** (reine Logik): Deck hat 36 Karten, je vier pro Wert, je Farbe neun, mehrere Decks vervielfachen sie. Spielzeit wächst mit Decks und Spielern. Reducer: Ziehen, Rollenwechsel, Bitch-Zug, Spielende, Effekte. Sieben Tod: 7, 14, 17, 27, 70 sind „Piep“. Rad: jeder Index und jeder Versatz landet unter dem Zeiger. Namen: Grenzen und Duplikate. Inhalte: genug Einträge für ein 8er-Rad, keine doppelten Titel.
 - **Browser** (Dev-Server): Alle neun Ereignisse einmal durchspielen, schmales Handy-Fenster prüfen, Konsole ohne Fehler.
 - **Gate**: `npm test`, `npm run lint`, `npm run build` müssen grün sein.

@@ -5,12 +5,13 @@ import { CardEvent } from '@/games/tangera/components/events/CardEvent.tsx'
 import { EndScreen } from '@/games/tangera/components/EndScreen.tsx'
 import { CardStack, PlayingCard } from '@/games/tangera/components/PlayingCard.tsx'
 import { StatusBar } from '@/games/tangera/components/StatusBar.tsx'
-import { createGame, currentPlayer, ranking, tangeraReducer } from '@/games/tangera/logic/game.ts'
+import { createGame, currentPlayer, ranking, tangeraReducer, totalCards } from '@/games/tangera/logic/game.ts'
 import { roundFrom } from '@/games/tangera/logic/players.ts'
 
 interface TangeraRoundProps {
   players: readonly string[]
   spicy: boolean
+  decks: number
   leaveLabel: string
   onLogout?: () => void
   onLeave: () => void
@@ -18,8 +19,8 @@ interface TangeraRoundProps {
   onSetup: () => void
 }
 
-export function TangeraRound({ players, spicy, leaveLabel, onLogout, onLeave, onAgain, onSetup }: TangeraRoundProps) {
-  const [state, dispatch] = useReducer(tangeraReducer, players, (names) => createGame(names))
+export function TangeraRound({ players, spicy, decks, leaveLabel, onLogout, onLeave, onAgain, onSetup }: TangeraRoundProps) {
+  const [state, dispatch] = useReducer(tangeraReducer, players, (names) => createGame(names, { decks }))
 
   if (state.phase === 'finished') {
     return (
@@ -36,6 +37,7 @@ export function TangeraRound({ players, spicy, leaveLabel, onLogout, onLeave, on
 
   const player = currentPlayer(state)
   const order = roundFrom(state.players, state.turn)
+  const total = totalCards(state)
   const cardNumber = state.drawn.length + (state.phase === 'event' ? 0 : 1)
 
   return (
@@ -43,7 +45,7 @@ export function TangeraRound({ players, spicy, leaveLabel, onLogout, onLeave, on
       <header className="panel-head">
         <div>
           <p className="eyebrow">
-            Tangera · Karte {Math.min(cardNumber, 36)} von 36
+            Tangera · Karte {Math.min(cardNumber, total)} von {total}
           </p>
           <h1>{player}</h1>
         </div>

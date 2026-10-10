@@ -7,6 +7,7 @@ import {
   currentPlayer,
   ranking,
   tangeraReducer,
+  totalCards,
   type TangeraState,
 } from './game.ts'
 
@@ -32,6 +33,18 @@ describe('Spielstart', () => {
     expect(state.sips).toEqual({ Anna: 0, Ben: 0, Cem: 0 })
     expect(state.shots).toEqual({ Anna: 0, Ben: 0, Cem: 0 })
     expect(state.deck.length + state.drawn.length).toBe(createDeck().length)
+  })
+})
+
+describe('Mehrere Decks', () => {
+  it('mischt je Deck 36 Karten dazu, jede Karte kommt entsprechend oft vor', () => {
+    const state = createGame(PLAYERS, { decks: 3 })
+    expect(totalCards(state)).toBe(108)
+    expect(state.deck.filter((entry) => entry.rank === 'A' && entry.suit === 'herz')).toHaveLength(3)
+  })
+
+  it('nimmt bei ungültiger Zahl mindestens ein Deck', () => {
+    expect(totalCards(createGame(PLAYERS, { decks: 0 }))).toBe(36)
   })
 })
 

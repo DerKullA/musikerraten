@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { RANKS, SUITS, cardLabel, createDeck, createShuffledDeck, isRedSuit, shuffle } from './cards.ts'
+import { RANKS, SUITS, cardLabel, createDeck, createShoe, createShuffledDeck, isRedSuit, shuffle } from './cards.ts'
 
 describe('Skatblatt', () => {
   it('hat 36 Karten, vier je Wert und neun je Farbe', () => {
@@ -48,5 +48,16 @@ describe('Mischen', () => {
     }
     const first = createShuffledDeck(rng)
     expect(first).not.toEqual(createDeck())
+  })
+})
+
+describe('Mehrere Blätter', () => {
+  it('liefert je Blatt 36 Karten', () => {
+    expect(createShoe(1)).toHaveLength(36)
+    expect(createShoe(4)).toHaveLength(144)
+  })
+
+  it('nimmt mindestens ein Blatt', () => {
+    expect(createShoe(0)).toHaveLength(36)
   })
 })

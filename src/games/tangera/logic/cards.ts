@@ -6,6 +6,8 @@ export interface Card {
   suit: Suit
 }
 
+export const CARDS_PER_DECK = 36
+
 export const RANKS: readonly Rank[] = ['6', '7', '8', '9', '10', 'B', 'D', 'K', 'A']
 export const SUITS: readonly Suit[] = ['herz', 'karo', 'pik', 'kreuz']
 
@@ -81,4 +83,13 @@ export function shuffle<T>(items: readonly T[], rng: () => number = Math.random)
 
 export function createShuffledDeck(rng: () => number = Math.random): Card[] {
   return shuffle(createDeck(), rng)
+}
+
+/** Mehrere Blätter, gemeinsam gemischt. Jede Karte kommt dann `decks`-mal vor. */
+export function createShoe(decks: number, rng: () => number = Math.random): Card[] {
+  const cards: Card[] = []
+  for (let count = 0; count < Math.max(1, decks); count += 1) {
+    cards.push(...createDeck())
+  }
+  return shuffle(cards, rng)
 }

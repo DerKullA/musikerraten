@@ -18,6 +18,7 @@ export function TangeraScreen({ signedIn, onLogout, onLeave }: GameScreenProps) 
         key={run}
         players={lobby.players}
         spicy={lobby.spicy}
+        decks={lobby.decks}
         leaveLabel={leaveLabel}
         onLogout={logout}
         onLeave={onLeave}
@@ -31,6 +32,7 @@ export function TangeraScreen({ signedIn, onLogout, onLeave }: GameScreenProps) 
     <TangeraSetup
       players={lobby.players}
       spicy={lobby.spicy}
+      decks={lobby.decks}
       nameDraft={lobby.nameDraft}
       nameError={lobby.nameError}
       leaveLabel={leaveLabel}
@@ -40,6 +42,7 @@ export function TangeraScreen({ signedIn, onLogout, onLeave }: GameScreenProps) 
       onAddName={lobby.addName}
       onRemoveName={lobby.removeName}
       onSpicy={lobby.changeSpicy}
+      onDecks={lobby.changeDecks}
       onStart={() => {
         if (canStart(lobby.players)) {
           setRun(0)
