@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { rememberPlayedTrack, type BackdropPosition, type BackdropTrack } from '@/games/shotless/logic/bonusBackdrop.ts'
+import { rememberPlayedTrack, type BackdropTrack } from '@/games/shotless/logic/bonusBackdrop.ts'
 import { POST_REVEAL_PLAY_MS } from '@/ui/phaseTimings.ts'
 import { suggestGuesses } from '@/games/shotless/logic/guessSuggestions.ts'
 import { createShotlessRound } from '@/games/shotless/logic/reducer.ts'
@@ -8,6 +8,7 @@ import type { Track } from '@/types.ts'
 import { useLoserBonus } from './useLoserBonus.ts'
 import { useShotlessClipPlayback } from './useShotlessClipPlayback.ts'
 import { useGameDebugWatch } from '@/platform/diagnostics/useGameDebug.ts'
+import type { PlaybackApi } from '@/platform/playback/usePlaybackEngine.ts'
 import { shotlessRoundCommands, type WrongPopup } from '@/games/shotless/logic/roundCommands.ts'
 
 const NO_GUESSES: readonly GuessSuggestion[] = []
@@ -18,19 +19,11 @@ interface ShotlessRoundInput {
   mode: ShotlessMode | null
   guessTarget: ShotlessGuessTarget
   openingOrigin: ShotlessRound['origin']
-  onPlayClip: (uri: string, positionMs: number) => Promise<void>
-  onResumeClip: () => Promise<void>
-  onPauseClip: () => Promise<void>
-  onPrimeClip?: (uri: string, positionMs: number) => Promise<void>
-  onInvalidateClip?: () => void
-  onReadPosition?: () => Promise<BackdropPosition | null>
-  onReadPaused?: () => Promise<boolean | null>
-  onReleaseSilence?: () => Promise<void>
-  onPlayback: (state: 'playing' | 'paused') => void
+  playback: PlaybackApi
 }
 
 export function useShotlessRound(input: ShotlessRoundInput) {
-  const { tracks, started, mode, guessTarget, openingOrigin } = input
+  const { tracks, started, mode, guessTarget, openingOrigin, playback } = input
   const [round, setRound] = useState<ShotlessRound>(() => createShotlessRound())
   const [query, setQuery] = useState('')
   const [artistQuery, setArtistQuery] = useState('')
@@ -42,11 +35,6 @@ export function useShotlessRound(input: ShotlessRoundInput) {
   const [wrongPopup, setWrongPopup] = useState<WrongPopup | null>(null)
   const { bonusWinner, noteLoserBonusOutcome, dismissLoserBonus, revokeLoserBonusOutcome } = useLoserBonus()
 
-  const onPrimeClipRef = useRef(input.onPrimeClip)
-  const onPauseClipRef = useRef(input.onPauseClip)
-  const onReadPausedRef = useRef(input.onReadPaused)
-  const onReleaseSilenceRef = useRef(input.onReleaseSilence)
-  const onPlaybackRef = useRef(input.onPlayback)
   const releasePlaybackRef = useRef<() => Promise<void>>(async () => undefined)
   const suppressPauseRef = useRef(false)
   const handoffRef = useRef(false)
@@ -86,10 +74,7 @@ export function useShotlessRound(input: ShotlessRoundInput) {
       handoffRef,
       suppressPauseRef,
       releasePlaybackRef,
-      onPauseClipRef,
-      onReadPausedRef,
-      onReleaseSilenceRef,
-      onPlaybackRef,
+      playback,
       noteOutcomeRef,
       dismissBonusRef,
       revokeOutcomeRef,
@@ -102,11 +87,6 @@ export function useShotlessRound(input: ShotlessRoundInput) {
       setRevealHoldMs,
       setBonusClosing,
     })
-    onPrimeClipRef.current = input.onPrimeClip
-    onPauseClipRef.current = input.onPauseClip
-    onReadPausedRef.current = input.onReadPaused
-    onReleaseSilenceRef.current = input.onReleaseSilence
-    onPlaybackRef.current = input.onPlayback
   })
 
   function readyCommands(): ReturnType<typeof shotlessRoundCommands> {
@@ -150,8 +130,8 @@ export function useShotlessRound(input: ShotlessRoundInput) {
     if (started || !openingTrack) {
       return
     }
-    void onPrimeClipRef.current?.(openingTrack.uri, clipStartMs(openingTrack.durationMs, openingOrigin))
-  }, [started, openingTrack, openingOrigin])
+    void playback.primeClip(openingTrack.uri, clipStartMs(openingTrack.durationMs, openingOrigin))
+  }, [started, openingTrack, openingOrigin, playback])
 
   useShotlessClipPlayback({
     active: clipActive || revealHold,
@@ -163,12 +143,7 @@ export function useShotlessRound(input: ShotlessRoundInput) {
     releaseRef: releasePlaybackRef,
     suppressPauseRef,
     handlers: {
-      onPlayClip: input.onPlayClip,
-      onResumeClip: input.onResumeClip,
-      onPauseClip: input.onPauseClip,
-      onPrimeClip: input.onPrimeClip,
-      onInvalidateClip: input.onInvalidateClip,
-      onReadPosition: input.onReadPosition,
+      playback,
       onNextBackdropTrack: (finishedUri) => readyCommands().nextBackdropTrack(finishedUri),
       onPlayback: (state) => {
         readyCommands().reportClipPlayback(state)
@@ -213,8 +188,8 @@ export function useShotlessRound(input: ShotlessRoundInput) {
     }
     clipPlayingRef.current = false
     setClipPlaying(false)
-    onPlaybackRef.current('paused')
-  }, [started, clipActive, revealHold])
+    playback.syncMedia('paused')
+  }, [started, clipActive, revealHold, playback])
 
   const suggestionField = guessTarget === 'both' || guessTarget === 'title' ? 'title' : guessTarget
   const suggestions = useMemo(

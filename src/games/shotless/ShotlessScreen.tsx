@@ -4,7 +4,7 @@ import { ShotlessRoundView } from '@/games/shotless/components/ShotlessRoundView
 import { ShotlessSetup } from '@/games/shotless/components/ShotlessSetup.tsx'
 import { useShotlessLobby } from '@/games/shotless/hooks/useShotlessLobby.ts'
 import { useShotlessRound } from '@/games/shotless/hooks/useShotlessRound.ts'
-import type { BackdropPosition } from '@/games/shotless/logic/bonusBackdrop.ts'
+import type { PlaybackApi } from '@/platform/playback/usePlaybackEngine.ts'
 import type { Track } from '@/types.ts'
 
 interface ShotlessScreenProps {
@@ -13,15 +13,7 @@ interface ShotlessScreenProps {
   onLogout: () => void
   onLeave: () => void
   onBackToPlaylists: () => void
-  onPlayClip: (uri: string, positionMs: number) => Promise<void>
-  onResumeClip: () => Promise<void>
-  onPauseClip: () => Promise<void>
-  onPrimeClip?: (uri: string, positionMs: number) => Promise<void>
-  onInvalidateClip?: () => void
-  onReadPosition?: () => Promise<BackdropPosition | null>
-  onReadPaused?: () => Promise<boolean | null>
-  onReleaseSilence?: () => Promise<void>
-  onPlayback: (state: 'playing' | 'paused') => void
+  playback: PlaybackApi
   onLiveChange?: (live: boolean) => void
 }
 
@@ -31,15 +23,7 @@ export function ShotlessScreen({
   onLogout,
   onLeave,
   onBackToPlaylists,
-  onPlayClip,
-  onResumeClip,
-  onPauseClip,
-  onPrimeClip,
-  onInvalidateClip,
-  onReadPosition,
-  onReadPaused,
-  onReleaseSilence,
-  onPlayback,
+  playback,
   onLiveChange,
 }: ShotlessScreenProps) {
   const lobby = useShotlessLobby(onLiveChange)
@@ -49,15 +33,7 @@ export function ShotlessScreen({
     mode: lobby.mode,
     guessTarget: lobby.guessTarget,
     openingOrigin: lobby.openingOrigin,
-    onPlayClip,
-    onResumeClip,
-    onPauseClip,
-    onPrimeClip,
-    onInvalidateClip,
-    onReadPosition,
-    onReadPaused,
-    onReleaseSilence,
-    onPlayback,
+    playback,
   })
 
   if (!lobby.started || !lobby.mode || !round.track) {

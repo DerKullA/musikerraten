@@ -18,31 +18,11 @@ import {
   writeSessionPhaseTimings,
   type PhaseTimings,
 } from '@/ui/phaseTimings.ts'
-import { isConfirmedPaused, pauseConnectedPlayback, readSpotifyPaused } from '@/platform/playback/connectedPlayback.ts'
-import {
-  AUDIBLE_VOLUME,
-  createClipWarmup,
-  readQueuedTrackUri,
-  readWarmPlayback,
-  type ClipCue,
-  type ClipWarmup,
-  type WarmPlaybackState,
-} from '@/platform/playback/clipWarmup/index.ts'
-import { createSilenceWatch, type SilenceWatch } from '@/platform/playback/silenceWatch.ts'
-import { reportClientError, reportClientWarning } from '@/platform/diagnostics/clientLog.ts'
+import { usePlaybackEngine } from '@/platform/playback/usePlaybackEngine.ts'
+import { reportClientWarning } from '@/platform/diagnostics/clientLog.ts'
 import { formatGameDebugLog, traceGame } from '@/platform/diagnostics/gameDebug.ts'
-import { traceSongLoad } from '@/platform/diagnostics/gameDebugSong.ts'
 import { useGameDebugWatch } from '@/platform/diagnostics/useGameDebug.ts'
-import type { PlaybackClaimResult } from '@/platform/playback/playbackDevice.ts'
-import {
-  ensurePlaybackOnDevice,
-  fetchTracksForPlaylists,
-  fetchUserPlaylists,
-  pausePlayback,
-  queuePlayback,
-  resumePlayback,
-  startPlayback,
-} from '@/platform/spotify/spotifyApi.ts'
+import { fetchTracksForPlaylists, fetchUserPlaylists } from '@/platform/spotify/spotifyApi.ts'
 import {
   clearAuthCallbackFromUrl,
   clearTokens,
@@ -54,16 +34,6 @@ import {
   readStoredTokens,
   startSpotifyLogin,
 } from '@/platform/spotify/spotifyAuth.ts'
-import {
-  holdQuizMediaSession,
-  isQuizMediaSessionActive,
-  quizMediaToken,
-  startQuizMediaSession,
-  stopQuizMediaSession,
-  stopQuizMediaSessionIfCurrent,
-  syncQuizMediaPlayback,
-} from '@/platform/playback/quizMediaSession.ts'
-import { connectSpotifyPlayer } from '@/platform/spotify/spotifyPlayer.ts'
 import { stopSpeakerKeepAlive, watchSpeakerKeepAliveGestures } from '@/platform/playback/speakerKeepAlive.ts'
 import type { AppScreen, GamePhase, Playlist, Track } from '@/types.ts'
 
@@ -90,8 +60,6 @@ export default function App() {
 
   const bootstrapped = useRef(false)
   const screenRef = useRef<AppScreen>('login')
-  const playerRef = useRef<SpotifyPlayer | null>(null)
-  const deviceIdRef = useRef<string | null>(null)
   const phaseEntryRef = useRef(0)
   const timerRef = useRef<number | null>(null)
   const runningRef = useRef(false)
@@ -104,15 +72,14 @@ export default function App() {
   const savedTimingsRef = useRef(savedTimings)
   const roundTimingsRef = useRef(roundTimings)
   const navigationEpochRef = useRef(0)
-  const silenceRef = useRef<SilenceWatch | null>(null)
-  const warmupRef = useRef<ClipWarmup | null>(null)
-  const loadedUriRef = useRef<{
-    requested: string
-    before: string | null
-    actual: string | null
-    settled: boolean
-  } | null>(null)
   screenRef.current = screen
+  const playback = usePlaybackEngine({
+    screen: () => screenRef.current,
+    gamePhase: () => phaseRef.current,
+    tracks: () => tracksRef.current,
+    currentIndex: () => indexRef.current,
+    roundPaused: () => pausedRef.current,
+  })
 
   useEffect(() => {
     if (bootstrapped.current) {
@@ -123,13 +90,11 @@ export default function App() {
     void bootstrapAuth()
     return () => {
       clearGameTimer()
-      stopQuizMediaSession()
-      void silenceRef.current?.release()
-      playerRef.current?.disconnect()
+      playback.dispose()
       unbindKeepAlive()
       stopSpeakerKeepAlive()
     }
-  }, [])
+  }, [playback])
 
   async function bootstrapAuth(): Promise<void> {
     const callback = readAuthCallback()
@@ -225,9 +190,7 @@ export default function App() {
     setShotlessLive(false)
     resetPhaseTimings()
     stopRound()
-    playerRef.current?.disconnect()
-    playerRef.current = null
-    deviceIdRef.current = null
+    playback.disconnect()
     clearTokens()
     tracksRef.current = []
     indexRef.current = 0
@@ -268,7 +231,7 @@ export default function App() {
         throw new Error('Keine abspielbaren Titel gefunden.')
       }
       traceGame('runde', { aktion: 'geladen', anzahl: loaded.length, modus: menuGameId })
-      await ensurePlayer()
+      await playback.connect()
       if (epoch !== navigationEpochRef.current) {
         traceGame('runde', { aktion: 'laden-verworfen', schritt: 'player' })
         return
@@ -291,16 +254,7 @@ export default function App() {
       setScreen('game')
       const opening = shuffled[0]
       if (opening) {
-        noteSongLoad(opening.uri, 0, 'prime')
-        void clipWarmup()
-          .prime({ uri: opening.uri, positionMs: 0 })
-          .catch((cause: unknown) => {
-            traceGame('runde', {
-              aktion: 'prime-fehler',
-              uri: opening.uri,
-              fehler: cause instanceof Error && cause.message ? cause.message : 'Prime fehlgeschlagen',
-            })
-          })
+        void playback.primeOpening(opening.uri)
       }
     } catch (cause) {
       if (epoch !== navigationEpochRef.current) {
@@ -317,270 +271,8 @@ export default function App() {
     }
   }
 
-  async function ensurePlayer(): Promise<void> {
-    if (playerRef.current && deviceIdRef.current) {
-      await playerRef.current.activateElement()
-      return
-    }
-    const { player, deviceId } = await connectSpotifyPlayer('Musikerraten')
-    playerRef.current = player
-    deviceIdRef.current = deviceId
-    await player.activateElement()
-  }
-
-  function silence(): SilenceWatch {
-    silenceRef.current ??= createSilenceWatch({
-      pause: () => pauseConnectedPlayback(deviceIdRef.current, playerRef.current, pausePlayback),
-      probe: () => readSpotifyPaused(playerRef.current),
-    })
-    return silenceRef.current
-  }
-
-  function trackAfter(uri: string): string | null {
-    const queued = tracksRef.current
-    const current = queued.findIndex((track) => track.uri === uri)
-    if (current < 0 || queued.length < 2) {
-      return null
-    }
-    const next = queued[(current + 1) % queued.length]
-    if (!next || next.uri === uri) {
-      return null
-    }
-    return next.uri
-  }
-
-  function clipWarmup(): ClipWarmup {
-    warmupRef.current ??= createClipWarmup({
-      getState: async () => {
-        const player = playerRef.current
-        if (!player) {
-          return null
-        }
-        try {
-          return adoptLoadedUri(readWarmPlayback(await player.getCurrentState()))
-        } catch {
-          return null
-        }
-      },
-      getVolume: async () => {
-        const player = playerRef.current
-        if (!player) {
-          return null
-        }
-        try {
-          return await player.getVolume()
-        } catch {
-          return null
-        }
-      },
-      setVolume: async (volume) => {
-        await playerRef.current?.setVolume(volume)
-      },
-      seek: async (positionMs) => {
-        const player = playerRef.current
-        if (!player) {
-          throw new Error('Spotify-Player nicht bereit.')
-        }
-        await player.seek(positionMs)
-      },
-      resume: async () => {
-        const player = playerRef.current
-        if (!player) {
-          throw new Error('Spotify-Player nicht bereit.')
-        }
-        await player.resume()
-      },
-      pause: () => pauseConnectedPlayback(deviceIdRef.current, playerRef.current, pausePlayback),
-      load: async (next) => {
-        const deviceId = deviceIdRef.current
-        if (!deviceId) {
-          throw new Error('Spotify-Player nicht bereit.')
-        }
-        const following = next.positionMs === 0 ? (trackAfter(next.uri) ?? undefined) : undefined
-        const before = readWarmPlayback(await playerRef.current?.getCurrentState().catch(() => null) ?? null)
-        loadedUriRef.current = { requested: next.uri, before: before?.uri ?? null, actual: null, settled: false }
-        await startPlayback(deviceId, next.uri, next.positionMs, following)
-      },
-      handoff: async (next) => {
-        if (next.positionMs !== 0) {
-          return false
-        }
-        const player = playerRef.current
-        if (!player) {
-          return false
-        }
-        const state = await player.getCurrentState().catch(() => null)
-        if (readQueuedTrackUri(state) !== next.uri) {
-          return false
-        }
-        loadedUriRef.current = null
-        await player.nextTrack()
-        return true
-      },
-      claimDevice: (cue) => claimPlaybackDevice(cue),
-      queueFollowing: async (next) => {
-        const deviceId = deviceIdRef.current
-        const player = playerRef.current
-        const following = trackAfter(next.uri)
-        if (!deviceId || !player || !following) {
-          return
-        }
-        const state = await player.getCurrentState().catch(() => null)
-        if (readQueuedTrackUri(state) === following) {
-          return
-        }
-        await queuePlayback(deviceId, following)
-      },
-      activate: async () => {
-        await playerRef.current?.activateElement()
-      },
-      suspendSilence: () => silence().suspend(),
-      // Nach dem Verlassen ist der Wächter versiegelt; ein neues Vorladen braucht ihn wieder.
-      restoreSilence: async () => {
-        await silence().release()
-        await silence().arm()
-      },
-      readPhase: playbackPhase,
-    })
-    return warmupRef.current
-  }
-
-  // Manche Titel spielt Spotify unter einer anderen URI ab, ohne die angefragte
-  // mitzuliefern. Der erste neue Titel nach einem Ladebefehl gilt als der geladene.
-  function adoptLoadedUri(state: WarmPlaybackState | null): WarmPlaybackState | null {
-    const loaded = loadedUriRef.current
-    if (!state?.uri || !loaded) {
-      return state
-    }
-    if (state.uri === loaded.requested) {
-      loaded.settled = true
-      return state
-    }
-    if (!loaded.settled && loaded.actual === null && state.uri !== loaded.before) {
-      loaded.actual = state.uri
-      traceGame('warmup', { aktion: 'andere-uri', soll: loaded.requested, aktuell: state.uri })
-    }
-    return state.uri === loaded.actual ? { ...state, uri: loaded.requested } : state
-  }
-
-  function playbackPhase(): string {
-    return screenRef.current === 'shotless' ? 'shotless' : phaseRef.current
-  }
-
-  async function claimPlaybackDevice(cue?: ClipCue | null): Promise<PlaybackClaimResult> {
-    const deviceId = deviceIdRef.current
-    const player = playerRef.current
-    if (!deviceId || !player) {
-      return 'idle'
-    }
-    await player.activateElement().catch((cause: unknown) => {
-      const message =
-        cause instanceof Error && cause.message
-          ? cause.message
-          : 'Spotify-Player lässt sich nicht aktivieren.'
-      reportClientError(
-        message,
-        {
-          source: 'playback',
-          uri: cue?.uri ?? null,
-          action: 'transfer',
-          phase: playbackPhase(),
-          step: 'activate',
-        },
-        cause,
-      )
-    })
-    return await ensurePlaybackOnDevice(deviceId, {
-      uri: cue?.uri,
-      phase: playbackPhase(),
-      mute: () => player.setVolume(0),
-    })
-  }
-
-  function notePlaybackFailure(cause: unknown, action: 'play' | 'restore', uri: string | null): void {
-    const message = cause instanceof Error && cause.message ? cause.message : 'Wiedergabe fehlgeschlagen.'
-    reportClientError(
-      message,
-      {
-        source: 'playback',
-        uri,
-        action,
-        phase: playbackPhase(),
-      },
-      cause,
-    )
-  }
-
   function currentTrackUri(): string | null {
     return tracksRef.current[indexRef.current]?.uri ?? null
-  }
-
-  function noteSongLoad(uri: string, positionMs: number, art: 'prime' | 'play'): void {
-    const known = tracksRef.current.find((item) => item.uri === uri)
-    traceSongLoad({
-      art,
-      uri,
-      positionMs,
-      titel: known?.title ?? 'unbekannt',
-      interpret: known?.artist ?? '',
-    })
-  }
-
-  async function openAudiblePlayback(start: () => Promise<void>): Promise<void> {
-    await silence().release()
-    holdQuizMediaSession()
-    await start()
-  }
-
-  async function playCurrentTrack(): Promise<void> {
-    const track = tracksRef.current[indexRef.current]
-    const deviceId = deviceIdRef.current
-    if (!track || !deviceId) {
-      return
-    }
-    noteSongLoad(track.uri, 0, 'play')
-    await openAudiblePlayback(() => clipWarmup().play({ uri: track.uri, positionMs: 0 }))
-    if (pausedRef.current) {
-      await pauseCurrentTrack()
-    }
-  }
-
-  async function pauseCurrentTrack(): Promise<void> {
-    if (!deviceIdRef.current && !playerRef.current) {
-      return
-    }
-    holdQuizMediaSession()
-    const paused = await readSpotifyPaused(playerRef.current)
-    if (isConfirmedPaused(paused)) {
-      await silence().arm()
-      return
-    }
-    await silence().hold()
-  }
-
-  async function resumeCurrentTrack(): Promise<void> {
-    const deviceId = deviceIdRef.current
-    if (!deviceId) {
-      return
-    }
-    await openAudiblePlayback(async () => {
-      if (await clipWarmup().resumeDisplaced()) {
-        return
-      }
-      const player = playerRef.current
-      await claimPlaybackDevice()
-      if (player) {
-        void player.activateElement().catch(() => undefined)
-        try {
-          await player.setVolume(AUDIBLE_VOLUME)
-          await player.resume()
-          return
-        } catch {
-          // Web-API, wenn das SDK die Fortsetzung ablehnt.
-        }
-      }
-      await resumePlayback(deviceId)
-    })
   }
 
   function clearGameTimer(): void {
@@ -670,7 +362,7 @@ export default function App() {
     const entry = phaseEntryRef.current
     setRoundReason(grund)
     if (next === 'playing') {
-      warmupRef.current?.invalidate()
+      playback.invalidate()
       const lastIndex = tracksRef.current.length - 1
       const upcoming = indexRef.current >= lastIndex ? 0 : indexRef.current + 1
       indexRef.current = upcoming
@@ -690,7 +382,7 @@ export default function App() {
       await applyPhaseAudio(next)
       playbackStarted = true
     } catch (cause) {
-      notePlaybackFailure(cause, 'play', currentTrackUri())
+      playback.noteFailure(cause, 'play', currentTrackUri())
       setError(formatSpotifyUserError(cause))
     }
     if (playbackStarted && phaseRef.current === next && next === 'playing') {
@@ -709,14 +401,14 @@ export default function App() {
     // Spotify pausiert hier; der Speaker-Wachhalter bleibt aktiv.
     engageQuizMedia(next)
     if (pausedRef.current || next === 'idle' || next === 'thinking') {
-      await pauseCurrentTrack()
+      await playback.pause()
       return
     }
     if (next === 'playing') {
-      await playCurrentTrack()
+      await playback.playCurrent()
       return
     }
-    await resumeCurrentTrack()
+    await playback.resume()
   }
 
   async function handlePlay(): Promise<void> {
@@ -737,10 +429,10 @@ export default function App() {
     engageQuizMedia('playing')
     let playbackStarted = false
     try {
-      await playCurrentTrack()
+      await playback.playCurrent()
       playbackStarted = true
     } catch (cause) {
-      notePlaybackFailure(cause, 'play', currentTrackUri())
+      playback.noteFailure(cause, 'play', currentTrackUri())
       setError(formatSpotifyUserError(cause))
     }
     if (playbackStarted && phaseRef.current === 'playing') {
@@ -771,10 +463,10 @@ export default function App() {
     engageQuizMedia('playing')
     let playbackStarted = false
     try {
-      await playCurrentTrack()
+      await playback.playCurrent()
       playbackStarted = true
     } catch (cause) {
-      notePlaybackFailure(cause, 'play', currentTrackUri())
+      playback.noteFailure(cause, 'play', currentTrackUri())
       setError(formatSpotifyUserError(cause))
     }
     if (playbackStarted && phaseRef.current === 'playing') {
@@ -840,19 +532,7 @@ export default function App() {
     clearGameTimer()
     phaseRef.current = 'idle'
     setPhase('idle')
-    void endQuizPlayback()
-  }
-
-  async function endQuizPlayback(): Promise<void> {
-    const token = quizMediaToken()
-    warmupRef.current?.invalidate()
-    try {
-      await silence().seal()
-      await pauseConnectedPlayback(deviceIdRef.current, playerRef.current, pausePlayback)
-      await playerRef.current?.setVolume(AUDIBLE_VOLUME)?.catch(() => undefined)
-    } finally {
-      stopQuizMediaSessionIfCurrent(token)
-    }
+    void playback.end()
   }
 
   function playbackForPhase(phase: GamePhase): 'playing' | 'paused' {
@@ -863,102 +543,24 @@ export default function App() {
   }
 
   function beginQuizMedia(phase: GamePhase): void {
-    startQuizMediaSession(playbackForPhase(phase))
+    playback.beginMedia(playbackForPhase(phase))
   }
 
   function engageQuizMedia(phase: GamePhase): void {
-    const nextPlayback = playbackForPhase(phase)
-    if (!isQuizMediaSessionActive()) {
-      startQuizMediaSession(nextPlayback)
-      return
-    }
-    syncQuizMediaPlayback(nextPlayback)
-  }
-
-  function readShotlessPaused(): Promise<boolean | null> {
-    return readSpotifyPaused(playerRef.current)
-  }
-
-  async function releaseShotlessSilence(): Promise<void> {
-    await silence().release()
-    await playerRef.current?.setVolume(AUDIBLE_VOLUME)?.catch(() => undefined)
-  }
-
-  function readShotlessPosition(): Promise<{ uri: string | null; positionMs: number } | null> {
-    const player = playerRef.current
-    if (!player) {
-      return Promise.resolve(null)
-    }
-    return player
-      .getCurrentState()
-      .then((state) => {
-        const warm = adoptLoadedUri(readWarmPlayback(state))
-        if (!warm) {
-          return null
-        }
-        return { uri: warm.uri, positionMs: warm.positionMs }
-      })
-      .catch(() => null)
-  }
-
-  function invalidateClipWarmup(): void {
-    warmupRef.current?.invalidate()
-  }
-
-  function primeShotlessClip(uri: string, positionMs: number): Promise<void> {
-    noteSongLoad(uri, positionMs, 'prime')
-    if (!deviceIdRef.current || !playerRef.current) {
-      traceGame('runde', { aktion: 'prime-aus', uri, positionMs })
-      return Promise.resolve()
-    }
-    return clipWarmup()
-      .prime({ uri, positionMs })
-      .catch((cause: unknown) => {
-        traceGame('runde', {
-          aktion: 'prime-fehler',
-          uri,
-          positionMs,
-          fehler: cause instanceof Error && cause.message ? cause.message : 'Prime fehlgeschlagen',
-        })
-      })
-  }
-
-  async function playShotlessClip(uri: string, positionMs: number): Promise<void> {
-    noteSongLoad(uri, positionMs, 'play')
-    try {
-      const deviceId = deviceIdRef.current
-      if (!deviceId) {
-        throw new Error('Spotify-Player nicht bereit.')
-      }
-      await openAudiblePlayback(() => clipWarmup().play({ uri, positionMs }))
-    } catch (cause) {
-      notePlaybackFailure(cause, 'play', uri)
-      throw new Error(formatSpotifyUserError(cause))
-    }
-  }
-
-  function syncShotlessPlayback(state: 'playing' | 'paused'): void {
-    if (screenRef.current !== 'shotless') {
-      return
-    }
-    if (!isQuizMediaSessionActive()) {
-      startQuizMediaSession(state)
-      return
-    }
-    syncQuizMediaPlayback(state)
+    playback.engageMedia(playbackForPhase(phase))
   }
 
   function handleLeaveShotless(): void {
     setRoundReason('verlassen')
     traceGame('runde', { aktion: 'verlassen', modus: 'shotless' })
-    void endQuizPlayback()
+    void playback.end()
     handleBackToMenu()
   }
 
   function handleShotlessToPlaylists(): void {
     setRoundReason('verlassen')
     traceGame('runde', { aktion: 'zur-playlistauswahl', modus: 'shotless' })
-    void endQuizPlayback()
+    void playback.end()
     setShotlessLive(false)
     setError(null)
     setScreen('playlists')
@@ -983,7 +585,7 @@ export default function App() {
     setPaused(true)
     markSnippetReady(false)
     engageQuizMedia(phaseRef.current)
-    void pauseCurrentTrack().finally(enableReplayAfterPause)
+    void playback.pause().finally(enableReplayAfterPause)
   }
 
   function enableReplayAfterPause(): void {
@@ -1009,9 +611,9 @@ export default function App() {
     }
     if (phasePlaysAudio(current)) {
       try {
-        await resumeCurrentTrack()
+        await playback.resume()
       } catch (cause) {
-        notePlaybackFailure(cause, 'restore', currentTrackUri())
+        playback.noteFailure(cause, 'restore', currentTrackUri())
         setError(formatSpotifyUserError(cause))
       }
     }
@@ -1121,15 +723,7 @@ export default function App() {
           onLogout={handleLogout}
           onLeave={handleLeaveShotless}
           onBackToPlaylists={handleShotlessToPlaylists}
-          onPlayClip={playShotlessClip}
-          onResumeClip={resumeCurrentTrack}
-          onPauseClip={pauseCurrentTrack}
-          onPrimeClip={primeShotlessClip}
-          onInvalidateClip={invalidateClipWarmup}
-          onReadPosition={readShotlessPosition}
-          onReadPaused={readShotlessPaused}
-          onReleaseSilence={releaseShotlessSilence}
-          onPlayback={syncShotlessPlayback}
+          playback={playback}
           onLiveChange={setShotlessLive}
         />
       ) : null}

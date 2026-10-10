@@ -1,15 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from 'react'
-import { runBackdropPlayback, type BackdropPosition, type BackdropTrack } from '@/games/shotless/logic/bonusBackdrop.ts'
+import { runBackdropPlayback, type BackdropTrack } from '@/games/shotless/logic/bonusBackdrop.ts'
 import { shouldPrimeParkedClip } from '@/platform/playback/clipWarmup/index.ts'
+import type { PlaybackApi } from '@/platform/playback/usePlaybackEngine.ts'
 import { createCancellableDelay, holdPlaybackThen, runBoundedClip } from '@/platform/playback/clipPlayback.ts'
 
 interface ClipHandlers {
-  onPlayClip: (uri: string, positionMs: number) => Promise<void>
-  onResumeClip: () => Promise<void>
-  onPauseClip: () => Promise<void>
-  onPrimeClip?: (uri: string, positionMs: number) => Promise<void>
-  onInvalidateClip?: () => void
-  onReadPosition?: () => Promise<BackdropPosition | null>
+  playback: PlaybackApi
   onNextBackdropTrack?: (finishedUri: string) => BackdropTrack | null
   onPlayback: (state: 'playing' | 'paused') => void
   onFirstPlayReady?: () => void
@@ -53,7 +49,7 @@ export function useShotlessClipPlayback(input: ShotlessClipInput): void {
   useEffect(() => {
     const nextActive = Boolean(active && uri && durationMs > 0)
     if (uri && clipWasActiveRef.current && clipUriRef.current && clipUriRef.current !== uri) {
-      handlersRef.current.onInvalidateClip?.()
+      handlersRef.current.playback.invalidate()
     }
     if (uri) {
       clipUriRef.current = uri
@@ -91,25 +87,25 @@ export function useShotlessClipPlayback(input: ShotlessClipInput): void {
       tokenRef.current += 1
       delay.cancel()
       await enqueue(async () => {
-        await handlersRef.current.onPauseClip()
+        await handlersRef.current.playback.pause()
       })
     }
 
     publishRelease(releaseActivePlayback)
 
     async function parkClipAtCue(clipUri: string, cueMs: number): Promise<void> {
-      await handlersRef.current.onPauseClip()
+      await handlersRef.current.playback.pause()
       if (playback !== 'clip' || !shouldPrimeParkedClip('clip', token, tokenRef.current)) {
         return
       }
-      await handlersRef.current.onPrimeClip?.(clipUri, cueMs)
+      await handlersRef.current.playback.primeClip(clipUri, cueMs)
     }
 
     const clipHandlers = {
       play: () =>
         playback === 'continue'
-          ? handlersRef.current.onResumeClip()
-          : handlersRef.current.onPlayClip(uri, positionMs),
+          ? handlersRef.current.playback.resume()
+          : handlersRef.current.playback.playClip(uri, positionMs),
       pause: () => parkClipAtCue(uri, positionMs),
       isCancelled: () => tokenRef.current !== token,
       onPlayback: (state: 'playing' | 'paused') => {
@@ -129,9 +125,9 @@ export function useShotlessClipPlayback(input: ShotlessClipInput): void {
         await runBackdropPlayback(
           { uri, durationMs, positionMs, resume: true },
           {
-            play: (nextUri, nextPosition) => handlersRef.current.onPlayClip(nextUri, nextPosition),
-            resume: () => handlersRef.current.onResumeClip(),
-            readPosition: () => handlersRef.current.onReadPosition?.() ?? Promise.resolve(null),
+            play: (nextUri, nextPosition) => handlersRef.current.playback.playClip(nextUri, nextPosition),
+            resume: () => handlersRef.current.playback.resume(),
+            readPosition: () => handlersRef.current.playback.readPosition(),
             nextTrack: (finishedUri) => handlersRef.current.onNextBackdropTrack?.(finishedUri) ?? null,
             isCancelled: () => tokenRef.current !== token,
             onPlayback: (state) => {
@@ -166,7 +162,7 @@ export function useShotlessClipPlayback(input: ShotlessClipInput): void {
         return
       }
       enqueue(async () => {
-        await handlersRef.current.onPauseClip()
+        await handlersRef.current.playback.pause()
       })
     }
   }, [active, uri, positionMs, durationMs, replayNonce, playback])

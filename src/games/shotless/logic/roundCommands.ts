@@ -11,6 +11,7 @@ import {
 } from './rules.ts'
 import { reportClientWarning } from '@/platform/diagnostics/clientLog.ts'
 import { traceGame, type GameDebugDetail } from '@/platform/diagnostics/gameDebug.ts'
+import type { PlaybackApi } from '@/platform/playback/usePlaybackEngine.ts'
 import type { Track } from '@/types.ts'
 
 const WRONG_POPUP_MS = 4_000
@@ -35,10 +36,7 @@ export interface ShotlessCommandContext {
   handoffRef: MutableRefObject<boolean>
   suppressPauseRef: MutableRefObject<boolean>
   releasePlaybackRef: MutableRefObject<() => Promise<void>>
-  onPauseClipRef: MutableRefObject<() => Promise<void>>
-  onReadPausedRef: MutableRefObject<(() => Promise<boolean | null>) | undefined>
-  onReleaseSilenceRef: MutableRefObject<(() => Promise<void>) | undefined>
-  onPlaybackRef: MutableRefObject<(state: 'playing' | 'paused') => void>
+  playback: PlaybackApi
   noteOutcomeRef: MutableRefObject<(winner: string | null) => boolean>
   dismissBonusRef: MutableRefObject<() => void>
   revokeOutcomeRef: MutableRefObject<() => void>
@@ -135,7 +133,7 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
   const commands = {
     reportClipPlayback(state: 'playing' | 'paused'): void {
       markClipPlaying(ctx, state === 'playing')
-      ctx.onPlaybackRef.current(state)
+      ctx.playback.syncMedia(state)
     },
     advanceAfterReveal(): void {
       if (ctx.blockAdvanceRef.current) {
@@ -175,8 +173,8 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
       try {
         await ctx.releasePlaybackRef.current()
         await prepareGuessHandoff({
-          readPaused: () => ctx.onReadPausedRef.current?.() ?? Promise.resolve(null),
-          pause: () => ctx.onPauseClipRef.current(),
+          readPaused: () => ctx.playback.readPaused(),
+          pause: () => ctx.playback.pause(),
           prime: async () => undefined,
           wait: waitForGuessPause,
         })
@@ -187,7 +185,7 @@ export function shotlessRoundCommands(ctx: ShotlessCommandContext) {
       }
       ctx.suppressPauseRef.current = true
       try {
-        await ctx.onReleaseSilenceRef.current?.()
+        await ctx.playback.releaseSilence()
       } catch {
         // Die nächste Clip-Wiedergabe hebt die Stille selbst auf.
       }
