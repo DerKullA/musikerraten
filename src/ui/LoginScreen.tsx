@@ -5,6 +5,8 @@ interface LoginScreenProps {
   busy: boolean
   error: string | null
   onSpotifyLogin: () => void
+  /** Spiele ohne Spotify direkt starten (Tangera). */
+  onPlayWithoutSpotify: () => void
 }
 
 export function LoginScreen({
@@ -12,6 +14,7 @@ export function LoginScreen({
   busy,
   error,
   onSpotifyLogin,
+  onPlayWithoutSpotify,
 }: LoginScreenProps) {
   const redirectUri = getRedirectUri()
 
@@ -44,6 +47,9 @@ export function LoginScreen({
       <div className="actions">
         <button type="button" className="btn primary" onClick={onSpotifyLogin} disabled={busy || !clientIdPresent}>
           {busy ? 'Verbinde …' : 'Mit Spotify anmelden'}
+        </button>
+        <button type="button" className="btn ghost" onClick={onPlayWithoutSpotify} disabled={busy}>
+          Tangera ohne Spotify spielen
         </button>
       </div>
     </section>

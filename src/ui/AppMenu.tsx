@@ -6,7 +6,8 @@ import { SettingsDialog } from './SettingsDialog.tsx'
 interface AppMenuProps {
   timings?: PhaseTimings
   onSaveTimings?: (timings: PhaseTimings) => void
-  onLogout: () => void
+  /** Ohne Anmeldung (Spiele ohne Spotify) entfällt „Abmelden“. */
+  onLogout?: () => void
   onLeaveRound?: () => void
   onForceSkip?: () => void
   onBackToPlaylists?: () => void
@@ -78,7 +79,7 @@ export function AppMenu({
 
   function logout(): void {
     setMenuOpen(false)
-    onLogout()
+    onLogout?.()
   }
 
   function forceSkip(): void {
@@ -165,14 +166,16 @@ export function AppMenu({
             {leaveLabel}
           </button>
         ) : null}
-        <button
-          type="button"
-          role="menuitem"
-          className="menu-item menu-item-danger"
-          onClick={logout}
-        >
-          Abmelden
-        </button>
+        {onLogout ? (
+          <button
+            type="button"
+            role="menuitem"
+            className="menu-item menu-item-danger"
+            onClick={logout}
+          >
+            Abmelden
+          </button>
+        ) : null}
         <p className="menu-version">{readAppVersionLabel()}</p>
       </div>
       {settingsOpen && timings && onSaveTimings ? (

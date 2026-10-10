@@ -67,6 +67,10 @@ VITE_SPOTIFY_CLIENT_ID=
 
 Keine echten Client-IDs und keine `.env`-Dateien ins Repository committen. `VITE_*` landet im Frontend-Bundle.
 
+## Tangera
+
+Trinkspiel mit einem Skatblatt (36 Karten), spielbar ohne Spotify direkt vom Login-Bildschirm. Jede Karte löst ein Ereignis aus (Wahrheit oder Pflicht, Sieben Tod, Quizmaster, Regel, Zehner, Kasper, Bitch, Kategorie, Wasserfall). Regeln, Annahmen und Meilensteine stehen in [docs/TANGERA_PLAN.md](docs/TANGERA_PLAN.md).
+
 ## Skripte
 
 - `npm run dev` – Entwicklung auf `127.0.0.1:43123` (Basis `/`)
@@ -95,6 +99,7 @@ src/
     registry.ts             # Liste aller Spiele (GAMES) und der Vertrag GameScreenProps
     guess-song/             # Song erraten: GuessSongGame, useGuessSongRound, roundTransitions, GuessSongScreen, guess-song.css
     shotless/               # Shotless: ShotlessScreen, components/, hooks/, logic/, shotless.css
+    tangera/                # Tangera (Kartenspiel, ohne Spotify): TangeraScreen, components/, hooks/, logic/, tangera.css
   styles/base.css           # Reset, .app, .panel, .btn und weitere gemeinsame Klassen
   types.ts                  # geteilte Typen: Track, Playlist, TokenSet, GamePhase
 ```
@@ -106,13 +111,14 @@ Die Shell hält nur, was Spiele teilen: Login, Navigation, die geladene Titellis
 1. Ordner `src/games/<spiel>/` anlegen, darin ein Screen als React-Komponente mit den Props `GameScreenProps` aus `src/games/registry.ts`. Zustand, Timer und Regeln gehören in einen eigenen Hook (`use<Spiel>Round`) und möglichst in reine, getestete Funktionen daneben (Vorbild: `guess-song/roundTransitions.ts`).
 2. Stylesheet `src/games/<spiel>/<spiel>.css` anlegen. Klassen mit Spielpräfix benennen; gemeinsame Klassen stehen in `styles/base.css`.
 3. In `src/games/registry.ts` das CSS importieren (neue Spiele hinten anhängen, die Reihenfolge ist Teil der Kaskade) und einen Eintrag in `GAMES` ergänzen:
-   `id`, `kicker`, `label`, `available`, `entry: { kind: 'component', Screen }`, `clipPlayback` (spielt das Spiel Clips an wechselnden Stellen statt Runden-Phasen), `fullBleed` (`'always'` oder `'live'`), `debugScreen` (Name in den Spiellogs) und optional `menuVariant` und `clearSession` (Aufräumen beim Logout). Das Hauptmenü und die Navigation lesen nur diese Liste.
+   `id`, `kicker`, `label`, `available`, `requiresSpotify` (`false` = startet ohne Login und Playlist-Auswahl, auch vom Login-Bildschirm aus; Beispiel Tangera), `entry: { kind: 'component', Screen }`, `clipPlayback` (spielt das Spiel Clips an wechselnden Stellen statt Runden-Phasen), `fullBleed` (`'always'` oder `'live'`), `debugScreen` (Name in den Spiellogs) und optional `menuVariant` und `clearSession` (Aufräumen beim Logout). Das Hauptmenü und die Navigation lesen nur diese Liste.
 4. Mehr ist nicht nötig: `App.tsx` kennt kein einzelnes Spiel.
 
 Was ein Spiel von der Shell bekommt (`GameScreenProps`):
 
 | Prop | Bedeutung |
 | --- | --- |
+| `signedIn` | Spotify-Login vorhanden? Spiele ohne Spotify blenden dann „Abmelden“ aus |
 | `tracks` | geladene und gemischte Titel der gewählten Playlists |
 | `error` | Fehleranzeige der Shell |
 | `playback` | `PlaybackApi` der Wiedergabe-Engine |

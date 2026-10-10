@@ -1,4 +1,4 @@
-import { findPlayableGame, type GameModule } from '@/games/registry.ts'
+import { findGame, findPlayableGame, type GameModule } from '@/games/registry.ts'
 import type { Playlist } from '@/types.ts'
 
 export type AppScreen = 'login' | 'menu' | 'playlists' | 'game'
@@ -8,6 +8,11 @@ export type AppScreen = 'login' | 'menu' | 'playlists' | 'game'
 /** Gewähltes Spiel, falls es existiert und spielbar ist (Platzhalter ergeben null). */
 export function selectableGameId(id: string, games?: readonly GameModule[]): string | null {
   return findPlayableGame(id, games)?.id ?? null
+}
+
+/** Braucht das Spiel Spotify? Unbekannte Spiele gelten als „braucht Spotify“, damit sie nie ohne Login starten. */
+export function requiresSpotify(id: string, games?: readonly GameModule[]): boolean {
+  return findGame(id, games)?.requiresSpotify ?? true
 }
 
 /** Vollbild: Spiele mit fullBleed 'always' immer, 'live'-Spiele nur während der laufenden Runde. */

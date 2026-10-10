@@ -1,0 +1,1207 @@
+/* Tangera. Wird nach base.css und shotless.css geladen. Alle Klassen tragen das Präfix tangera-. */
+.game-entry.is-tangera {
+  background: var(--rose);
+  color: var(--ink);
+}
+
+.tangera {
+  --tangera-red: #d9503f;
+  --tangera-card: #f7f1e3;
+  --tangera-ink: #1b1b1b;
+}
+
+/* Kein Doppeltipp-Zoom und keine Textauswahl auf Schaltflächen, wenn schnell getippt wird. */
+.tangera button,
+.tangera summary {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Setup */
+
+.tangera-roster {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.tangera-name-row {
+  display: flex;
+  gap: 8px;
+}
+
+.tangera-name-row input,
+.tangera-rule-form textarea {
+  min-width: 0;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(16, 22, 14, 0.45);
+  color: var(--paper);
+  padding: 14px 16px;
+  font-size: 1.05rem;
+}
+
+.tangera-name-row input {
+  flex: 1 1 0;
+}
+
+.tangera-name-row .btn {
+  flex: none;
+  min-height: 52px;
+}
+
+.tangera-add-icon {
+  display: none;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.tangera-rule-form textarea {
+  width: 100%;
+  resize: vertical;
+  border-radius: 18px;
+  font-family: inherit;
+}
+
+.tangera-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tangera-chips li {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(243, 234, 216, 0.05);
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.tangera-chips li.is-on {
+  color: var(--ink);
+  background: var(--amber);
+  border-color: transparent;
+}
+
+.tangera-chips li.is-bitch {
+  background: var(--rose);
+}
+
+.tangera-chips.is-players li {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.tangera-chips.is-players button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(243, 234, 216, 0.08);
+  color: var(--paper);
+  min-height: 48px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.tangera-chips.is-players button span {
+  margin-left: 8px;
+  color: var(--muted);
+}
+
+.tangera-switch {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(243, 234, 216, 0.04);
+  cursor: pointer;
+}
+
+.tangera-switch input {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 2px 0 0;
+  accent-color: var(--rose);
+}
+
+.tangera-switch span {
+  display: grid;
+  gap: 2px;
+}
+
+.tangera-switch small {
+  color: var(--paper-dim);
+  line-height: 1.4;
+}
+
+.tangera-card-rules {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tangera-card-rules li {
+  display: grid;
+  gap: 2px;
+}
+
+.tangera-card-rules span {
+  color: var(--paper-dim);
+  line-height: 1.4;
+}
+
+/* Decks und Spielzeit */
+
+.tangera-decks {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.tangera-decks-label {
+  margin: 0;
+  color: var(--paper-dim);
+  font-weight: 700;
+}
+
+.tangera-deck-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.tangera-deck {
+  min-height: 52px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(243, 234, 216, 0.05);
+  color: var(--paper);
+  font-family: var(--display);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.tangera-deck.is-selected {
+  background: var(--rose);
+  border-color: transparent;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.tangera-estimate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: rgba(243, 234, 216, 0.05);
+}
+
+.tangera-estimate strong {
+  font-family: var(--display);
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: var(--lime);
+}
+
+.tangera-estimate span {
+  color: var(--paper-dim);
+  font-size: 0.9rem;
+}
+
+/* Tisch */
+
+.tangera-stage {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.tangera-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.tangera-table > * {
+  flex: none;
+}
+
+/* Wer dran ist, sieht nur den Stapel: mittig im freien Raum, gut mit dem Daumen zu treffen. */
+.tangera-table > .tangera-stage.is-turn {
+  flex: 1 0 auto;
+  align-content: center;
+  padding-bottom: 12px;
+}
+
+.tangera-status {
+  margin-top: 12px;
+}
+
+.tangera-details {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 6px 8px;
+  background: rgba(243, 234, 216, 0.03);
+}
+
+.tangera-details summary {
+  cursor: pointer;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+}
+
+.tangera-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.tangera-details summary .tangera-chips {
+  flex: 1;
+  gap: 6px;
+}
+
+.tangera-details summary .tangera-chips li {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+}
+
+.tangera-status-toggle {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  margin: 0 8px 4px 4px;
+  border-right: 2px solid var(--paper-dim);
+  border-bottom: 2px solid var(--paper-dim);
+  transform: rotate(45deg);
+  transition: transform 0.18s ease-out;
+}
+
+.tangera-details[open] .tangera-status-toggle {
+  margin-bottom: -4px;
+  transform: rotate(-135deg);
+}
+
+.tangera-status-body {
+  padding: 0 6px 8px;
+}
+
+.tangera-details h3 {
+  margin: 14px 0 6px;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lime);
+}
+
+.tangera-rules {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+
+.tangera-prompt {
+  margin: 0;
+  max-width: 34rem;
+  color: var(--paper-dim);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.tangera-big {
+  margin: 0;
+  max-width: 30rem;
+  font-family: var(--display);
+  font-size: clamp(1.6rem, 6vw, 2.3rem);
+  line-height: 1.05;
+  text-align: center;
+}
+
+.tangera-event {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.fit-scroll > .tangera-event {
+  margin-top: 18px;
+}
+
+.tangera-event h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  text-align: center;
+}
+
+.tangera-summary {
+  margin: 0;
+  max-width: 34rem;
+  color: var(--paper-dim);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.tangera-result {
+  display: grid;
+  gap: 6px;
+  width: min(100%, 34rem);
+  margin: 0;
+  padding: 16px 18px;
+  border-radius: 20px;
+  background: var(--amber);
+  color: var(--ink);
+  font-size: 1.15rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.tangera-result strong {
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.tangera-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: grid;
+  gap: 8px;
+  width: min(100%, 26rem);
+  padding: 10px 0 4px;
+  background: linear-gradient(to bottom, transparent, var(--panel-bg) 28%);
+}
+
+.tangera-footer .btn {
+  width: 100%;
+}
+
+/* Karte */
+
+.tangera-card {
+  --card-h: clamp(190px, 34dvh, 300px);
+  height: var(--card-h);
+  aspect-ratio: 5 / 7;
+  perspective: 1000px;
+}
+
+.tangera-card.is-compact {
+  --card-h: clamp(96px, 15dvh, 190px);
+}
+
+.tangera-card.is-stack {
+  --card-h: min(clamp(190px, 42dvh, 380px), 92vw);
+}
+
+.tangera-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+.tangera-card.is-up .tangera-card-inner {
+  transform: rotateY(180deg);
+  animation: tangera-flip 0.42s cubic-bezier(0.3, 0.7, 0.2, 1) backwards;
+}
+
+/* Die Karte kommt verdeckt und gross vom Stapel, dreht sich und landet mit kleinem Nachfedern. */
+@keyframes tangera-flip {
+  0% {
+    transform: translateY(26px) scale(1.5) rotateY(0deg) rotateZ(-5deg);
+  }
+
+  60% {
+    transform: translateY(-6px) scale(1.12) rotateY(180deg) rotateZ(2deg);
+  }
+
+  100% {
+    transform: translateY(0) scale(1) rotateY(180deg) rotateZ(0deg);
+  }
+}
+
+/* Das Ereignis blendet nach, sobald die Karte fast liegt. */
+.tangera-card.is-up + .tangera-event {
+  animation: tangera-event-in 0.28s ease-out 0.2s backwards;
+}
+
+@keyframes tangera-event-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.tangera-card-back,
+.tangera-card-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
+}
+
+.tangera-card-back {
+  display: grid;
+  place-items: center;
+  background:
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.12) 0 8px, transparent 8px 16px),
+    var(--rose);
+  border: 6px solid var(--tangera-card);
+  color: var(--tangera-card);
+  font-family: var(--display);
+  font-size: calc(var(--card-h) * 0.4);
+  line-height: 1;
+}
+
+.tangera-card-face {
+  transform: rotateY(180deg);
+  display: grid;
+  place-items: center;
+  background: var(--tangera-card);
+  color: var(--tangera-ink);
+}
+
+.tangera-card.is-red .tangera-card-face {
+  color: var(--tangera-red);
+}
+
+.tangera-card-corner {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  display: grid;
+  justify-items: center;
+  font-family: var(--display);
+  font-size: calc(var(--card-h) * 0.15);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.tangera-card-corner small {
+  font-size: 0.75em;
+}
+
+.tangera-card-corner.is-bottom {
+  top: auto;
+  left: auto;
+  right: 10px;
+  bottom: 8px;
+}
+
+.tangera-card-pip {
+  font-size: calc(var(--card-h) * 0.42);
+  line-height: 1;
+}
+
+.tangera-stack {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.tangera-stack-button {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.14s ease-out;
+}
+
+.tangera-stack-button .tangera-card,
+.tangera-stack-button .tangera-card-inner,
+.tangera-stack-button .tangera-card-back {
+  display: block;
+}
+
+.tangera-stack-button .tangera-card-back {
+  display: grid;
+}
+
+@media (hover: hover) {
+  .tangera-stack-button:hover {
+    transform: translateY(-4px) rotate(-1.5deg);
+  }
+}
+
+.tangera-stack-button:active {
+  transform: translateY(2px) scale(0.97);
+}
+
+.tangera-stack-button:focus-visible {
+  outline: 3px solid var(--tangera-card);
+  outline-offset: 6px;
+}
+
+.tangera-card.is-stack {
+  box-shadow:
+    5px 5px 0 -1px color-mix(in srgb, var(--rose) 70%, black),
+    10px 10px 0 -2px color-mix(in srgb, var(--rose) 50%, black);
+  border-radius: 14px;
+}
+
+.tangera-stack-count {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* Münze und Rad werden per Tipp auf das Objekt selbst ausgelöst. */
+
+.tangera-tap {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: scale 0.14s ease-out;
+}
+
+.tangera-tap:disabled {
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .tangera-tap:enabled:hover {
+    scale: 1.03;
+  }
+}
+
+.tangera-tap:enabled:active {
+  scale: 0.96;
+}
+
+.tangera-tap:focus-visible {
+  outline: 3px solid var(--tangera-card);
+  outline-offset: 8px;
+}
+
+.tangera-tap-hint {
+  margin: 0;
+  min-height: 1.4em;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* Münze */
+
+.tangera-coin-area {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.tangera-coin {
+  display: block;
+  position: relative;
+  width: 150px;
+  height: 150px;
+  transform-style: preserve-3d;
+  transition: transform 1.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.tangera-coin-side {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 6px double color-mix(in srgb, var(--amber) 60%, var(--ink));
+  background: radial-gradient(circle at 35% 30%, #f6d98d, var(--amber) 60%, #b98630);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
+
+.tangera-coin-side.is-back {
+  transform: rotateY(180deg);
+}
+
+.tangera-coin-result {
+  margin: 0;
+  min-height: 1.6em;
+  font-family: var(--display);
+  font-size: 1.6rem;
+  color: var(--lime);
+}
+
+/* Glücksrad */
+
+.tangera-wheel-area {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.tangera-wheel {
+  position: relative;
+  width: min(100%, 340px, 46dvh);
+  aspect-ratio: 1;
+}
+
+.tangera-wheel-pointer {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border-left: 13px solid transparent;
+  border-right: 13px solid transparent;
+  border-top: 24px solid var(--paper);
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.5));
+}
+
+.tangera-wheel-disc {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: 0 0 0 5px var(--paper), 0 16px 40px rgba(0, 0, 0, 0.45);
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.12, 0.7, 0.12, 1);
+  will-change: transform;
+}
+
+.tangera-wheel-disc svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tangera-seg-fill {
+  stroke: rgba(16, 22, 14, 0.55);
+  stroke-width: 0.8;
+}
+
+.tangera-seg-fill.c0 {
+  fill: #d4e157;
+}
+
+.tangera-seg-fill.c1 {
+  fill: #e4b15a;
+}
+
+.tangera-seg-fill.c2 {
+  fill: #d36b5a;
+}
+
+.tangera-seg-fill.c3 {
+  fill: #8fb98b;
+}
+
+.tangera-seg text {
+  fill: var(--ink);
+  font-weight: 800;
+  pointer-events: none;
+}
+
+.tangera-seg.is-win .tangera-seg-fill {
+  stroke: var(--paper);
+  stroke-width: 2.4;
+}
+
+.tangera-wheel-hub {
+  fill: var(--ink);
+  stroke: var(--paper);
+  stroke-width: 3;
+}
+
+/* Sieben Tod */
+
+.tangera-order {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: seat;
+}
+
+.tangera-order li {
+  counter-increment: seat;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--paper-dim);
+  font-size: 0.9rem;
+}
+
+.tangera-order li::before {
+  content: counter(seat) '. ';
+  color: var(--muted);
+}
+
+.tangera-order li.is-first {
+  background: var(--lime);
+  border-color: transparent;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.tangera-order li.is-first::before {
+  color: var(--ink);
+}
+
+.tangera-referee {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  width: min(100%, 26rem);
+  padding: 10px 14px 8px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: rgba(243, 234, 216, 0.05);
+}
+
+.tangera-referee-who {
+  color: var(--paper-dim);
+  font-size: 0.9rem;
+}
+
+.tangera-referee-input {
+  width: 100%;
+  min-width: 0;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(16, 22, 14, 0.45);
+  color: var(--paper);
+  padding: 10px 12px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.tangera-referee-input::placeholder {
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.tangera-referee-number {
+  margin: 2px 0 0;
+  text-align: center;
+  font-family: var(--display);
+  font-size: clamp(2rem, 10vw, 2.8rem);
+  line-height: 1;
+  color: var(--lime);
+}
+
+.tangera-referee-number.is-piep {
+  color: var(--rose);
+}
+
+/* Kasper */
+
+.tangera-moves {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 26rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tangera-moves li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: rgba(243, 234, 216, 0.06);
+  font-size: 1.15rem;
+  font-weight: 700;
+  animation: tangera-beat 2.7s ease-in-out infinite;
+}
+
+.tangera-moves li span {
+  font-size: 1.8rem;
+}
+
+@keyframes tangera-beat {
+  0%,
+  100% {
+    background: rgba(243, 234, 216, 0.06);
+    transform: none;
+  }
+  12%,
+  30% {
+    background: var(--amber);
+    color: var(--ink);
+    transform: scale(1.03);
+  }
+  45% {
+    background: rgba(243, 234, 216, 0.06);
+    color: inherit;
+    transform: none;
+  }
+}
+
+/* Regel */
+
+.tangera-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(243, 234, 216, 0.06);
+}
+
+.tangera-tabs button {
+  min-height: 44px;
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--paper-dim);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tangera-tabs button.is-selected {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.tangera-tabs button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tangera-rule-form,
+.tangera-rule-list {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 30rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tangera-rule {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(243, 234, 216, 0.05);
+  color: var(--paper);
+  text-align: left;
+  cursor: pointer;
+}
+
+.tangera-rule.is-selected {
+  background: var(--rose);
+  border-color: transparent;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* Spielerwahl, Zähler */
+
+.tangera-players {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tangera-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(243, 234, 216, 0.08);
+  color: var(--paper);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.tangera-player small {
+  min-width: 1.6em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(243, 234, 216, 0.14);
+  color: var(--paper-dim);
+  font-weight: 700;
+  text-align: center;
+}
+
+.tangera-player.is-selected {
+  background: var(--rose);
+  border-color: transparent;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.tangera-share-list {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 26rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tangera-share-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 6px 6px 16px;
+  border-radius: 999px;
+  background: rgba(243, 234, 216, 0.05);
+}
+
+.tangera-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tangera-step {
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tangera-step:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.tangera-step-value {
+  min-width: 2ch;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+/* Wasserfall */
+
+.tangera-fall {
+  display: flex;
+  gap: 10px;
+  height: 90px;
+}
+
+.tangera-fall span {
+  width: 14px;
+  border-radius: 8px;
+  background: linear-gradient(to bottom, transparent, #6fb8e8);
+  animation: tangera-fall 1.1s ease-in infinite;
+}
+
+.tangera-fall span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.tangera-fall span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.tangera-fall span:nth-child(4) {
+  animation-delay: 0.1s;
+}
+
+.tangera-fall span:nth-child(5) {
+  animation-delay: 0.3s;
+}
+
+@keyframes tangera-fall {
+  from {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(30px);
+    opacity: 0.2;
+  }
+}
+
+.tangera-timer {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 2rem;
+  color: var(--lime);
+}
+
+/* Auswertung */
+
+.tangera-ranking {
+  display: grid;
+  gap: 14px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tangera-ranking-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.tangera-ranking-row span {
+  color: var(--paper-dim);
+}
+
+.tangera-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(243, 234, 216, 0.08);
+  overflow: hidden;
+}
+
+.tangera-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--rose);
+}
+
+@media (max-width: 720px) {
+  .tangera .actions .btn {
+    width: 100%;
+  }
+
+  .tangera .lede {
+    margin-top: 12px;
+    font-size: 0.95rem;
+    line-height: 1.45;
+  }
+
+  .tangera-roster,
+  .tangera-decks,
+  .tangera-switch {
+    margin-top: 16px;
+  }
+
+  .tangera-name-row .btn {
+    width: 52px;
+    padding: 0;
+  }
+
+  .tangera-add-icon {
+    display: inline;
+  }
+
+  .tangera-add-text {
+    display: none;
+  }
+
+  .tangera-stage,
+  .fit-scroll > .tangera-event {
+    margin-top: 12px;
+  }
+
+  .tangera-event,
+  .tangera-stage {
+    gap: 10px;
+  }
+
+  .tangera-summary {
+    font-size: 0.92rem;
+    line-height: 1.4;
+  }
+
+  /* Das Pulsieren der Kasper-Zeilen darf die Spielfläche nicht seitlich scrollbar machen. */
+  .tangera-table {
+    overflow-x: hidden;
+  }
+
+  .tangera-moves {
+    gap: 8px;
+  }
+
+  .tangera-moves li {
+    padding: 8px 14px;
+    font-size: 1.05rem;
+  }
+
+  .tangera-moves li span {
+    font-size: 1.5rem;
+  }
+
+  /* Steht das Rad, macht es Platz für das Ergebnis und die Knöpfe darunter. */
+  .tangera-wheel.is-done {
+    width: min(100%, 170px, 24dvh);
+  }
+
+  .tangera-wheel.is-done .tangera-wheel-pointer {
+    scale: 0.6;
+    transform-origin: top center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tangera-coin,
+  .tangera-wheel-disc,
+  .tangera-stack-button,
+  .tangera-tap {
+    transition-duration: 0.01ms !important;
+  }
+
+  .tangera-card.is-up .tangera-card-inner,
+  .tangera-card.is-up + .tangera-event,
+  .tangera-moves li,
+  .tangera-fall span {
+    animation: none;
+  }
+}
