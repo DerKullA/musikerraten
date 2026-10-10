@@ -1,5 +1,5 @@
-import type { PhaseTimings } from '../lib/phaseTimings.ts'
-import { SHOTLESS_ID, listMainMenuGames, type MainMenuGame } from '../lib/mainMenuGames.ts'
+import type { PhaseTimings } from '@/lib/phaseTimings.ts'
+import { SHOTLESS_ID, listMainMenuGames, type MainMenuGame } from '@/lib/mainMenuGames.ts'
 import { AppMenu } from './AppMenu.tsx'
 
 interface MainMenuProps {

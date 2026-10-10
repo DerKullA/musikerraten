@@ -1,4 +1,4 @@
-import type { ClipCue, ClipWarmupDeps, PrimeAbort, WarmRequest } from './clipWarmupPolicy.ts'
+import type { ClipCue, ClipWarmupDeps, PrimeAbort, WarmRequest } from './policy.ts'
 
 export interface WarmRuntime {
   readonly generation: number

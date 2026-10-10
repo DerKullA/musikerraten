@@ -10,7 +10,7 @@ import {
   rememberPlayedTrack,
   waitUntilPlaybackPaused,
   type BackdropTrack,
-} from '@/lib/bonusBackdrop.ts'
+} from './bonusBackdrop.ts'
 
 const A: BackdropTrack = { uri: 'a', durationMs: 100_000 }
 const B: BackdropTrack = { uri: 'b', durationMs: 200_000 }

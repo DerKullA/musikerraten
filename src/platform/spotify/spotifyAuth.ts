@@ -7,7 +7,7 @@ import {
   storePkceSession,
 } from './pkce.ts'
 import { getRedirectUri } from './redirectUri.ts'
-import type { TokenSet } from '../types.ts'
+import type { TokenSet } from '@/types.ts'
 
 const TOKEN_KEY = 'musikerraten_tokens'
 const AUTH_URL = 'https://accounts.spotify.com/authorize'

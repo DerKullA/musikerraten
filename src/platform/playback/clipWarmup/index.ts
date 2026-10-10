@@ -1,5 +1,5 @@
-import { createWarmRun } from './clipWarmupRun.ts'
-import type { WarmRuntime } from './clipWarmupRuntime.ts'
+import { createWarmRun } from './run.ts'
+import type { WarmRuntime } from './runtime.ts'
 import {
   AUDIBLE_VOLUME,
   normalizeCue,
@@ -9,7 +9,7 @@ import {
   type ClipWarmupDeps,
   type PrimeAbort,
   type WarmRequest,
-} from './clipWarmupPolicy.ts'
+} from './policy.ts'
 
 export {
   AUDIBLE_VOLUME,
@@ -47,7 +47,7 @@ export {
   type ClipWarmupDeps,
   type ClipWarmup,
   type ColdBufferWatch,
-} from './clipWarmupPolicy.ts'
+} from './policy.ts'
 
 export function createClipWarmup(deps: ClipWarmupDeps): ClipWarmup {
   const audibleVolume = deps.audibleVolume ?? AUDIBLE_VOLUME

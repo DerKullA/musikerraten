@@ -1,7 +1,7 @@
-import { AUDIBLE_VOLUME } from './clipWarmup.ts'
-import { clientError } from './clientLog.ts'
+import { AUDIBLE_VOLUME } from '@/platform/playback/clipWarmup/index.ts'
+import { clientError } from '@/platform/diagnostics/clientLog.ts'
 import { getValidAccessToken } from './spotifyAuth.ts'
-import { watchQuizPlayback } from './quizMediaSession.ts'
+import { watchQuizPlayback } from '@/platform/playback/quizMediaSession.ts'
 
 const SDK_SRC = 'https://sdk.scdn.co/spotify-player.js'
 const READY_TIMEOUT_MS = 15_000

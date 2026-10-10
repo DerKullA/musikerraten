@@ -1,4 +1,4 @@
-import { getRedirectUri } from '../lib/redirectUri.ts'
+import { getRedirectUri } from '@/platform/spotify/redirectUri.ts'
 
 interface LoginScreenProps {
   clientIdPresent: boolean

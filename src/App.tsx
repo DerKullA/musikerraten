@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { AppFooter } from './components/AppFooter.tsx'
-import { GameScreen } from './components/GameScreen.tsx'
-import { LoginScreen } from './components/LoginScreen.tsx'
-import { MainMenu } from './components/MainMenu.tsx'
-import { PlaylistPicker } from './components/PlaylistPicker.tsx'
-import { ShotlessScreen } from './components/ShotlessScreen.tsx'
-import { nextPhase, phaseDuration, phasePlaysAudio, shuffleTracks } from './lib/gameLoop.ts'
-import { GUESS_SONG_ID, SHOTLESS_ID, isPlayableMenuGame } from './lib/mainMenuGames.ts'
-import { clearShotlessSession } from './lib/shotlessSession.ts'
+import { AppFooter } from '@/components/AppFooter.tsx'
+import { GameScreen } from '@/components/GameScreen.tsx'
+import { LoginScreen } from '@/components/LoginScreen.tsx'
+import { MainMenu } from '@/components/MainMenu.tsx'
+import { PlaylistPicker } from '@/components/PlaylistPicker.tsx'
+import { ShotlessScreen } from '@/components/ShotlessScreen.tsx'
+import { nextPhase, phaseDuration, phasePlaysAudio, shuffleTracks } from '@/lib/gameLoop.ts'
+import { GUESS_SONG_ID, SHOTLESS_ID, isPlayableMenuGame } from '@/lib/mainMenuGames.ts'
+import { clearShotlessSession } from '@/lib/shotlessSession.ts'
 import {
   clearSessionPhaseTimings,
   DEFAULT_PHASE_TIMINGS,
@@ -16,8 +16,8 @@ import {
   timingsAtTrackStart,
   writeSessionPhaseTimings,
   type PhaseTimings,
-} from './lib/phaseTimings.ts'
-import { isConfirmedPaused, pauseConnectedPlayback, readSpotifyPaused } from './lib/connectedPlayback.ts'
+} from '@/lib/phaseTimings.ts'
+import { isConfirmedPaused, pauseConnectedPlayback, readSpotifyPaused } from '@/platform/playback/connectedPlayback.ts'
 import {
   AUDIBLE_VOLUME,
   createClipWarmup,
@@ -26,13 +26,13 @@ import {
   type ClipCue,
   type ClipWarmup,
   type WarmPlaybackState,
-} from './lib/clipWarmup.ts'
-import { createSilenceWatch, type SilenceWatch } from './lib/silenceWatch.ts'
-import { reportClientError, reportClientWarning } from './lib/clientLog.ts'
-import { formatGameDebugLog, traceGame } from './lib/gameDebug.ts'
-import { traceSongLoad } from './lib/gameDebugSong.ts'
-import { useGameDebugWatch } from './components/useGameDebug.ts'
-import type { PlaybackClaimResult } from './lib/playbackDevice.ts'
+} from '@/platform/playback/clipWarmup/index.ts'
+import { createSilenceWatch, type SilenceWatch } from '@/platform/playback/silenceWatch.ts'
+import { reportClientError, reportClientWarning } from '@/platform/diagnostics/clientLog.ts'
+import { formatGameDebugLog, traceGame } from '@/platform/diagnostics/gameDebug.ts'
+import { traceSongLoad } from '@/platform/diagnostics/gameDebugSong.ts'
+import { useGameDebugWatch } from '@/platform/diagnostics/useGameDebug.ts'
+import type { PlaybackClaimResult } from '@/platform/playback/playbackDevice.ts'
 import {
   ensurePlaybackOnDevice,
   fetchTracksForPlaylists,
@@ -41,7 +41,7 @@ import {
   queuePlayback,
   resumePlayback,
   startPlayback,
-} from './lib/spotifyApi.ts'
+} from '@/platform/spotify/spotifyApi.ts'
 import {
   clearAuthCallbackFromUrl,
   clearTokens,
@@ -52,7 +52,7 @@ import {
   readAuthCallback,
   readStoredTokens,
   startSpotifyLogin,
-} from './lib/spotifyAuth.ts'
+} from '@/platform/spotify/spotifyAuth.ts'
 import {
   holdQuizMediaSession,
   isQuizMediaSessionActive,
@@ -61,9 +61,9 @@ import {
   stopQuizMediaSession,
   stopQuizMediaSessionIfCurrent,
   syncQuizMediaPlayback,
-} from './lib/quizMediaSession.ts'
-import { connectSpotifyPlayer } from './lib/spotifyPlayer.ts'
-import { stopSpeakerKeepAlive, watchSpeakerKeepAliveGestures } from './lib/speakerKeepAlive.ts'
+} from '@/platform/playback/quizMediaSession.ts'
+import { connectSpotifyPlayer } from '@/platform/spotify/spotifyPlayer.ts'
+import { stopSpeakerKeepAlive, watchSpeakerKeepAliveGestures } from '@/platform/playback/speakerKeepAlive.ts'
 import type { AppScreen, GamePhase, Playlist, Track } from './types.ts'
 
 export default function App() {

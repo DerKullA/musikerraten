@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import type { PhaseTimings } from '../lib/phaseTimings.ts'
-import type { Playlist } from '../types.ts'
+import type { PhaseTimings } from '@/lib/phaseTimings.ts'
+import type { Playlist } from '@/types.ts'
 import { AppMenu } from './AppMenu.tsx'
 
 interface PlaylistPickerProps {

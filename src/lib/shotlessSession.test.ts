@@ -7,8 +7,8 @@ import {
   readShotlessSession,
   removeShotlessPlayer,
   writeShotlessSession,
-} from '@/lib/shotlessSession.ts'
-import type { KeyValueStore } from '@/lib/phaseTimings.ts'
+} from './shotlessSession.ts'
+import type { KeyValueStore } from './phaseTimings.ts'
 
 const STORAGE_KEY = 'musikerraten_shotless'
 

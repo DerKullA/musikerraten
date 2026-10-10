@@ -1,4 +1,4 @@
-import type { GamePhase } from '../types.ts'
+import type { GamePhase } from '@/types.ts'
 
 const STORAGE_KEY = 'musikerraten_phase_timings'
 

@@ -17,7 +17,7 @@ import {
   wheelPoint,
   wheelStopRotation,
   type WinStreak,
-} from '@/lib/loserBonus.ts'
+} from './loserBonus.ts'
 
 describe('loserBonus: Siegesserie', () => {
   it('löst nach drei Siegen derselben Person in Folge aus und setzt zurück', () => {

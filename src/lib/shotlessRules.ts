@@ -1,4 +1,4 @@
-import type { Track } from '../types.ts'
+import type { Track } from '@/types.ts'
 
 export const SHOTLESS_STAGES = [
   { index: 0, durationMs: 1_000, penalty: 'Shot' },

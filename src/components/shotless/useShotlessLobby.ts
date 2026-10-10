@@ -1,13 +1,13 @@
 import { useState } from 'react'
-import { startSpeakerKeepAlive } from '../../lib/speakerKeepAlive.ts'
+import { startSpeakerKeepAlive } from '@/platform/playback/speakerKeepAlive.ts'
 import {
   addShotlessPlayer,
   canStartShotless,
   readShotlessSession,
   removeShotlessPlayer,
   writeShotlessSession,
-} from '../../lib/shotlessSession.ts'
-import { pickClipOrigin, type ShotlessGuessTarget, type ShotlessMode } from '../../lib/shotlessRules.ts'
+} from '@/lib/shotlessSession.ts'
+import { pickClipOrigin, type ShotlessGuessTarget, type ShotlessMode } from '@/lib/shotlessRules.ts'
 
 export function useShotlessLobby(onLiveChange?: (live: boolean) => void) {
   const stored = readShotlessSession()

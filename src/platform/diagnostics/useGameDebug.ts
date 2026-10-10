@@ -7,7 +7,7 @@ import {
   subscribeGameDebug,
   traceGame,
   type GameDebugValue,
-} from '../lib/gameDebug.ts'
+} from './gameDebug.ts'
 
 /** Liest den Spiellog-Schalter und aktualisiert ihn bei Änderungen. */
 function useGameDebugEnabled(): boolean {

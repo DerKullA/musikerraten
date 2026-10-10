@@ -1,4 +1,4 @@
-import type { GamePhase } from '../types.ts'
+import type { GamePhase } from '@/types.ts'
 
 export interface AlbumImage {
   url?: string

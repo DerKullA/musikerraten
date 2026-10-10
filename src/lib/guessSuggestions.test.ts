@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { suggestGuesses, suggestSongTitles } from '@/lib/guessSuggestions.ts'
+import { suggestGuesses, suggestSongTitles } from './guessSuggestions.ts'
 
 const tracks = [
   { title: 'Under Pressure', artist: 'Queen, David Bowie' },

@@ -1,7 +1,7 @@
 // Ein neuer Song wird stumm vorgeladen, bis der Puffer am Einsatz steht.
 // Hörbar wird danach nur die Lautstärke angehoben und fortgesetzt.
 
-import type { PlaybackClaimResult } from './playbackDevice.ts'
+import type { PlaybackClaimResult } from '@/platform/playback/playbackDevice.ts'
 
 export const AUDIBLE_VOLUME = 0.8
 export const CUE_POSITION_TOLERANCE_MS = 180

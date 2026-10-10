@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { guessFieldLabel, type GuessSuggestion, type ShotlessGuessTarget } from '../../lib/shotlessRules.ts'
+import { guessFieldLabel, type GuessSuggestion, type ShotlessGuessTarget } from '@/lib/shotlessRules.ts'
 
 interface GuessComposerProps {
   target: ShotlessGuessTarget

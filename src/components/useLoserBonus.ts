@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { createWinStreak, recordRoundOutcome, type WinStreak } from '../lib/loserBonus.ts'
+import { createWinStreak, recordRoundOutcome, type WinStreak } from '@/lib/loserBonus.ts'
 
 export function useLoserBonus(): {
   bonusWinner: string | null

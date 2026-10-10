@@ -1,4 +1,4 @@
-import type { Track } from '../types.ts'
+import type { Track } from '@/types.ts'
 
 export const MAX_CONSECUTIVE_SAME_PLAYLIST = 3
 

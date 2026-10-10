@@ -1,4 +1,4 @@
-import type { Playlist, Track } from '../types.ts'
+import type { Playlist, Track } from '@/types.ts'
 import { pickAlbumImageUrl, type AlbumImage } from './albumArt.ts'
 import {
   PLAYBACK_TRANSFER_CONFIRM_MS,
@@ -12,8 +12,8 @@ import {
   transferPlaybackBody,
   type ActivePlaybackDevice,
   type PlaybackClaimResult,
-} from './playbackDevice.ts'
-import { clientError, reportClientError, type ClientLogContext } from './clientLog.ts'
+} from '@/platform/playback/playbackDevice.ts'
+import { clientError, reportClientError, type ClientLogContext } from '@/platform/diagnostics/clientLog.ts'
 import { getValidAccessToken } from './spotifyAuth.ts'
 
 const API = 'https://api.spotify.com/v1'

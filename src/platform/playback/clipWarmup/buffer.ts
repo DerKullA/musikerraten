@@ -1,4 +1,4 @@
-import { clientError } from './clientLog.ts'
+import { clientError } from '@/platform/diagnostics/clientLog.ts'
 import {
   BUFFER_RETRY_LIMIT,
   BUFFER_STABLE_POLLS,
@@ -17,9 +17,9 @@ import {
   playbackIsHeld,
   type ClipCue,
   type WarmPlaybackState,
-} from './clipWarmupPolicy.ts'
-import type { WarmRuntime } from './clipWarmupRuntime.ts'
-import { traceGame } from './gameDebug.ts'
+} from './policy.ts'
+import type { WarmRuntime } from './runtime.ts'
+import { traceGame } from '@/platform/diagnostics/gameDebug.ts'
 
 export function createWarmBuffer(runtime: WarmRuntime) {
   async function waitUntilFirstPlayReady(target: ClipCue, token: number): Promise<void> {

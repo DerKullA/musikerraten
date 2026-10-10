@@ -8,7 +8,7 @@ import {
   playbackTransferStillForeign,
   readActiveDeviceId,
   transferPlaybackBody,
-} from '@/lib/playbackDevice.ts'
+} from './playbackDevice.ts'
 
 describe('playbackDevice', () => {
   it('liest die aktive Geräte-ID getrimmt oder null', () => {

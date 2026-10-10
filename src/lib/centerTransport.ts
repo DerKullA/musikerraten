@@ -1,4 +1,4 @@
-import type { GamePhase } from '../types.ts'
+import type { GamePhase } from '@/types.ts'
 
 export type TransportIconName = 'play' | 'pause'
 export type TransportAction = 'start' | 'pause' | 'resume'

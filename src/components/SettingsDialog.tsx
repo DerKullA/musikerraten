@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type Ref } from 'react'
-import { isGameDebugEnabled, setGameDebugEnabled } from '../lib/gameDebug.ts'
+import { isGameDebugEnabled, setGameDebugEnabled } from '@/platform/diagnostics/gameDebug.ts'
 import {
   MAX_PHASE_SECONDS,
   MIN_PHASE_SECONDS,
@@ -8,7 +8,7 @@ import {
   phaseTimingsFromDraft,
   type PhaseTimingDraft,
   type PhaseTimings,
-} from '../lib/phaseTimings.ts'
+} from '@/lib/phaseTimings.ts'
 
 interface SettingsDialogProps {
   timings: PhaseTimings

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { centerTransportCue } from '@/lib/centerTransport.ts'
+import { centerTransportCue } from './centerTransport.ts'
 
 describe('centerTransportCue', () => {
   it('zeigt Abspielen, solange keine Runde läuft oder die Phase idle ist', () => {

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
-import { ROOT_BASE_PATH } from './src/lib/basePath.ts'
+import { ROOT_BASE_PATH } from './src/platform/spotify/basePath.ts'
 
 function readPackageVersion(): string {
   const parsed: unknown = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))

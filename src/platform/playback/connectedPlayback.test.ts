@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { isConfirmedPaused, pauseConnectedPlayback, readSpotifyPaused } from '@/lib/connectedPlayback.ts'
+import { isConfirmedPaused, pauseConnectedPlayback, readSpotifyPaused } from './connectedPlayback.ts'
 
 describe('connectedPlayback', () => {
   it('gilt nur true als bestätigte Pause', () => {

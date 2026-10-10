@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from 'react'
-import { runBackdropPlayback, type BackdropPosition, type BackdropTrack } from '../lib/bonusBackdrop.ts'
-import { shouldPrimeParkedClip } from '../lib/clipWarmup.ts'
-import { createCancellableDelay, holdPlaybackThen, runBoundedClip } from '../lib/clipPlayback.ts'
+import { runBackdropPlayback, type BackdropPosition, type BackdropTrack } from '@/lib/bonusBackdrop.ts'
+import { shouldPrimeParkedClip } from '@/platform/playback/clipWarmup/index.ts'
+import { createCancellableDelay, holdPlaybackThen, runBoundedClip } from '@/platform/playback/clipPlayback.ts'
 
 interface ClipHandlers {
   onPlayClip: (uri: string, positionMs: number) => Promise<void>

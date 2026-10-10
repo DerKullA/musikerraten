@@ -1,4 +1,4 @@
-import { readAppVersionLabel } from '../lib/appVersion.ts'
+import { readAppVersionLabel } from '@/platform/diagnostics/appVersion.ts'
 
 export function AppFooter() {
   return (

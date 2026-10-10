@@ -1,6 +1,6 @@
-import { AppMenu } from '../AppMenu.tsx'
-import { canStartShotless } from '../../lib/shotlessSession.ts'
-import { SHOTLESS_GUESS_TARGETS, type ShotlessGuessTarget, type ShotlessMode } from '../../lib/shotlessRules.ts'
+import { AppMenu } from '@/components/AppMenu.tsx'
+import { canStartShotless } from '@/lib/shotlessSession.ts'
+import { SHOTLESS_GUESS_TARGETS, type ShotlessGuessTarget, type ShotlessMode } from '@/lib/shotlessRules.ts'
 
 interface ShotlessSetupProps {
   mode: ShotlessMode | null

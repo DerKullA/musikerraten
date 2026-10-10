@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { readAppVersionLabel } from '../lib/appVersion.ts'
-import type { PhaseTimings } from '../lib/phaseTimings.ts'
+import { readAppVersionLabel } from '@/platform/diagnostics/appVersion.ts'
+import type { PhaseTimings } from '@/lib/phaseTimings.ts'
 import { SettingsDialog } from './SettingsDialog.tsx'
 
 interface AppMenuProps {

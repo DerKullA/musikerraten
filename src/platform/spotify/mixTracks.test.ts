@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_CONSECUTIVE_SAME_PLAYLIST, limitConsecutivePlaylistRuns, shuffleTracks } from '@/lib/mixTracks.ts'
+import { MAX_CONSECUTIVE_SAME_PLAYLIST, limitConsecutivePlaylistRuns, shuffleTracks } from './mixTracks.ts'
 import type { Track } from '@/types.ts'
 
 function track(index: number, playlistId?: string, artist = `Artist ${index}`): Track {

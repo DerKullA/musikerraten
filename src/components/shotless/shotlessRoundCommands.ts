@@ -1,6 +1,6 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
-import { prepareGuessHandoff, pickBackdropTrack, type BackdropTrack } from '../../lib/bonusBackdrop.ts'
-import { POST_REVEAL_PLAY_MS } from '../../lib/phaseTimings.ts'
+import { prepareGuessHandoff, pickBackdropTrack, type BackdropTrack } from '@/lib/bonusBackdrop.ts'
+import { POST_REVEAL_PLAY_MS } from '@/lib/phaseTimings.ts'
 import {
   createShotlessRound,
   stageByIndex,
@@ -9,10 +9,10 @@ import {
   type GuessSuggestion,
   type ShotlessGuessTarget,
   type ShotlessRound,
-} from '../../lib/shotlessRules.ts'
-import { reportClientWarning } from '../../lib/clientLog.ts'
-import { traceGame, type GameDebugDetail } from '../../lib/gameDebug.ts'
-import type { Track } from '../../types.ts'
+} from '@/lib/shotlessRules.ts'
+import { reportClientWarning } from '@/platform/diagnostics/clientLog.ts'
+import { traceGame, type GameDebugDetail } from '@/platform/diagnostics/gameDebug.ts'
+import type { Track } from '@/types.ts'
 
 const WRONG_POPUP_MS = 4_000
 

@@ -26,7 +26,7 @@ import {
   shouldPrimeParkedClip,
   type ClipCue,
   type WarmPlaybackState,
-} from '@/lib/clipWarmupPolicy.ts'
+} from './policy.ts'
 
 const CUE: ClipCue = { uri: 'spotify:track:a', positionMs: 10_000 }
 

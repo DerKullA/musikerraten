@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { pickAlbumImageUrl, revealAlbumArtUrl } from '@/lib/albumArt.ts'
+import { pickAlbumImageUrl, revealAlbumArtUrl } from './albumArt.ts'
 
 describe('pickAlbumImageUrl', () => {
   it('liefert undefined ohne verwendbare Bilder', () => {

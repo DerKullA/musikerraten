@@ -14,7 +14,7 @@ import {
   writeSessionPhaseTimings,
   type KeyValueStore,
   type PhaseTimings,
-} from '@/lib/phaseTimings.ts'
+} from './phaseTimings.ts'
 
 const STORAGE_KEY = 'musikerraten_phase_timings'
 

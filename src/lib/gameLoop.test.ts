@@ -9,8 +9,8 @@ import {
   phaseDuration,
   phaseLabel,
   phasePlaysAudio,
-} from '@/lib/gameLoop.ts'
-import type { PhaseTimings } from '@/lib/phaseTimings.ts'
+} from './gameLoop.ts'
+import type { PhaseTimings } from './phaseTimings.ts'
 
 const NO_THINK: PhaseTimings = { playMs: 5_000, thinkMs: 0, revealMs: 4_000 }
 

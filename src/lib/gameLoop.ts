@@ -1,9 +1,9 @@
-import type { GamePhase } from '../types.ts'
+import type { GamePhase } from '@/types.ts'
 import {
   limitConsecutivePlaylistRuns,
   MAX_CONSECUTIVE_SAME_PLAYLIST,
   shuffleTracks,
-} from './mixTracks.ts'
+} from '@/platform/spotify/mixTracks.ts'
 import { DEFAULT_PHASE_TIMINGS, type PhaseTimings } from './phaseTimings.ts'
 
 export { limitConsecutivePlaylistRuns, MAX_CONSECUTIVE_SAME_PLAYLIST, shuffleTracks }

@@ -1,8 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
-import { installClientLogger } from './lib/clientLog.ts'
-import { installGameDebug } from './lib/gameDebug.ts'
+import { installClientLogger } from '@/platform/diagnostics/clientLog.ts'
+import { installGameDebug } from '@/platform/diagnostics/gameDebug.ts'
 import './index.css'
 
 installClientLogger()
