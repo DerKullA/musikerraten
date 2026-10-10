@@ -51,6 +51,17 @@ export function useShotlessRound(input: ShotlessRoundInput) {
   const revokeOutcomeRef = useRef(revokeLoserBonusOutcome)
 
   const commandsRef = useRef<ReturnType<typeof shotlessRoundCommands> | null>(null)
+  // useState-Setter sind stabil; als Objekt gebündelt muss der Effekt unten sie nicht einzeln nennen.
+  const [setters] = useState(() => ({
+    setWrongPopup,
+    setRound,
+    setQuery,
+    setArtistQuery,
+    setPlaybackError,
+    setClipPlaying,
+    setRevealHoldMs,
+    setBonusClosing,
+  }))
 
   useLayoutEffect(() => {
     roundRef.current = round
@@ -78,14 +89,7 @@ export function useShotlessRound(input: ShotlessRoundInput) {
       noteOutcomeRef,
       dismissBonusRef,
       revokeOutcomeRef,
-      setWrongPopup,
-      setRound,
-      setQuery,
-      setArtistQuery,
-      setPlaybackError,
-      setClipPlaying,
-      setRevealHoldMs,
-      setBonusClosing,
+      ...setters,
     })
   })
 
