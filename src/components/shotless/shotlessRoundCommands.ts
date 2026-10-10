@@ -1,6 +1,6 @@
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
 import { prepareGuessHandoff, pickBackdropTrack, type BackdropTrack } from '@/lib/bonusBackdrop.ts'
-import { POST_REVEAL_PLAY_MS } from '@/lib/phaseTimings.ts'
+import { POST_REVEAL_PLAY_MS } from '@/ui/phaseTimings.ts'
 import {
   createShotlessRound,
   stageByIndex,

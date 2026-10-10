@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { revealAlbumArtUrl } from '@/platform/spotify/albumArt.ts'
 import { centerTransportCue, type TransportIconName } from '@/lib/centerTransport.ts'
-import { pulseReveal } from '@/lib/haptics.ts'
+import { pulseReveal } from '@/ui/haptics.ts'
 import { formatTrackDuration, isTitleHidden, phaseDuration, phaseLabel } from '@/lib/gameLoop.ts'
-import type { PhaseTimings } from '@/lib/phaseTimings.ts'
+import type { PhaseTimings } from '@/ui/phaseTimings.ts'
 import type { GamePhase, Track } from '@/types.ts'
-import { AppMenu } from './AppMenu.tsx'
-import { RoundProgress } from './RoundProgress.tsx'
-import { SkipTrackButton } from './SkipTrackButton.tsx'
+import { AppMenu } from '@/ui/AppMenu.tsx'
+import { RoundProgress } from '@/ui/RoundProgress.tsx'
+import { SkipTrackButton } from '@/ui/SkipTrackButton.tsx'
 
 interface GameScreenProps {
   track: Track | null

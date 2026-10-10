@@ -1,4 +1,4 @@
-import type { KeyValueStore } from './phaseTimings.ts'
+import type { KeyValueStore } from '@/ui/phaseTimings.ts'
 import type { ShotlessGuessTarget, ShotlessMode } from './shotlessRules.ts'
 
 const STORAGE_KEY = 'musikerraten_shotless'

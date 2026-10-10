@@ -4,7 +4,7 @@ import {
   MAX_CONSECUTIVE_SAME_PLAYLIST,
   shuffleTracks,
 } from '@/platform/spotify/mixTracks.ts'
-import { DEFAULT_PHASE_TIMINGS, type PhaseTimings } from './phaseTimings.ts'
+import { DEFAULT_PHASE_TIMINGS, type PhaseTimings } from '@/ui/phaseTimings.ts'
 
 export { limitConsecutivePlaylistRuns, MAX_CONSECUTIVE_SAME_PLAYLIST, shuffleTracks }
 

@@ -1,6 +1,6 @@
 import { memo, useEffect } from 'react'
-import { pulseReveal } from '@/lib/haptics.ts'
-import { POST_REVEAL_PLAY_MS } from '@/lib/phaseTimings.ts'
+import { pulseReveal } from '@/ui/haptics.ts'
+import { POST_REVEAL_PLAY_MS } from '@/ui/phaseTimings.ts'
 import {
   SHOTLESS_STAGES,
   formatClipLength,
@@ -16,9 +16,9 @@ import {
   type ShotlessRound,
 } from '@/lib/shotlessRules.ts'
 import type { Track } from '@/types.ts'
-import { AppMenu } from '@/components/AppMenu.tsx'
-import { RoundProgress } from '@/components/RoundProgress.tsx'
-import { SkipTrackButton } from '@/components/SkipTrackButton.tsx'
+import { AppMenu } from '@/ui/AppMenu.tsx'
+import { RoundProgress } from '@/ui/RoundProgress.tsx'
+import { SkipTrackButton } from '@/ui/SkipTrackButton.tsx'
 import { GuessComposer } from './GuessComposer.tsx'
 import { PlayerPick, ShotlessGuessDock, ClipMeter } from './ShotlessStageParts.tsx'
 

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { AppFooter } from '@/components/AppFooter.tsx'
+import { AppFooter } from '@/ui/AppFooter.tsx'
 import { GameScreen } from '@/components/GameScreen.tsx'
-import { LoginScreen } from '@/components/LoginScreen.tsx'
-import { MainMenu } from '@/components/MainMenu.tsx'
-import { PlaylistPicker } from '@/components/PlaylistPicker.tsx'
+import { LoginScreen } from '@/ui/LoginScreen.tsx'
+import { MainMenu } from '@/ui/MainMenu.tsx'
+import { PlaylistPicker } from '@/ui/PlaylistPicker.tsx'
 import { ShotlessScreen } from '@/components/ShotlessScreen.tsx'
 import { nextPhase, phaseDuration, phasePlaysAudio, shuffleTracks } from '@/lib/gameLoop.ts'
 import { GUESS_SONG_ID, SHOTLESS_ID, isPlayableMenuGame } from '@/lib/mainMenuGames.ts'
@@ -16,7 +16,7 @@ import {
   timingsAtTrackStart,
   writeSessionPhaseTimings,
   type PhaseTimings,
-} from '@/lib/phaseTimings.ts'
+} from '@/ui/phaseTimings.ts'
 import { isConfirmedPaused, pauseConnectedPlayback, readSpotifyPaused } from '@/platform/playback/connectedPlayback.ts'
 import {
   AUDIBLE_VOLUME,

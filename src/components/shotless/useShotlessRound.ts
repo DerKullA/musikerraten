@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { rememberPlayedTrack, type BackdropPosition, type BackdropTrack } from '@/lib/bonusBackdrop.ts'
-import { POST_REVEAL_PLAY_MS } from '@/lib/phaseTimings.ts'
+import { POST_REVEAL_PLAY_MS } from '@/ui/phaseTimings.ts'
 import { suggestGuesses } from '@/lib/guessSuggestions.ts'
 import { clipStartMs, createShotlessRound, stageByIndex, type GuessSuggestion, type ShotlessGuessTarget, type ShotlessMode, type ShotlessRound } from '@/lib/shotlessRules.ts'
 import type { Track } from '@/types.ts'

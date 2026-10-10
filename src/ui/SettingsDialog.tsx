@@ -8,7 +8,7 @@ import {
   phaseTimingsFromDraft,
   type PhaseTimingDraft,
   type PhaseTimings,
-} from '@/lib/phaseTimings.ts'
+} from './phaseTimings.ts'
 
 interface SettingsDialogProps {
   timings: PhaseTimings
