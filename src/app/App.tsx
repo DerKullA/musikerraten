@@ -65,7 +65,7 @@ import {
 } from '@/platform/playback/quizMediaSession.ts'
 import { connectSpotifyPlayer } from '@/platform/spotify/spotifyPlayer.ts'
 import { stopSpeakerKeepAlive, watchSpeakerKeepAliveGestures } from '@/platform/playback/speakerKeepAlive.ts'
-import type { AppScreen, GamePhase, Playlist, Track } from './types.ts'
+import type { AppScreen, GamePhase, Playlist, Track } from '@/types.ts'
 
 export default function App() {
   const [screen, setScreen] = useState<AppScreen>('login')
