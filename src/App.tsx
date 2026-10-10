@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { AppFooter } from '@/ui/AppFooter.tsx'
-import { GameScreen } from '@/components/GameScreen.tsx'
+import { GuessSongScreen } from '@/games/guess-song/GuessSongScreen.tsx'
 import { LoginScreen } from '@/ui/LoginScreen.tsx'
 import { MainMenu } from '@/ui/MainMenu.tsx'
 import { PlaylistPicker } from '@/ui/PlaylistPicker.tsx'
 import { ShotlessScreen } from '@/games/shotless/ShotlessScreen.tsx'
-import { nextPhase, phaseDuration, phasePlaysAudio, shuffleTracks } from '@/lib/gameLoop.ts'
-import { GUESS_SONG_ID, SHOTLESS_ID, isPlayableMenuGame } from '@/lib/mainMenuGames.ts'
+import { nextPhase, phaseDuration, phasePlaysAudio } from '@/games/guess-song/roundLoop.ts'
+import { shuffleTracks } from '@/platform/spotify/mixTracks.ts'
+import { GUESS_SONG_ID, SHOTLESS_ID, isPlayableMenuGame } from '@/games/mainMenuGames.ts'
 import { clearShotlessSession } from '@/games/shotless/logic/session.ts'
 import {
   clearSessionPhaseTimings,
@@ -1077,7 +1078,7 @@ export default function App() {
         />
       ) : null}
       {screen === 'game' ? (
-        <GameScreen
+        <GuessSongScreen
           track={currentTrack}
           phase={phase}
           index={index}

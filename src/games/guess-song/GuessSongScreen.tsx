@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { revealAlbumArtUrl } from '@/platform/spotify/albumArt.ts'
-import { centerTransportCue, type TransportIconName } from '@/lib/centerTransport.ts'
+import { centerTransportCue, type TransportIconName } from './centerTransport.ts'
 import { pulseReveal } from '@/ui/haptics.ts'
-import { formatTrackDuration, isTitleHidden, phaseDuration, phaseLabel } from '@/lib/gameLoop.ts'
+import { formatTrackDuration, isTitleHidden, phaseDuration, phaseLabel } from './roundLoop.ts'
 import type { PhaseTimings } from '@/ui/phaseTimings.ts'
 import type { GamePhase, Track } from '@/types.ts'
 import { AppMenu } from '@/ui/AppMenu.tsx'
 import { RoundProgress } from '@/ui/RoundProgress.tsx'
 import { SkipTrackButton } from '@/ui/SkipTrackButton.tsx'
 
-interface GameScreenProps {
+interface GuessSongScreenProps {
   track: Track | null
   phase: GamePhase
   index: number
@@ -33,7 +33,7 @@ interface GameScreenProps {
   onLogout: () => void
 }
 
-export function GameScreen({
+export function GuessSongScreen({
   track,
   phase,
   index,
@@ -55,7 +55,7 @@ export function GameScreen({
   onForceSkip,
   onAbort,
   onLogout,
-}: GameScreenProps) {
+}: GuessSongScreenProps) {
   const [listenGeneration, setListenGeneration] = useState(0)
   const [listenLocked, setListenLocked] = useState(phase === 'playing' && !paused)
   const listenLockedRef = useRef(phase === 'playing' && !paused)
