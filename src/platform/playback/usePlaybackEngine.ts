@@ -28,7 +28,7 @@ import { traceSongLoad } from '@/platform/diagnostics/gameDebugSong.ts'
 import { ensurePlaybackOnDevice, pausePlayback, queuePlayback, resumePlayback, startPlayback } from '@/platform/spotify/spotifyApi.ts'
 import { formatSpotifyUserError } from '@/platform/spotify/spotifyAuth.ts'
 import { connectSpotifyPlayer } from '@/platform/spotify/spotifyPlayer.ts'
-import type { AppScreen, GamePhase, Track } from '@/types.ts'
+import type { GamePhase, Track } from '@/types.ts'
 
 export type MediaPlayback = 'playing' | 'paused'
 
@@ -40,7 +40,8 @@ export interface ClipPosition {
 // Was die Wiedergabe vom Spiel braucht, ohne es zu besitzen. Alle Getter lesen
 // zum Aufrufzeitpunkt den aktuellen Wert (Refs der App), nie einen Render-Stand.
 export interface PlaybackHost {
-  screen: () => AppScreen
+  // Das aktive Spiel spielt Clips (Shotless) statt Runden-Phasen.
+  clipGameActive: () => boolean
   gamePhase: () => GamePhase
   tracks: () => readonly Track[]
   currentIndex: () => number
@@ -81,7 +82,7 @@ export interface PlaybackApi {
   beginMedia: (state: MediaPlayback) => void
   /** Medien-Sitzung starten oder, falls aktiv, auf den Zustand synchronisieren. */
   engageMedia: (state: MediaPlayback) => void
-  /** Wie engageMedia, aber nur auf dem Shotless-Bildschirm. */
+  /** Wie engageMedia, aber nur, solange ein Clip-Spiel (Shotless) aktiv ist. */
   syncMedia: (state: MediaPlayback) => void
 
   noteFailure: (cause: unknown, action: 'play' | 'restore', uri: string | null) => void
@@ -236,7 +237,7 @@ export function createPlaybackEngine(initialHost: PlaybackHost): PlaybackEngine 
   }
 
   function playbackPhase(): string {
-    return host.screen() === 'shotless' ? 'shotless' : host.gamePhase()
+    return host.clipGameActive() ? 'shotless' : host.gamePhase()
   }
 
   async function claimPlaybackDevice(cue?: ClipCue | null): Promise<PlaybackClaimResult> {
@@ -376,7 +377,7 @@ export function createPlaybackEngine(initialHost: PlaybackHost): PlaybackEngine 
   }
 
   function syncMedia(state: MediaPlayback): void {
-    if (host.screen() !== 'shotless') {
+    if (!host.clipGameActive()) {
       return
     }
     engageMedia(state)

@@ -1,15 +1,24 @@
 import type { PhaseTimings } from './phaseTimings.ts'
-import { SHOTLESS_ID, listMainMenuGames, type MainMenuGame } from '@/games/mainMenuGames.ts'
 import { AppMenu } from './AppMenu.tsx'
 
+export interface MainMenuGame {
+  id: string
+  kicker: string
+  label: string
+  available: boolean
+  /** Zusätzliche CSS-Klasse des Menüeintrags. */
+  menuVariant?: string
+}
+
 interface MainMenuProps {
+  games: readonly MainMenuGame[]
   savedTimings: PhaseTimings
   onSaveTimings: (timings: PhaseTimings) => void
   onLogout: () => void
   onSelectGame: (gameId: string) => void
 }
 
-export function MainMenu({ savedTimings, onSaveTimings, onLogout, onSelectGame }: MainMenuProps) {
+export function MainMenu({ games, savedTimings, onSaveTimings, onLogout, onSelectGame }: MainMenuProps) {
   return (
     <section className="panel with-menu fit-screen">
       <header className="panel-head">
@@ -24,7 +33,7 @@ export function MainMenu({ savedTimings, onSaveTimings, onLogout, onSelectGame }
       <div className="fit-scroll">
       <p className="lede">Wähle ein Spiel. Weitere Modi folgen.</p>
       <div className="game-menu">
-        {listMainMenuGames().map((game) => (
+        {games.map((game) => (
           <GameMenuEntry key={game.id} game={game} onSelectGame={onSelectGame} />
         ))}
       </div>
@@ -54,10 +63,7 @@ function GameMenuEntry({ game, onSelectGame }: { game: MainMenuGame; onSelectGam
 }
 
 function gameEntryClass(game: MainMenuGame): string {
-  if (game.id === SHOTLESS_ID) {
-    return 'game-entry is-shotless'
-  }
-  return 'game-entry'
+  return game.menuVariant ? `game-entry ${game.menuVariant}` : 'game-entry'
 }
 
 function GameMenuLabel({ game }: { game: MainMenuGame }) {

@@ -1,6 +1,6 @@
 export type GamePhase = 'idle' | 'playing' | 'thinking' | 'reveal'
 
-export type AppScreen = 'login' | 'menu' | 'playlists' | 'game' | 'shotless'
+export type AppScreen = 'login' | 'menu' | 'playlists' | 'game'
 
 export interface Track {
   uri: string

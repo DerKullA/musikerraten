@@ -1,14 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { AppFooter } from '@/ui/AppFooter.tsx'
 import { GuessSongScreen } from '@/games/guess-song/GuessSongScreen.tsx'
 import { LoginScreen } from '@/ui/LoginScreen.tsx'
 import { MainMenu } from '@/ui/MainMenu.tsx'
 import { PlaylistPicker } from '@/ui/PlaylistPicker.tsx'
-import { ShotlessScreen } from '@/games/shotless/ShotlessScreen.tsx'
+import { useNavigation } from '@/app/useNavigation.ts'
+import { useSpotifySession } from '@/app/useSpotifySession.ts'
 import { nextPhase, phaseDuration, phasePlaysAudio } from '@/games/guess-song/roundLoop.ts'
 import { shuffleTracks } from '@/platform/spotify/mixTracks.ts'
-import { GUESS_SONG_ID, SHOTLESS_ID, isPlayableMenuGame } from '@/games/mainMenuGames.ts'
-import { clearShotlessSession } from '@/games/shotless/logic/session.ts'
+import { GAMES } from '@/games/registry.ts'
 import {
   clearSessionPhaseTimings,
   DEFAULT_PHASE_TIMINGS,
@@ -22,29 +22,18 @@ import { usePlaybackEngine } from '@/platform/playback/usePlaybackEngine.ts'
 import { reportClientWarning } from '@/platform/diagnostics/clientLog.ts'
 import { formatGameDebugLog, traceGame } from '@/platform/diagnostics/gameDebug.ts'
 import { useGameDebugWatch } from '@/platform/diagnostics/useGameDebug.ts'
-import { fetchTracksForPlaylists, fetchUserPlaylists } from '@/platform/spotify/spotifyApi.ts'
-import {
-  clearAuthCallbackFromUrl,
-  clearTokens,
-  exchangeAuthorizationCode,
-  formatSpotifyUserError,
-  getSpotifyClientId,
-  getValidAccessToken,
-  readAuthCallback,
-  readStoredTokens,
-  startSpotifyLogin,
-} from '@/platform/spotify/spotifyAuth.ts'
-import { stopSpeakerKeepAlive, watchSpeakerKeepAliveGestures } from '@/platform/playback/speakerKeepAlive.ts'
-import type { AppScreen, GamePhase, Playlist, Track } from '@/types.ts'
+import { fetchTracksForPlaylists } from '@/platform/spotify/spotifyApi.ts'
+import { formatSpotifyUserError, getSpotifyClientId } from '@/platform/spotify/spotifyAuth.ts'
+import type { GamePhase, Track } from '@/types.ts'
+
+// Nur aus Handlern und Timern aufgerufen, nie im Render; der Wrapper hält die Purity-Lint-Regel ruhig.
+function nowMs(): number {
+  return Date.now()
+}
 
 export default function App() {
-  const [screen, setScreen] = useState<AppScreen>('login')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [playlists, setPlaylists] = useState<Playlist[]>([])
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [loadingPlaylists, setLoadingPlaylists] = useState(false)
-  const [loadingTracks, setLoadingTracks] = useState(false)
+  const navigation = useNavigation()
+  const { error, setError } = navigation
   const [tracks, setTracks] = useState<Track[]>([])
   const [index, setIndex] = useState(0)
   const [phase, setPhase] = useState<GamePhase>('idle')
@@ -54,12 +43,8 @@ export default function App() {
   const [audiblePlay, setAudiblePlay] = useState(false)
   const [savedTimings, setSavedTimings] = useState<PhaseTimings>(() => readSessionPhaseTimings())
   const [roundTimings, setRoundTimings] = useState<PhaseTimings>(() => readSessionPhaseTimings())
-  const [menuGameId, setMenuGameId] = useState(GUESS_SONG_ID)
-  const [shotlessLive, setShotlessLive] = useState(false)
   const [roundReason, setRoundReason] = useState('start')
 
-  const bootstrapped = useRef(false)
-  const screenRef = useRef<AppScreen>('login')
   const phaseEntryRef = useRef(0)
   const timerRef = useRef<number | null>(null)
   const runningRef = useRef(false)
@@ -71,168 +56,47 @@ export default function App() {
   const phaseRef = useRef<GamePhase>('idle')
   const savedTimingsRef = useRef(savedTimings)
   const roundTimingsRef = useRef(roundTimings)
-  const navigationEpochRef = useRef(0)
-  screenRef.current = screen
   const playback = usePlaybackEngine({
-    screen: () => screenRef.current,
+    // Der Host wird je Render nachgezogen, der Wert ist also nie älter als der letzte Render.
+    clipGameActive: () => navigation.clipGame,
     gamePhase: () => phaseRef.current,
     tracks: () => tracksRef.current,
     currentIndex: () => indexRef.current,
     roundPaused: () => pausedRef.current,
   })
 
-  useEffect(() => {
-    if (bootstrapped.current) {
-      return
-    }
-    bootstrapped.current = true
-    const unbindKeepAlive = watchSpeakerKeepAliveGestures()
-    void bootstrapAuth()
-    return () => {
-      clearGameTimer()
-      playback.dispose()
-      unbindKeepAlive()
-      stopSpeakerKeepAlive()
-    }
-  }, [playback])
-
-  async function bootstrapAuth(): Promise<void> {
-    const callback = readAuthCallback()
-    if (callback.error) {
-      clearAuthCallbackFromUrl()
-      setError(callback.error === 'access_denied' ? 'Anmeldung abgebrochen.' : callback.error)
-      return
-    }
-    if (callback.code) {
-      setBusy(true)
-      try {
-        await exchangeAuthorizationCode(callback.code, callback.state)
-        clearAuthCallbackFromUrl()
-        resetPhaseTimings()
-        showMainMenu()
-      } catch (cause) {
-        setError(formatSpotifyUserError(cause))
-      } finally {
-        setBusy(false)
-      }
-      return
-    }
-    if (readStoredTokens()) {
-      try {
-        await getValidAccessToken()
-        showMainMenu()
-      } catch {
-        clearTokens()
-        resetPhaseTimings()
-      }
-    }
-  }
-
-  function showMainMenu(): void {
-    setError(null)
-    setScreen('menu')
-  }
-
-  function handleBackToMenu(): void {
-    navigationEpochRef.current += 1
-    setLoadingPlaylists(false)
-    setLoadingTracks(false)
-    setShotlessLive(false)
-    showMainMenu()
-  }
-
-  function handleSelectGame(gameId: string): void {
-    if (!isPlayableMenuGame(gameId)) {
-      return
-    }
-    setMenuGameId(gameId)
-    setShotlessLive(false)
-    void openPlaylistScreen()
-  }
-
-  async function openPlaylistScreen(): Promise<void> {
-    const epoch = navigationEpochRef.current
-    setScreen('playlists')
-    setError(null)
-    setLoadingPlaylists(true)
-    try {
-      const items = await fetchUserPlaylists()
-      if (epoch !== navigationEpochRef.current) {
-        return
-      }
-      setPlaylists(items)
-    } catch (cause) {
-      if (epoch !== navigationEpochRef.current) {
-        return
-      }
-      setError(formatSpotifyUserError(cause))
-    } finally {
-      if (epoch === navigationEpochRef.current) {
-        setLoadingPlaylists(false)
-      }
-    }
-  }
-
-  async function handleSpotifyLogin(): Promise<void> {
-    setError(null)
-    setBusy(true)
-    try {
-      await startSpotifyLogin()
-    } catch (cause) {
-      setBusy(false)
-      setError(formatSpotifyUserError(cause))
-    }
-  }
-
-  function handleLogout(): void {
-    stopSpeakerKeepAlive()
-    clearShotlessSession()
-    setShotlessLive(false)
-    resetPhaseTimings()
-    stopRound()
-    playback.disconnect()
-    clearTokens()
-    tracksRef.current = []
-    indexRef.current = 0
-    setTracks([])
-    setIndex(0)
-    setPlaylists([])
-    setSelectedIds([])
-    setLoadingPlaylists(false)
-    setLoadingTracks(false)
-    setBusy(false)
-    setScreen('login')
-    setError(null)
-  }
-
-  function handleTogglePlaylist(id: string): void {
-    setSelectedIds((current) =>
-      current.includes(id) ? current.filter((value) => value !== id) : [...current, id],
-    )
-  }
-
-  function handleToggleAll(): void {
-    setSelectedIds((current) =>
-      current.length === playlists.length ? [] : playlists.map((playlist) => playlist.id),
-    )
-  }
+  const session = useSpotifySession({
+    playback,
+    navigation,
+    round: {
+      resetPhaseTimings,
+      stopRound,
+      clearTracks: () => {
+        tracksRef.current = []
+        indexRef.current = 0
+        setTracks([])
+        setIndex(0)
+      },
+      clearTimer: clearGameTimer,
+    },
+  })
 
   async function handleStartGame(): Promise<void> {
-    const epoch = navigationEpochRef.current
+    const epoch = navigation.currentEpoch()
     setError(null)
-    setLoadingTracks(true)
+    navigation.setLoadingTracks(true)
     try {
-      const loaded = await fetchTracksForPlaylists(selectedIds)
-      if (epoch !== navigationEpochRef.current) {
+      const loaded = await fetchTracksForPlaylists(navigation.selectedIds)
+      if (epoch !== navigation.currentEpoch()) {
         traceGame('runde', { aktion: 'laden-verworfen', schritt: 'titel' })
         return
       }
       if (loaded.length === 0) {
         throw new Error('Keine abspielbaren Titel gefunden.')
       }
-      traceGame('runde', { aktion: 'geladen', anzahl: loaded.length, modus: menuGameId })
+      traceGame('runde', { aktion: 'geladen', anzahl: loaded.length, modus: navigation.gameId })
       await playback.connect()
-      if (epoch !== navigationEpochRef.current) {
+      if (epoch !== navigation.currentEpoch()) {
         traceGame('runde', { aktion: 'laden-verworfen', schritt: 'player' })
         return
       }
@@ -246,18 +110,16 @@ export default function App() {
       phaseRef.current = 'idle'
       beginQuizMedia('idle')
       setRoundReason('bereit')
-      if (menuGameId === SHOTLESS_ID) {
-        setShotlessLive(false)
-        setScreen('shotless')
-        return
-      }
-      setScreen('game')
-      const opening = shuffled[0]
-      if (opening) {
-        void playback.primeOpening(opening.uri)
+      navigation.showGame()
+      // Song erraten hält die Runde noch in der App (bis Phase 3) und lädt den ersten Titel vor.
+      if (navigation.game?.entry.kind === 'hosted') {
+        const opening = shuffled[0]
+        if (opening) {
+          void playback.primeOpening(opening.uri)
+        }
       }
     } catch (cause) {
-      if (epoch !== navigationEpochRef.current) {
+      if (epoch !== navigation.currentEpoch()) {
         traceGame('runde', { aktion: 'laden-verworfen', schritt: 'fehler' })
         return
       }
@@ -265,8 +127,8 @@ export default function App() {
       traceGame('runde', { aktion: 'laden-fehler', fehler })
       setError(fehler)
     } finally {
-      if (epoch === navigationEpochRef.current) {
-        setLoadingTracks(false)
+      if (epoch === navigation.currentEpoch()) {
+        navigation.setLoadingTracks(false)
       }
     }
   }
@@ -286,7 +148,7 @@ export default function App() {
     if (deadlineRef.current === null) {
       return remainingMsRef.current
     }
-    return Math.max(0, deadlineRef.current - Date.now())
+    return Math.max(0, deadlineRef.current - nowMs())
   }
 
   function resetPauseState(): void {
@@ -313,7 +175,7 @@ export default function App() {
 
   function armPhaseTimer(current: GamePhase, delayMs: number, timings: PhaseTimings): void {
     remainingMsRef.current = delayMs
-    deadlineRef.current = Date.now() + delayMs
+    deadlineRef.current = nowMs() + delayMs
     schedulePhase(nextPhase(current, timings), delayMs)
   }
 
@@ -550,26 +412,24 @@ export default function App() {
     playback.engageMedia(playbackForPhase(phase))
   }
 
-  function handleLeaveShotless(): void {
+  function handleLeaveGame(): void {
     setRoundReason('verlassen')
-    traceGame('runde', { aktion: 'verlassen', modus: 'shotless' })
+    traceGame('runde', { aktion: 'verlassen', modus: navigation.gameId })
     void playback.end()
-    handleBackToMenu()
+    navigation.backToMenu()
   }
 
-  function handleShotlessToPlaylists(): void {
+  function handleGameToPlaylists(): void {
     setRoundReason('verlassen')
-    traceGame('runde', { aktion: 'zur-playlistauswahl', modus: 'shotless' })
+    traceGame('runde', { aktion: 'zur-playlistauswahl', modus: navigation.gameId })
     void playback.end()
-    setShotlessLive(false)
-    setError(null)
-    setScreen('playlists')
+    navigation.leaveGameToPlaylists()
   }
 
   function handleAbort(): void {
     traceGame('runde', { aktion: 'abbruch', phase: phaseRef.current, index: indexRef.current })
     stopRound()
-    setScreen('playlists')
+    navigation.showPlaylists()
   }
 
   function handlePause(): void {
@@ -622,7 +482,7 @@ export default function App() {
 
   const currentTrack = tracks[index] ?? null
   useGameDebugWatch('spiel', {
-    screen,
+    screen: navigation.debugScreen,
     phase,
     grund: roundReason,
     index,
@@ -630,56 +490,34 @@ export default function App() {
     laufend: running,
     pause: paused,
     fehler: error,
-    modus: menuGameId,
-    shotless: shotlessLive,
+    modus: navigation.gameId,
+    shotless: navigation.gameLive,
     titel: currentTrack?.title ?? null,
     interpret: currentTrack?.artist ?? null,
     uri: currentTrack?.uri ?? null,
     hoerbar: audiblePlay,
     snippet: snippetReady,
   })
-  const fullBleed = screen === 'game' || (screen === 'shotless' && shotlessLive)
+  const { screen, game, fullBleed } = navigation
 
-  return (
-    <main className={fullBleed ? 'app app-game' : 'app'}>
-      <div className="glow" aria-hidden="true" />
-      {screen === 'login' ? (
-        <LoginScreen
-          clientIdPresent={Boolean(getSpotifyClientId())}
-          busy={busy}
+  function renderGame() {
+    if (game?.entry.kind === 'component') {
+      const { Screen } = game.entry
+      return (
+        <Screen
+          tracks={tracks}
           error={error}
-          onSpotifyLogin={() => {
-            void handleSpotifyLogin()
-          }}
+          playback={playback}
+          onLogout={session.logout}
+          onLeave={handleLeaveGame}
+          onBackToPlaylists={handleGameToPlaylists}
+          onLiveChange={navigation.setGameLive}
         />
-      ) : null}
-      {screen === 'menu' ? (
-        <MainMenu
-          savedTimings={savedTimings}
-          onSaveTimings={handleSaveTimings}
-          onLogout={handleLogout}
-          onSelectGame={handleSelectGame}
-        />
-      ) : null}
-      {screen === 'playlists' ? (
-        <PlaylistPicker
-          playlists={playlists}
-          selectedIds={selectedIds}
-          loading={loadingPlaylists}
-          loadingTracks={loadingTracks}
-          error={error}
-          savedTimings={savedTimings}
-          onSaveTimings={handleSaveTimings}
-          onToggle={handleTogglePlaylist}
-          onToggleAll={handleToggleAll}
-          onStart={() => {
-            void handleStartGame()
-          }}
-          onBack={handleBackToMenu}
-          onLogout={handleLogout}
-        />
-      ) : null}
-      {screen === 'game' ? (
+      )
+    }
+    if (game?.entry.kind === 'hosted') {
+      // Song erraten: Zustandsmaschine liegt noch in der App (Phase 3 macht daraus einen Hook).
+      return (
         <GuessSongScreen
           track={currentTrack}
           phase={phase}
@@ -713,22 +551,55 @@ export default function App() {
             void forceSkipTrack()
           }}
           onAbort={handleAbort}
-          onLogout={handleLogout}
+          onLogout={session.logout}
         />
-      ) : null}
-      {screen === 'shotless' ? (
-        <ShotlessScreen
-          tracks={tracks}
+      )
+    }
+    return null
+  }
+
+  return (
+    <main className={fullBleed ? 'app app-game' : 'app'}>
+      <div className="glow" aria-hidden="true" />
+      {screen === 'login' ? (
+        <LoginScreen
+          clientIdPresent={Boolean(getSpotifyClientId())}
+          busy={session.busy}
           error={error}
-          onLogout={handleLogout}
-          onLeave={handleLeaveShotless}
-          onBackToPlaylists={handleShotlessToPlaylists}
-          playback={playback}
-          onLiveChange={setShotlessLive}
+          onSpotifyLogin={() => {
+            void session.login()
+          }}
         />
       ) : null}
+      {screen === 'menu' ? (
+        <MainMenu
+          games={GAMES}
+          savedTimings={savedTimings}
+          onSaveTimings={handleSaveTimings}
+          onLogout={session.logout}
+          onSelectGame={navigation.selectGame}
+        />
+      ) : null}
+      {screen === 'playlists' ? (
+        <PlaylistPicker
+          playlists={navigation.playlists}
+          selectedIds={navigation.selectedIds}
+          loading={navigation.loadingPlaylists}
+          loadingTracks={navigation.loadingTracks}
+          error={error}
+          savedTimings={savedTimings}
+          onSaveTimings={handleSaveTimings}
+          onToggle={navigation.togglePlaylist}
+          onToggleAll={navigation.toggleAllPlaylists}
+          onStart={() => {
+            void handleStartGame()
+          }}
+          onBack={navigation.backToMenu}
+          onLogout={session.logout}
+        />
+      ) : null}
+      {screen === 'game' ? renderGame() : null}
       {fullBleed ? null : <AppFooter />}
     </main>
   )
 }
-
