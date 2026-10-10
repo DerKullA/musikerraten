@@ -67,6 +67,12 @@ VITE_SPOTIFY_CLIENT_ID=
 
 Keine echten Client-IDs und keine `.env`-Dateien ins Repository committen. `VITE_*` landet im Frontend-Bundle.
 
+## Bildschirm wach
+
+Solange eine Runde läuft, fordert die App die Screen Wake Lock API an (`navigator.wakeLock.request('screen')`): Song erraten ab dem Play-Tipp durch Abspielen, Nachdenken, Pause und Auflösung; Shotless ab dem Start der Runde; Tangera ab dem Start bis zurück ins Setup. Im Hauptmenü, auf dem Login und nach Rundenende wird der Lock freigegeben. Wird die Seite verborgen, gibt der Browser den Lock selbst frei; beim Wieder-Sichtbarwerden fordert die App ihn neu an.
+
+Ältere Browser ohne die API (unter anderem iOS Safari vor 16.4) werden stillschweigend übersprungen. Es gibt keinen Video-Fallback: eine stumme Dauerschleife kann die Medien-Sitzung und den Spotify-Web-Playback stören.
+
 ## Tangera
 
 Trinkspiel mit einem Skatblatt (36 Karten), spielbar ohne Spotify direkt vom Login-Bildschirm. Jede Karte löst ein Ereignis aus (Wahrheit oder Pflicht, Sieben Tod, Quizmaster, Regel, Zehner, Kasper, Bitch, Kategorie, Wasserfall). Regeln, Annahmen und Meilensteine stehen in [docs/TANGERA_PLAN.md](docs/TANGERA_PLAN.md).
@@ -93,6 +99,7 @@ src/
   platform/                 # alles, was kein Spiel kennt
     spotify/                # API, Auth (PKCE), Web-Playback-SDK-Player, Titel mischen
     playback/               # usePlaybackEngine (PlaybackApi), Warmup, Stille-Wächter, Medien-Sitzung
+    wakeLock/               # useWakeLock: Bildschirm wach während einer laufenden Runde
     diagnostics/            # Client-Log, Spiellog (siehe LOGGING.md), App-Version
   ui/                       # geteilte Oberfläche (Menü, Login, Playlist-Auswahl, Einstellungen, Phasenzeiten)
   games/

@@ -4,6 +4,7 @@ import { ShotlessRoundView } from '@/games/shotless/components/ShotlessRoundView
 import { ShotlessSetup } from '@/games/shotless/components/ShotlessSetup.tsx'
 import { useShotlessLobby } from '@/games/shotless/hooks/useShotlessLobby.ts'
 import { useShotlessRound } from '@/games/shotless/hooks/useShotlessRound.ts'
+import { useWakeLock } from '@/platform/wakeLock/useWakeLock.ts'
 import type { PlaybackApi } from '@/platform/playback/usePlaybackEngine.ts'
 import type { Track } from '@/types.ts'
 
@@ -35,6 +36,7 @@ export function ShotlessScreen({
     openingOrigin: lobby.openingOrigin,
     playback,
   })
+  useWakeLock(lobby.started)
 
   if (!lobby.started || !lobby.mode || !round.track) {
     return (

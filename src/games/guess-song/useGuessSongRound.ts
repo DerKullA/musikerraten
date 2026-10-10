@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { reportClientWarning } from '@/platform/diagnostics/clientLog.ts'
+import { holdScreenWakeLock } from '@/platform/wakeLock/browserWakeLock.ts'
 import { formatGameDebugLog, traceGame } from '@/platform/diagnostics/gameDebug.ts'
 import { useGameDebugWatch } from '@/platform/diagnostics/useGameDebug.ts'
 import type { PlaybackApi } from '@/platform/playback/usePlaybackEngine.ts'
@@ -252,6 +253,7 @@ export function useGuessSongRound({ tracks, error, playback, onError }: GuessSon
       traceGame('runde', { aktion: 'starten-leer' })
       return
     }
+    holdScreenWakeLock()
     setRoundReason('starten')
     reportError(null)
     runningRef.current = true

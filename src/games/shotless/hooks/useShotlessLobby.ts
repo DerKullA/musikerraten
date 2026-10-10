@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { startSpeakerKeepAlive } from '@/platform/playback/speakerKeepAlive.ts'
+import { holdScreenWakeLock } from '@/platform/wakeLock/browserWakeLock.ts'
 import {
   addShotlessPlayer,
   canStartShotless,
@@ -61,6 +62,7 @@ export function useShotlessLobby(onLiveChange?: (live: boolean) => void) {
     if (!canStartShotless(mode, players) || !mode) {
       return
     }
+    holdScreenWakeLock()
     startSpeakerKeepAlive()
     beginRound()
     rememberSession(mode, players, guessTarget)
