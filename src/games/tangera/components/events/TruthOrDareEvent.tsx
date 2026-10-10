@@ -5,6 +5,7 @@ import { Wheel } from '@/games/tangera/components/Wheel.tsx'
 import { DARES, TRUTHS, contentPool, type WheelCard } from '@/games/tangera/logic/content.ts'
 import { LOSER_SIPS, RANK_EVENTS, sipsText } from '@/games/tangera/logic/rules.ts'
 import { pickWheelItems } from '@/games/tangera/logic/wheel.ts'
+import { revealResult } from './reveal.ts'
 import type { EventProps } from './types.ts'
 
 const WHEEL_SIZE = 8
@@ -37,7 +38,7 @@ export function TruthOrDareEvent({ player, spicy, onDone }: EventProps) {
           />
           {picked ? (
             <>
-              <p className="tangera-result" aria-live="polite">
+              <p className="tangera-result" aria-live="polite" ref={revealResult}>
                 <strong>{picked.title}</strong>
                 {picked.text}
               </p>

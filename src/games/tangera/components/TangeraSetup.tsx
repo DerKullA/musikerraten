@@ -90,10 +90,15 @@ export function TangeraSetup({
               placeholder="Name"
               maxLength={MAX_PLAYER_NAME_LENGTH}
               autoComplete="off"
+              autoCapitalize="words"
+              enterKeyHint="done"
               onChange={(event) => onNameDraft(event.target.value)}
             />
-            <button type="submit" className="btn ghost">
-              Hinzufügen
+            <button type="submit" className="btn ghost" aria-label="Hinzufügen">
+              <span className="tangera-add-icon" aria-hidden="true">
+                +
+              </span>
+              <span className="tangera-add-text">Hinzufügen</span>
             </button>
           </form>
           {nameError ? <p className="banner error">{nameError}</p> : null}
@@ -102,6 +107,7 @@ export function TangeraSetup({
               <li key={name}>
                 <button type="button" onClick={() => onRemoveName(name)} aria-label={`${name} entfernen`}>
                   {name}
+                  <span aria-hidden="true">×</span>
                 </button>
               </li>
             ))}

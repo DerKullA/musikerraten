@@ -4,6 +4,7 @@ import { pickSegment, segmentAngle, spinTo, wheelLabelLines } from '@/games/tang
 
 interface WheelProps {
   labels: readonly string[]
+  /** Beschriftung der Rad-Schaltfläche für Screenreader. */
   spinLabel?: string
   /** Wird einmal aufgerufen, sobald das Rad steht. */
   onResult: (index: number) => void
@@ -70,13 +71,19 @@ export function Wheel({ labels, spinLabel = 'Rad drehen', onResult }: WheelProps
 
   return (
     <div className="tangera-wheel-area">
-      <div className="tangera-wheel">
-        <div className="tangera-wheel-pointer" aria-hidden="true" />
-        <div
+      <button
+        type="button"
+        className={winner !== null ? 'tangera-tap tangera-wheel is-done' : 'tangera-tap tangera-wheel'}
+        aria-label={`${spinLabel}, Glücksrad mit ${count} Feldern`}
+        onClick={spin}
+        disabled={spinning || winner !== null}
+      >
+        <span className="tangera-wheel-pointer" aria-hidden="true" />
+        <span
           className="tangera-wheel-disc"
           style={{ transform: `rotate(${rotation}deg)`, transitionDuration: `${duration}ms` }}
         >
-          <svg viewBox="0 0 200 200" role="img" aria-label={`Glücksrad mit ${count} Feldern`}>
+          <svg viewBox="0 0 200 200" aria-hidden="true">
             {labels.map((label, index) => {
               const mid = (index + 0.5) * seg
               const lines = wheelLabelLines(label, maxChars)
@@ -103,13 +110,11 @@ export function Wheel({ labels, spinLabel = 'Rad drehen', onResult }: WheelProps
             })}
             <circle cx={CENTER} cy={CENTER} r="12" className="tangera-wheel-hub" />
           </svg>
-        </div>
-      </div>
-      <div className="tangera-footer">
-        <button type="button" className="btn primary cta" onClick={spin} disabled={spinning || winner !== null}>
-          {spinning ? 'Das Rad dreht …' : winner !== null ? 'Gewählt' : spinLabel}
-        </button>
-      </div>
+        </span>
+      </button>
+      <p className="tangera-tap-hint">
+        {spinning ? 'Das Rad dreht …' : winner !== null ? ' ' : 'Tippe auf das Rad.'}
+      </p>
     </div>
   )
 }

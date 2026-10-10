@@ -5,6 +5,7 @@ import { Wheel } from '@/games/tangera/components/Wheel.tsx'
 import { CATEGORIES, contentPool, type Category } from '@/games/tangera/logic/content.ts'
 import { LOSER_SIPS, RANK_EVENTS } from '@/games/tangera/logic/rules.ts'
 import { pickWheelItems } from '@/games/tangera/logic/wheel.ts'
+import { revealResult } from './reveal.ts'
 import type { EventProps } from './types.ts'
 
 const WHEEL_SIZE = 12
@@ -20,7 +21,7 @@ export function CategoryEvent({ order, spicy, onDone }: EventProps) {
       <Wheel labels={items.map((item) => item.name)} spinLabel="Kategorie drehen" onResult={(i) => setPicked(items[i] ?? null)} />
       {picked ? (
         <>
-          <p className="tangera-big" aria-live="polite">
+          <p className="tangera-big" aria-live="polite" ref={revealResult}>
             {picked.name}
           </p>
           <p className="tangera-prompt">

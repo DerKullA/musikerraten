@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { revealResult } from '@/games/tangera/components/events/reveal.ts'
 import { LOSER_SIPS, sipsText } from '@/games/tangera/logic/rules.ts'
 
 interface PlayerGridProps {
@@ -48,7 +49,9 @@ export function LoserPicker({ players, sips = LOSER_SIPS, initial = null, onPick
 
   return (
     <>
-      <p className="tangera-prompt">Wer hat verloren?</p>
+      <p className="tangera-prompt" ref={revealResult}>
+        Wer hat verloren?
+      </p>
       <PlayerGrid
         players={players}
         selected={selected ? [selected] : []}

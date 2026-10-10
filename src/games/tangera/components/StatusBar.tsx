@@ -7,17 +7,20 @@ interface StatusBarProps {
   shots: Record<string, number>
 }
 
-/** Rollen, Regeln und Stand, immer griffbereit und eingeklappt. */
+/** Rollen in einer Zeile; ein Tipp darauf klappt Regeln und Stand auf. */
 export function StatusBar({ players, quizmaster, bitch, rules, sips, shots }: StatusBarProps) {
   return (
-    <div className="tangera-status">
-      <ul className="tangera-chips" aria-label="Rollen">
-        <li className={quizmaster ? 'is-on' : undefined}>Quizmaster: {quizmaster ?? '–'}</li>
-        <li className={bitch ? 'is-on is-bitch' : undefined}>Bitch: {bitch ?? '–'}</li>
-        <li className={rules.length > 0 ? 'is-on' : undefined}>Regeln: {rules.length}</li>
-      </ul>
-      <details className="tangera-details">
-        <summary>Regeln und Stand</summary>
+    <details className="tangera-status tangera-details">
+      <summary>
+        <ul className="tangera-chips" aria-label="Rollen">
+          <li className={quizmaster ? 'is-on' : undefined}>Quizmaster: {quizmaster ?? '–'}</li>
+          <li className={bitch ? 'is-on is-bitch' : undefined}>Bitch: {bitch ?? '–'}</li>
+          <li className={rules.length > 0 ? 'is-on' : undefined}>Regeln: {rules.length}</li>
+        </ul>
+        <span className="sr-only">Regeln und Stand</span>
+        <span className="tangera-status-toggle" aria-hidden="true" />
+      </summary>
+      <div className="tangera-status-body">
         <h3>Regeln</h3>
         {rules.length > 0 ? (
           <ul className="tangera-rules">
@@ -38,7 +41,7 @@ export function StatusBar({ players, quizmaster, bitch, rules, sips, shots }: St
             </li>
           ))}
         </ul>
-      </details>
-    </div>
+      </div>
+    </details>
   )
 }

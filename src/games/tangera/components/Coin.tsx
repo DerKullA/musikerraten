@@ -10,7 +10,7 @@ interface CoinProps {
 const FLIP_MS = 1600
 const SHOW_MS = 900
 
-/** Münze: Wahrheit (Vorderseite) oder Pflicht (Rückseite). Das Ergebnis liegt beim Werfen fest. */
+/** Münze: Wahrheit (Vorderseite) oder Pflicht (Rückseite), geworfen per Tipp. Das Ergebnis liegt beim Werfen fest. */
 export function Coin({ onResult }: CoinProps) {
   const [rotation, setRotation] = useState(0)
   const [side, setSide] = useState<CoinSide | null>(null)
@@ -45,18 +45,22 @@ export function Coin({ onResult }: CoinProps) {
 
   return (
     <div className="tangera-coin-area">
-      <div className="tangera-coin" style={{ transform: `rotateY(${rotation}deg)` }} aria-hidden="true">
-        <span className="tangera-coin-side is-front">Wahrheit</span>
-        <span className="tangera-coin-side is-back">Pflicht</span>
-      </div>
+      <button
+        type="button"
+        className="tangera-tap"
+        aria-label="Münze werfen"
+        onClick={flip}
+        disabled={flipping || side !== null}
+      >
+        <span className="tangera-coin" style={{ transform: `rotateY(${rotation}deg)` }} aria-hidden="true">
+          <span className="tangera-coin-side is-front">Wahrheit</span>
+          <span className="tangera-coin-side is-back">Pflicht</span>
+        </span>
+      </button>
       <p className="tangera-coin-result" aria-live="polite">
         {side === 'wahrheit' ? 'Wahrheit!' : side === 'pflicht' ? 'Pflicht!' : ' '}
       </p>
-      <div className="tangera-footer">
-        <button type="button" className="btn primary cta" onClick={flip} disabled={flipping || side !== null}>
-          {flipping ? 'Die Münze fliegt …' : 'Münze werfen'}
-        </button>
-      </div>
+      <p className="tangera-tap-hint">{flipping ? 'Die Münze fliegt …' : side ? ' ' : 'Tippe auf die Münze.'}</p>
     </div>
   )
 }

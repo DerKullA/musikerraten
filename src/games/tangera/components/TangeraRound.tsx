@@ -53,7 +53,7 @@ export function TangeraRound({ players, spicy, decks, leaveLabel, onLogout, onLe
           <AppMenu onLogout={onLogout} onLeaveRound={onLeave} leaveLabel={leaveLabel} />
         </div>
       </header>
-      <div className="fit-scroll">
+      <div className="fit-scroll tangera-table">
         <StatusBar
           players={state.players}
           quizmaster={state.quizmaster}
@@ -63,14 +63,9 @@ export function TangeraRound({ players, spicy, decks, leaveLabel, onLogout, onLe
           shots={state.shots}
         />
         {state.phase === 'turn' ? (
-          <div className="tangera-stage">
-            <CardStack remaining={state.deck.length} />
-            <p className="tangera-prompt">{player} ist dran.</p>
-            <div className="tangera-footer">
-              <button type="button" className="btn primary cta" onClick={() => dispatch({ type: 'draw' })}>
-                Karte aufdecken
-              </button>
-            </div>
+          <div className="tangera-stage is-turn">
+            <CardStack remaining={state.deck.length} onDraw={() => dispatch({ type: 'draw' })} />
+            <p className="tangera-prompt">{player} ist dran. Tippe auf die Karte.</p>
           </div>
         ) : null}
         {state.phase === 'bitch' ? (

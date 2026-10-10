@@ -2,25 +2,27 @@ import { useState } from 'react'
 import { EventFrame } from '@/games/tangera/components/EventFrame.tsx'
 import { LoserPicker } from '@/games/tangera/components/PlayerGrid.tsx'
 import { LOSER_SIPS, RANK_EVENTS } from '@/games/tangera/logic/rules.ts'
-import { isPiep, sevenDeathCall } from '@/games/tangera/logic/sevenDeath.ts'
+import { isPiep } from '@/games/tangera/logic/sevenDeath.ts'
+import { revealResult } from './reveal.ts'
 import type { EventProps } from './types.ts'
 
 type Stage = 'play' | 'loser'
 
+const MAX_DIGITS = 4
+
 export function SevenDeathEvent({ order, onDone }: EventProps) {
   const [stage, setStage] = useState<Stage>('play')
   const [helper, setHelper] = useState(false)
-  const [count, setCount] = useState(1)
-  const [failed, setFailed] = useState<string | null>(null)
+  const [entry, setEntry] = useState('')
   const event = RANK_EVENTS['7']
-  const speaker = order[(count - 1) % order.length] ?? order[0] ?? ''
+  const number = Number(entry) >= 1 ? Number(entry) : null
+  const piep = number !== null && isPiep(number)
 
   if (stage === 'loser') {
     return (
       <EventFrame title={event.title} summary="Wer sich verzählt oder eine Zahl mit 7 gesagt hat, verliert.">
         <LoserPicker
           players={order}
-          initial={failed}
           onPick={(loser) => onDone(loser ? { sips: { [loser]: LOSER_SIPS } } : undefined)}
         />
       </EventFrame>
@@ -41,26 +43,29 @@ export function SevenDeathEvent({ order, onDone }: EventProps) {
         „Piep“.
       </p>
       {helper ? (
-        <div className="tangera-referee">
-          <p className="tangera-referee-who">{speaker} ist dran</p>
-          <p className={isPiep(count) ? 'tangera-referee-number is-piep' : 'tangera-referee-number'}>
-            {sevenDeathCall(count)}
-          </p>
-          <p className="tangera-referee-hint">Zahl {count}</p>
-          <div className="tangera-referee-actions">
-            <button type="button" className="btn primary" onClick={() => setCount((value) => value + 1)}>
-              Richtig, weiter
-            </button>
-            <button
-              type="button"
-              className="btn danger"
-              onClick={() => {
-                setFailed(speaker)
-                setStage('loser')
-              }}
-            >
-              Fehler
-            </button>
+        <div className="tangera-referee" ref={revealResult}>
+          <label className="tangera-referee-who" htmlFor="tangera-referee-number">
+            Schiedsrichter-Hilfe: Zahl eingeben
+          </label>
+          <input
+            id="tangera-referee-number"
+            className="tangera-referee-input"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            autoComplete="off"
+            enterKeyHint="done"
+            autoFocus
+            placeholder="z. B. 27"
+            value={entry}
+            onChange={(event) => setEntry(event.target.value.replace(/\D/g, '').slice(0, MAX_DIGITS))}
+          />
+          <div aria-live="polite">
+            {number !== null ? (
+              <p className={piep ? 'tangera-referee-number is-piep' : 'tangera-referee-number'}>
+                {piep ? 'Piep' : 'Normal'}
+              </p>
+            ) : null}
           </div>
         </div>
       ) : (

@@ -10,6 +10,14 @@
   --tangera-ink: #1b1b1b;
 }
 
+/* Kein Doppeltipp-Zoom und keine Textauswahl auf Schaltflächen, wenn schnell getippt wird. */
+.tangera button,
+.tangera summary {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 /* Setup */
 
 .tangera-roster {
@@ -20,7 +28,6 @@
 
 .tangera-name-row {
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -36,12 +43,18 @@
 }
 
 .tangera-name-row input {
-  flex: 1 1 12rem;
+  flex: 1 1 0;
 }
 
 .tangera-name-row .btn {
   flex: none;
   min-height: 52px;
+}
+
+.tangera-add-icon {
+  display: none;
+  font-size: 1.6rem;
+  line-height: 1;
 }
 
 .tangera-rule-form textarea {
@@ -95,6 +108,11 @@
   padding: 12px 16px;
   font-size: 1rem;
   cursor: pointer;
+}
+
+.tangera-chips.is-players button span {
+  margin-left: 8px;
+  color: var(--muted);
 }
 
 .tangera-switch {
@@ -215,25 +233,74 @@
   margin-top: 18px;
 }
 
+.tangera-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.tangera-table > * {
+  flex: none;
+}
+
+/* Wer dran ist, sieht nur den Stapel: mittig im freien Raum, gut mit dem Daumen zu treffen. */
+.tangera-table > .tangera-stage.is-turn {
+  flex: 1 0 auto;
+  align-content: center;
+  padding-bottom: 12px;
+}
+
 .tangera-status {
-  display: grid;
-  gap: 8px;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .tangera-details {
   border: 1px solid var(--line);
   border-radius: 16px;
-  padding: 10px 14px;
+  padding: 6px 8px;
   background: rgba(243, 234, 216, 0.03);
 }
 
 .tangera-details summary {
   cursor: pointer;
-  font-weight: 700;
-  min-height: 32px;
+  min-height: 36px;
   display: flex;
   align-items: center;
+  gap: 8px;
+  list-style: none;
+}
+
+.tangera-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.tangera-details summary .tangera-chips {
+  flex: 1;
+  gap: 6px;
+}
+
+.tangera-details summary .tangera-chips li {
+  padding: 5px 10px;
+  font-size: 0.8rem;
+}
+
+.tangera-status-toggle {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  margin: 0 8px 4px 4px;
+  border-right: 2px solid var(--paper-dim);
+  border-bottom: 2px solid var(--paper-dim);
+  transform: rotate(45deg);
+  transition: transform 0.18s ease-out;
+}
+
+.tangera-details[open] .tangera-status-toggle {
+  margin-bottom: -4px;
+  transform: rotate(-135deg);
+}
+
+.tangera-status-body {
+  padding: 0 6px 8px;
 }
 
 .tangera-details h3 {
@@ -330,14 +397,6 @@
   width: 100%;
 }
 
-/* Knöpfe von Münze und Rad stehen im Fluss, nur der Abschluss des Ereignisses klebt unten. */
-.tangera-coin-area .tangera-footer,
-.tangera-wheel-area .tangera-footer {
-  position: static;
-  padding: 0;
-  background: none;
-}
-
 /* Karte */
 
 .tangera-card {
@@ -351,16 +410,47 @@
   --card-h: clamp(96px, 15dvh, 190px);
 }
 
+.tangera-card.is-stack {
+  --card-h: min(clamp(190px, 42dvh, 380px), 92vw);
+}
+
 .tangera-card-inner {
   position: relative;
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
-  transition: transform 0.75s cubic-bezier(0.3, 0.7, 0.2, 1);
 }
 
 .tangera-card.is-up .tangera-card-inner {
   transform: rotateY(180deg);
+  animation: tangera-flip 0.42s cubic-bezier(0.3, 0.7, 0.2, 1) backwards;
+}
+
+/* Die Karte kommt verdeckt und gross vom Stapel, dreht sich und landet mit kleinem Nachfedern. */
+@keyframes tangera-flip {
+  0% {
+    transform: translateY(26px) scale(1.5) rotateY(0deg) rotateZ(-5deg);
+  }
+
+  60% {
+    transform: translateY(-6px) scale(1.12) rotateY(180deg) rotateZ(2deg);
+  }
+
+  100% {
+    transform: translateY(0) scale(1) rotateY(180deg) rotateZ(0deg);
+  }
+}
+
+/* Das Ereignis blendet nach, sobald die Karte fast liegt. */
+.tangera-card.is-up + .tangera-event {
+  animation: tangera-event-in 0.28s ease-out 0.2s backwards;
+}
+
+@keyframes tangera-event-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 }
 
 .tangera-card-back,
@@ -432,6 +522,44 @@
   gap: 10px;
 }
 
+.tangera-stack-button {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.14s ease-out;
+}
+
+.tangera-stack-button .tangera-card,
+.tangera-stack-button .tangera-card-inner,
+.tangera-stack-button .tangera-card-back {
+  display: block;
+}
+
+.tangera-stack-button .tangera-card-back {
+  display: grid;
+}
+
+@media (hover: hover) {
+  .tangera-stack-button:hover {
+    transform: translateY(-4px) rotate(-1.5deg);
+  }
+}
+
+.tangera-stack-button:active {
+  transform: translateY(2px) scale(0.97);
+}
+
+.tangera-stack-button:focus-visible {
+  outline: 3px solid var(--tangera-card);
+  outline-offset: 6px;
+}
+
 .tangera-card.is-stack {
   box-shadow:
     5px 5px 0 -1px color-mix(in srgb, var(--rose) 70%, black),
@@ -441,6 +569,47 @@
 
 .tangera-stack-count {
   margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* Münze und Rad werden per Tipp auf das Objekt selbst ausgelöst. */
+
+.tangera-tap {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: scale 0.14s ease-out;
+}
+
+.tangera-tap:disabled {
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .tangera-tap:enabled:hover {
+    scale: 1.03;
+  }
+}
+
+.tangera-tap:enabled:active {
+  scale: 0.96;
+}
+
+.tangera-tap:focus-visible {
+  outline: 3px solid var(--tangera-card);
+  outline-offset: 8px;
+}
+
+.tangera-tap-hint {
+  margin: 0;
+  min-height: 1.4em;
   color: var(--muted);
   font-size: 0.85rem;
 }
@@ -455,6 +624,7 @@
 }
 
 .tangera-coin {
+  display: block;
   position: relative;
   width: 150px;
   height: 150px;
@@ -502,7 +672,7 @@
 
 .tangera-wheel {
   position: relative;
-  width: min(86vw, 340px, 46dvh);
+  width: min(100%, 340px, 46dvh);
   aspect-ratio: 1;
 }
 
@@ -521,6 +691,7 @@
 }
 
 .tangera-wheel-disc {
+  display: block;
   width: 100%;
   height: 100%;
   border-radius: 50%;
@@ -615,42 +786,49 @@
 .tangera-referee {
   display: grid;
   justify-items: center;
-  gap: 4px;
+  gap: 6px;
   width: min(100%, 26rem);
-  padding: 16px;
+  padding: 10px 14px 8px;
   border-radius: 20px;
   border: 1px solid var(--line);
   background: rgba(243, 234, 216, 0.05);
 }
 
 .tangera-referee-who {
-  margin: 0;
   color: var(--paper-dim);
+  font-size: 0.9rem;
+}
+
+.tangera-referee-input {
+  width: 100%;
+  min-width: 0;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(16, 22, 14, 0.45);
+  color: var(--paper);
+  padding: 10px 12px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.tangera-referee-input::placeholder {
+  font-size: 1rem;
+  font-weight: 400;
 }
 
 .tangera-referee-number {
-  margin: 0;
+  margin: 2px 0 0;
+  text-align: center;
   font-family: var(--display);
-  font-size: clamp(3.2rem, 18vw, 5.4rem);
+  font-size: clamp(2rem, 10vw, 2.8rem);
   line-height: 1;
+  color: var(--lime);
 }
 
 .tangera-referee-number.is-piep {
   color: var(--rose);
-}
-
-.tangera-referee-hint {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.85rem;
-}
-
-.tangera-referee-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 8px;
 }
 
 /* Kasper */
@@ -942,15 +1120,86 @@
   .tangera .actions .btn {
     width: 100%;
   }
+
+  .tangera .lede {
+    margin-top: 12px;
+    font-size: 0.95rem;
+    line-height: 1.45;
+  }
+
+  .tangera-roster,
+  .tangera-decks,
+  .tangera-switch {
+    margin-top: 16px;
+  }
+
+  .tangera-name-row .btn {
+    width: 52px;
+    padding: 0;
+  }
+
+  .tangera-add-icon {
+    display: inline;
+  }
+
+  .tangera-add-text {
+    display: none;
+  }
+
+  .tangera-stage,
+  .fit-scroll > .tangera-event {
+    margin-top: 12px;
+  }
+
+  .tangera-event,
+  .tangera-stage {
+    gap: 10px;
+  }
+
+  .tangera-summary {
+    font-size: 0.92rem;
+    line-height: 1.4;
+  }
+
+  /* Das Pulsieren der Kasper-Zeilen darf die Spielfläche nicht seitlich scrollbar machen. */
+  .tangera-table {
+    overflow-x: hidden;
+  }
+
+  .tangera-moves {
+    gap: 8px;
+  }
+
+  .tangera-moves li {
+    padding: 8px 14px;
+    font-size: 1.05rem;
+  }
+
+  .tangera-moves li span {
+    font-size: 1.5rem;
+  }
+
+  /* Steht das Rad, macht es Platz für das Ergebnis und die Knöpfe darunter. */
+  .tangera-wheel.is-done {
+    width: min(100%, 170px, 24dvh);
+  }
+
+  .tangera-wheel.is-done .tangera-wheel-pointer {
+    scale: 0.6;
+    transform-origin: top center;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tangera-card-inner,
   .tangera-coin,
-  .tangera-wheel-disc {
+  .tangera-wheel-disc,
+  .tangera-stack-button,
+  .tangera-tap {
     transition-duration: 0.01ms !important;
   }
 
+  .tangera-card.is-up .tangera-card-inner,
+  .tangera-card.is-up + .tangera-event,
   .tangera-moves li,
   .tangera-fall span {
     animation: none;
