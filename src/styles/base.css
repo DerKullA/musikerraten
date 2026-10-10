@@ -1,3 +1,5 @@
+/* Basis: Tokens, Reset, App-Rahmen, Buttons, geteilte Spiel-Layouts und UI (Menü, Login, Playlists).
+   Muss vor guess-song.css und shotless.css geladen werden (siehe main.tsx). */
 :root {
   --ink: #10160e;
   --ink-soft: #1b2418;
@@ -324,6 +326,9 @@ h1 {
   flex: none;
 }
 
+/* Dock: von beiden Spielen genutzt. Die Shotless-Selektoren (.dock-pair, .is-guessing,
+   .shotless-actions, .guess-field) bleiben hier, damit sie in der Kaskade vor
+   .btn.compact/.btn.cta und den Media-Queries unten bleiben. */
 .round-actions,
 .game-lower,
 .game-dock {
@@ -498,98 +503,6 @@ h1 {
   border: 0;
 }
 
-.shotless-modes,
-.player-roster,
-.shotless-actions,
-.guess-field {
-  display: grid;
-  gap: 12px;
-  width: min(100%, 36rem);
-  margin-top: 22px;
-}
-
-.shotless-modes {
-  width: 100%;
-}
-
-.mode-card {
-  display: grid;
-  gap: 6px;
-  width: 100%;
-  padding: 18px 18px 16px;
-  border-radius: 22px;
-  border: 1px solid var(--line);
-  background: rgba(243, 234, 216, 0.04);
-  color: var(--paper);
-  text-align: left;
-  cursor: pointer;
-}
-
-.mode-card strong {
-  font-family: var(--display);
-  font-size: clamp(1.7rem, 5vw, 2.2rem);
-  font-weight: 500;
-  line-height: 1;
-}
-
-.mode-card span {
-  color: var(--paper-dim);
-  line-height: 1.45;
-}
-
-.mode-card.is-selected {
-  background: var(--amber);
-  color: var(--ink);
-  border-color: transparent;
-}
-
-.mode-card.is-selected span {
-  color: var(--ink-soft);
-}
-
-.guess-target-legend {
-  margin: 22px 0 0;
-  color: var(--paper-dim);
-  font-weight: 700;
-}
-
-.guess-targets {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.guess-target {
-  min-height: 52px;
-  padding: 12px 14px;
-  border-radius: 16px;
-  border: 1px solid var(--line);
-  background: rgba(243, 234, 216, 0.04);
-  color: var(--paper);
-  text-align: left;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.guess-target.is-selected {
-  background: var(--paper);
-  color: var(--ink);
-  border-color: transparent;
-}
-
-.player-roster {
-  margin-top: 18px;
-}
-
-.player-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.player-row input,
-.guess-field input,
 .playlist-search input {
   width: 100%;
   min-width: 0;
@@ -599,231 +512,6 @@ h1 {
   color: var(--paper);
   padding: 14px 16px;
   font-size: 1.05rem;
-}
-
-.player-row input {
-  flex: 1 1 12rem;
-  border-radius: 999px;
-}
-
-.player-row .btn {
-  flex: none;
-  min-height: 52px;
-}
-
-.guess-field input {
-  min-height: 50px;
-  padding-block: 12px;
-  text-align: left;
-}
-
-.guess-field.is-single {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: stretch;
-}
-
-.guess-field.is-single .btn {
-  width: auto;
-  min-height: 50px;
-  padding-inline: 18px;
-  font-size: 1rem;
-}
-
-.guess-field.is-single .suggestions {
-  grid-column: 1 / -1;
-}
-
-.player-chips,
-.suggestions,
-.stage-rail {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.player-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.player-chips button,
-.suggestions button {
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(243, 234, 216, 0.08);
-  color: var(--paper);
-  min-height: 48px;
-  padding: 12px 16px;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.suggestions {
-  display: flex;
-  gap: 8px;
-  padding-bottom: 2px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-}
-
-.suggestions button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.suggestions::-webkit-scrollbar {
-  display: none;
-}
-
-.suggestions li {
-  flex: none;
-}
-
-.suggestions button {
-  max-width: 78vw;
-  min-height: 44px;
-  padding: 10px 16px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.stage-rail {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  width: min(100%, 36rem);
-}
-
-.stage-rail li {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-  min-height: 46px;
-  padding: 6px 4px;
-  border-radius: 14px;
-  color: var(--muted);
-  background: rgba(243, 234, 216, 0.06);
-  font-size: 0.82rem;
-  font-weight: 700;
-  line-height: 1.12;
-  text-align: center;
-  text-wrap: balance;
-  overflow-wrap: break-word;
-}
-
-.stage-rail li small {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  opacity: 0.75;
-}
-
-.stage-rail li.is-past {
-  opacity: 0.5;
-}
-
-.stage-rail li.is-current {
-  color: var(--ink);
-  background: var(--paper);
-}
-
-.shotless-stage {
-  display: grid;
-  justify-items: center;
-  gap: 0.2rem;
-  width: min(100%, 40rem);
-  text-align: center;
-}
-
-.shotless-prompt,
-.shotless-rule {
-  margin: 0;
-  color: var(--paper-dim);
-  font-size: clamp(1rem, 3.2vw, 1.25rem);
-}
-
-.shotless-rule {
-  width: min(100%, 36rem);
-  text-align: center;
-  font-weight: 700;
-}
-
-.shotless-stage .shotless-prompt {
-  font-size: clamp(1.15rem, 4.6vw, 1.6rem);
-}
-
-.shotless-penalty {
-  margin: 0;
-  font-family: var(--display);
-  font-weight: 560;
-  font-size: clamp(2.8rem, min(22vw, 12dvh), 8rem);
-  line-height: 0.88;
-  text-wrap: balance;
-  letter-spacing: -0.03em;
-  overflow-wrap: break-word;
-}
-
-.shotless-penalty.is-shot {
-  color: var(--rose);
-}
-
-.shotless-penalty.is-heavy {
-  color: var(--amber);
-}
-
-.shotless-penalty.is-mid {
-  color: var(--paper);
-}
-
-.shotless-penalty.is-light {
-  color: var(--lime);
-}
-
-.shotless-feedback,
-.shotless-reveal-message {
-  width: min(100%, 36rem);
-  margin: 0;
-  text-align: center;
-}
-
-.shotless-feedback {
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: rgba(211, 107, 90, 0.18);
-  color: #ffc8be;
-  font-size: clamp(1.15rem, 4vw, 1.55rem);
-  font-weight: 700;
-}
-
-.shotless-reveal-message {
-  font-family: var(--display);
-  font-size: clamp(1.8rem, 6vw, 2.8rem);
-  line-height: 1.12;
-}
-
-.shotless-cover {
-  width: min(180px, 42vw);
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: 18px;
-  margin-bottom: 12px;
-}
-
-.panel.shotless .shotless-actions,
-.panel.shotless .guess-field {
-  margin-top: auto;
-  width: min(100%, 36rem);
-}
-
-.player-choice {
-  min-height: 64px;
-  font-size: 1.35rem;
-  font-weight: 700;
 }
 
 .banner {
@@ -952,7 +640,6 @@ code {
 .panel.game .game-abort,
 .panel.game .actions,
 .panel.game .session-exit,
-.panel.game .game-center-control,
 .panel.game .banner {
   margin-top: 0;
 }
@@ -972,139 +659,14 @@ code {
   overscroll-behavior: contain;
 }
 
-.game-readout {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: clamp(0.55rem, 1.4dvh, 0.9rem);
-  width: min(100%, 36rem);
-}
-
 .counter {
   margin: 6px 0 0;
   color: var(--amber);
   font-weight: 700;
 }
 
-.game-center-control {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: clamp(7.5rem, min(52vw, 32dvh), 20rem);
-  height: clamp(7.5rem, min(52vw, 32dvh), 20rem);
-}
-
-.center-transport {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 100%;
-  padding: 0;
-  overflow: hidden;
-  border: 0;
-  border-radius: 50%;
-  cursor: pointer;
-  color: var(--ink);
-  background: var(--lime);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
-  touch-action: manipulation;
-}
-
-.center-transport.is-paused {
-  background: var(--paper);
-}
-
-.center-transport:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.center-transport:focus-visible {
-  outline: 3px solid var(--paper);
-  outline-offset: 4px;
-}
-
-.center-transport:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.center-transport.has-cover {
-  color: var(--paper);
-  background: #12170f;
-  box-shadow:
-    inset 0 0 0 2px rgba(243, 234, 216, 0.38),
-    0 16px 40px rgba(0, 0, 0, 0.45);
-}
-
-.transport-cover {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: inherit;
-  pointer-events: none;
-}
-
-.transport-scrim {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(
-    circle,
-    rgba(8, 10, 6, 0.62) 0%,
-    rgba(8, 10, 6, 0.28) 52%,
-    rgba(8, 10, 6, 0.5) 100%
-  );
-  pointer-events: none;
-}
-
-.transport-icon {
-  position: relative;
-  z-index: 1;
-  width: 34%;
-  height: 34%;
-  display: block;
-}
-
-.transport-icon.is-play {
-  transform: translateX(7%);
-}
-
-.center-transport.has-cover .transport-icon {
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.75));
-}
-
 .meter.paused span {
   animation-play-state: paused;
-}
-
-.phase-pill {
-  display: inline-block;
-  margin: 0;
-  padding: 6px 12px;
-  border-radius: 999px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  background: rgba(243, 234, 216, 0.08);
-}
-
-.phase-pill.playing {
-  color: var(--lime);
-}
-
-.phase-pill.thinking {
-  color: var(--amber);
-}
-
-.phase-pill.reveal {
-  color: #9be7c4;
-}
-
-.phase-pill.paused {
-  color: var(--paper-dim);
 }
 
 .meter {
@@ -1164,15 +726,6 @@ code {
 .reveal-card.is-reveal .title {
   font-size: clamp(3.15rem, 13vw, 5rem);
   line-height: 1.05;
-}
-
-.track-duration {
-  margin: 14px 0 0;
-  color: var(--lime);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.08em;
-  font-weight: 700;
-  font-size: clamp(1rem, 3.4vw, 1.2rem);
 }
 
 @keyframes fill {
@@ -1515,16 +1068,6 @@ code {
     min-height: 60px;
   }
 
-  .guess-targets {
-    gap: 10px;
-  }
-
-  .guess-target {
-    min-height: 56px;
-    font-size: 0.98rem;
-    line-height: 1.2;
-  }
-
   .app-footer {
     padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
   }
@@ -1535,15 +1078,6 @@ code {
 }
 
 @media (max-height: 740px) {
-  .shotless-penalty {
-    font-size: clamp(2.4rem, 12dvh, 4.2rem);
-  }
-
-  .shotless-cover {
-    width: min(112px, 28vw);
-    margin-bottom: 6px;
-  }
-
   .panel.game {
     gap: 0.4rem;
   }
@@ -1557,138 +1091,19 @@ code {
     min-height: 60px;
   }
 
-  .shotless-actions .btn {
-    min-height: 48px;
-    padding: 10px 14px;
-  }
-
   .reveal-card.is-reveal .title {
     font-size: clamp(1.85rem, 8vw, 2.8rem);
   }
 }
 
 @media (max-height: 520px) {
-  .game-center-control {
-    width: clamp(4.25rem, 26dvh, 7rem);
-    height: clamp(4.25rem, 26dvh, 7rem);
-  }
-
   .panel.game h1 {
     font-size: 1.35rem;
   }
 }
 
-.game-dialog {
-  width: min(28rem, calc(100vw - 1rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
-  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem);
-  margin: auto;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 28px;
-  background: color-mix(in srgb, var(--ink-soft) 94%, black);
-  color: var(--paper);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
-  overflow: auto;
-}
-
-.game-dialog::backdrop {
-  background: rgba(8, 12, 7, 0.78);
-}
-
-.game-dialog-card {
-  padding: 1.35rem 1.2rem 1.2rem;
-  text-align: center;
-}
-
-.game-dialog-card h2 {
-  margin: 0;
-  font-family: var(--display);
-  font-size: clamp(1.7rem, 5vw, 2.3rem);
-  font-weight: 500;
-  line-height: 1.05;
-}
-
-.loser-bonus-copy,
-.loser-bonus-result,
-.loser-bonus-verdict {
-  margin: 0.75rem 0 0;
-  line-height: 1.45;
-}
-
-.loser-bonus-verdict {
-  color: var(--lime);
-  font-weight: 700;
-}
-
-.loser-bonus-done {
-  width: 100%;
-  min-height: 52px;
-  margin-top: 0.9rem;
-}
-
-.fortune-stage {
-  position: relative;
-  width: min(100%, 19.5rem);
-  margin: 0.85rem auto 0;
-  padding-top: 10px;
-}
-
-.fortune-pointer {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  z-index: 2;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 11px solid transparent;
-  border-right: 11px solid transparent;
-  border-top: 18px solid var(--paper);
-  filter: drop-shadow(0 1px 0 #10160e) drop-shadow(0 2px 2px rgba(0, 0, 0, 0.55));
-}
-
-.fortune-disc {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  overflow: hidden;
-  contain: paint;
-}
-
-.fortune-wheel {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  transition: transform 4.4s cubic-bezier(0.12, 0.72, 0.08, 1);
-}
-
-.fortune-wheel.is-instant {
-  transition: none;
-}
-
-.fortune-label {
-  fill: #10160e;
-  font-family: var(--sans);
-  font-weight: 700;
-}
-
-.fortune-core {
-  fill: #10160e;
-}
-
-.fortune-hub {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 2;
-  width: 4.75rem;
-  height: 4.75rem;
-  transform: translate(-50%, -50%);
-  padding: 0;
-}
-
 /* Kompakter Spielkopf */
+
 .game-bar {
   position: relative;
   z-index: 4;
@@ -1750,87 +1165,7 @@ code {
   letter-spacing: 0.14em;
 }
 
-/* Shotless: Auflösung zuerst, Titel passt sich der Höhe an */
-.panel.shotless .reveal-card.is-reveal {
-  display: grid;
-  justify-items: center;
-  gap: 0.35rem;
-}
-
-.panel.shotless .shotless-reveal-message {
-  padding: 10px 16px;
-  border-radius: 16px;
-  background: rgba(211, 107, 90, 0.18);
-  color: #ffc8be;
-  font-size: clamp(1.25rem, min(5.6vw, 3.4dvh), 1.7rem);
-  line-height: 1.15;
-}
-
-.panel.shotless .shotless-cover {
-  width: min(30vw, 14dvh, 140px);
-  margin: 4px 0 0;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
-}
-
-.panel.shotless .reveal-card.is-reveal .artist {
-  font-size: clamp(1.25rem, min(5.6vw, 3.4dvh), 1.8rem);
-}
-
-.panel.shotless .reveal-card.is-reveal .title {
-  margin-top: 0;
-  font-size: clamp(1.9rem, min(9.5vw, 5.2dvh), 3.4rem);
-  line-height: 1.05;
-}
-
-/* Tastatur offen: Strafe und Dock schrumpfen, Eingabe bleibt sichtbar */
-.game-stage:has(.guess-field:focus-within) .shotless-prompt,
-.game-stage:has(.guess-field:focus-within) .stage-rail {
-  display: none;
-}
-
-.game-stage:has(.guess-field:focus-within) .shotless-penalty {
-  font-size: clamp(1.8rem, 8dvh, 2.6rem);
-}
-
-.game-stage:has(.guess-field:focus-within) {
-  gap: 0.4rem;
-}
-
-.guess-field:focus-within input:not(:focus) + .suggestions {
-  display: none;
-}
-
-.panel.shotless:has(.guess-field:focus-within) .game-dock.is-guessing > .meter {
-  display: none;
-}
-
-.panel.shotless:has(.guess-field:focus-within) .game-dock.is-guessing .btn,
-.panel.shotless:has(.guess-field:focus-within) .game-dock.is-guessing .btn.cta {
-  min-height: 44px;
-  padding-block: 8px;
-  font-size: 1rem;
-}
-
-/* Setup, Login, Playlists */
-.rules {
-  margin-top: 10px;
-  color: var(--muted);
-  font-size: 0.92rem;
-  line-height: 1.45;
-}
-
-.rules summary {
-  min-height: 32px;
-  padding: 4px 0;
-  cursor: pointer;
-  color: var(--paper-dim);
-  font-weight: 700;
-}
-
-.rules p {
-  margin: 4px 0 0;
-}
-
+/* Login, Playlists */
 .panel.login .fit-scroll {
   display: flex;
   flex-direction: column;
@@ -1876,6 +1211,7 @@ code {
 }
 
 /* Hinweis auf weiteren Inhalt in scrollbaren Panels */
+
 @media (max-width: 720px) {
   .fit-screen > .fit-scroll {
     background:
@@ -1889,61 +1225,24 @@ code {
   .fit-screen > .fit-scroll::-webkit-scrollbar {
     display: none;
   }
-
-  .mode-card {
-    padding: 14px 16px 12px;
-  }
-
-  .guess-target {
-    min-height: 52px;
-  }
 }
 
 @media (max-width: 340px) {
-  .dock-pair .btn,
-  .game-dock.is-guessing .dock-pair .btn {
-    padding-inline: 8px;
-    font-size: 0.9rem;
-  }
-
   .btn.stage-skip {
     gap: 6px;
   }
 }
 
-/* Querformat: Dock in zwei Spalten, Stufenleiste weg */
+/* Querformat: kompakterer Zähler (Dock siehe shotless.css) */
+
 @media (max-height: 460px) and (orientation: landscape) {
-  .game-dock.is-guessing {
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-  }
-
-  .game-dock.is-guessing > .meter,
-  .game-dock.is-guessing > .btn.cta,
-  .game-dock.is-guessing > .btn.erraten {
-    grid-column: 1 / -1;
-  }
-
-  .game-dock.is-guessing .dock-pair {
-    display: contents;
-  }
-
-  .game-dock.is-guessing .btn,
-  .game-dock.is-guessing .btn.cta {
-    min-height: 48px;
-    padding-block: 8px;
-  }
-
-  .game-stage .stage-rail {
-    display: none;
-  }
-
   .game-bar .counter {
     font-size: 1.1rem;
   }
 }
 
 /* Übergang in die Auflösung */
+
 @media (prefers-reduced-motion: no-preference) {
   .reveal-card.is-reveal {
     animation: reveal-in 0.32s ease-out;
@@ -1954,11 +1253,5 @@ code {
       opacity: 0;
       transform: translateY(10px) scale(0.98);
     }
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .fortune-wheel {
-    transition: none;
   }
 }
