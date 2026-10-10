@@ -8,6 +8,9 @@ export interface WheelCard {
   spicy?: boolean
 }
 
+/** Inhaltsarten, die über ein Rad gezogen werden. */
+export type ContentKind = 'truth' | 'dare' | 'category'
+
 export interface Category {
   name: string
   spicy?: boolean

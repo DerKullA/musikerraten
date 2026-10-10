@@ -47,7 +47,7 @@ Setup (Namen, Spicy)  →  Zug: „Name ist dran“  →  Karte aufdecken  →  
 | 10 | Trinken oder selber trinken | Rot: 10 Schlücke verteilen. Schwarz: 10 Schlücke selbst trinken. |
 | Bube | Der Kasper | 2× Oberschenkel, 2× klatschen, 2× Wangen. Der Letzte verliert, Verlierer wählen. |
 | Dame | Die Bitch | Der Spieler wird Bitch. Vor jedem seiner nächsten Züge ruft die Gruppe laut „Bitch 1“ bis „Bitch 5“ (Hinweis in der App). |
-| König | Kategorie | Glücksrad mit Kategorien. Reihum nennen, wer nichts weiß, doppelt nennt oder falsch liegt, trinkt. Verlierer wählen. |
+| König | Kategorie | Glücksrad mit Kategorien. Reihum nennen, wer nichts weiß, doppelt nennt oder falsch liegt, trinkt. Verlierer wählen. Jedes Rad hat 14 Felder und bleibt über das Spiel bestehen: Ein gedrehtes Feld kommt im selben Spiel nicht wieder und wird durch ein neues aus dem Pool ersetzt. Das gilt auch für Fragen und Aufgaben bei Wahrheit oder Pflicht. |
 | Ass | Wasserfall | Alle trinken gleichzeitig, bis der Ass-Zieher aufhört. Wer zu früh absetzt, trinkt einen Shot. |
 
 ## 4. Architektur

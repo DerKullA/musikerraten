@@ -84,6 +84,8 @@ export function TangeraRound({ players, spicy, decks, leaveLabel, onLogout, onLe
               player={player}
               order={order}
               rules={state.rules}
+              used={state.used}
+              wheels={state.wheels}
               spicy={spicy}
               onDone={(effects) => dispatch({ type: 'resolve', effects })}
             />

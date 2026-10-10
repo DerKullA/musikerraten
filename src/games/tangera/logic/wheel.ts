@@ -1,8 +1,35 @@
 import { shuffle } from './cards.ts'
 
-/** Zufällige, verschiedene Einträge für ein Rad. Bei zu kleinem Pool kommt der ganze Pool. */
-export function pickWheelItems<T>(pool: readonly T[], count: number, rng: () => number = Math.random): T[] {
-  return shuffle(pool, rng).slice(0, Math.max(0, count))
+/** Felder auf jedem Rad. */
+export const WHEEL_SIZE = 14
+
+/**
+ * Rad für den nächsten Dreh: Felder des letzten Rads bleiben an ihrem Platz, schon gedrehte werden durch
+ * frische aus dem Pool ersetzt, Lücken aufgefüllt. Gehen die frischen aus, kommen gedrehte zurück.
+ * Bei zu kleinem Pool kommt der ganze Pool.
+ */
+export function refillWheel<T>(
+  pool: readonly T[],
+  wheel: readonly string[],
+  used: readonly string[],
+  label: (item: T) => string,
+  count: number = WHEEL_SIZE,
+  rng: () => number = Math.random,
+): T[] {
+  const byLabel = new Map(pool.map((item) => [label(item), item]))
+  const kept = wheel.slice(0, count).map((entry) => (used.includes(entry) ? undefined : byLabel.get(entry)))
+  const onWheel = new Set(kept.flatMap((item) => (item === undefined ? [] : [label(item)])))
+  const rest = shuffle(
+    pool.filter((item) => !onWheel.has(label(item))),
+    rng,
+  )
+  // Frische zuerst, schon gedrehte nur als Reserve.
+  const spare = [...rest.filter((item) => !used.includes(label(item))), ...rest.filter((item) => used.includes(label(item)))]
+  const filled = kept.map((item) => item ?? spare.shift())
+  while (filled.length < count && spare.length > 0) {
+    filled.push(spare.shift())
+  }
+  return filled.filter((item): item is T => item !== undefined)
 }
 
 export function segmentAngle(count: number): number {

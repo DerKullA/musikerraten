@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CATEGORIES, DARES, RULE_IDEAS, TRUTHS, contentPool } from './content.ts'
-
-const WHEEL_SIZE = 8
+import { MAX_DECKS } from './duration.ts'
+import { WHEEL_SIZE } from './wheel.ts'
 
 describe('Inhalte', () => {
   it('haben ohne Spicy genug Einträge für ein volles Rad', () => {
@@ -33,5 +33,11 @@ describe('Inhalte', () => {
     const names = CATEGORIES.map((category) => category.name)
     expect(new Set(names).size).toBe(names.length)
     expect(new Set(RULE_IDEAS).size).toBe(RULE_IDEAS.length)
+  })
+
+  it('haben je Rad genug Einträge, um ein Spiel lang jedes gedrehte Feld frisch zu ersetzen', () => {
+    for (const pool of [TRUTHS, DARES, CATEGORIES]) {
+      expect(contentPool<{ spicy?: boolean }>(pool, false).length).toBeGreaterThanOrEqual(WHEEL_SIZE + MAX_DECKS * 4)
+    }
   })
 })

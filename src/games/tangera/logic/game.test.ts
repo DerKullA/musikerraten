@@ -178,6 +178,22 @@ describe('Effekte', () => {
   })
 })
 
+describe('Gedrehte Räder', () => {
+  it('merkt sich je Inhaltsart das Rad und jeden gezogenen Eintrag einmal, über das Ereignis hinaus', () => {
+    const spin = { kind: 'category', wheel: ['Automarken', 'Biermarken'], picked: 'Automarken' } as const
+    let state = gameWith([card('K'), card('K'), card('6')])
+    state = tangeraReducer(tangeraReducer(state, { type: 'draw' }), { type: 'resolve', effects: { spin } })
+    state = tangeraReducer(tangeraReducer(state, { type: 'draw' }), { type: 'resolve', effects: { spin } })
+    expect(state.used.category).toEqual(['Automarken'])
+    expect(state.wheels.category).toEqual(['Automarken', 'Biermarken'])
+    state = applyEffects(state, { spin: { kind: 'truth', wheel: ['Automarken'], picked: 'Automarken' }, sips: { Anna: 1 } })
+    state = applyEffects(state, { spin: { kind: 'dare', wheel: ['Kuscheln', 'Tanz'], picked: 'Kuscheln' } })
+    expect(state.used).toEqual({ truth: ['Automarken'], dare: ['Kuscheln'], category: ['Automarken'] })
+    expect(state.wheels).toEqual({ truth: ['Automarken'], dare: ['Kuscheln', 'Tanz'], category: ['Automarken', 'Biermarken'] })
+    expect(state.sips.Anna).toBe(1)
+  })
+})
+
 describe('Auswertung', () => {
   it('sortiert nach Schlücken, dann nach Shots', () => {
     let state = createGame(PLAYERS)
