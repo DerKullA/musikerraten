@@ -1,10 +1,12 @@
 import type { GameScreenProps } from '@/games/registry.ts'
+import { useWakeLock } from '@/platform/wakeLock/useWakeLock.ts'
 import { GuessSongScreen } from './GuessSongScreen.tsx'
 import { useGuessSongRound } from './useGuessSongRound.ts'
 
 // Song erraten als Registry-Spiel: Rundenlogik (Hook) und Oberfläche (Screen) zusammenstecken.
 export function GuessSongGame({ tracks, error, playback, onLogout, onShowPlaylists, onError }: GameScreenProps) {
   const round = useGuessSongRound({ tracks, error, playback, onError })
+  useWakeLock(round.running)
 
   return (
     <GuessSongScreen

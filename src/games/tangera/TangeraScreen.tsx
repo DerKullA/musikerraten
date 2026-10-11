@@ -4,6 +4,8 @@ import { TangeraRound } from '@/games/tangera/components/TangeraRound.tsx'
 import { TangeraSetup } from '@/games/tangera/components/TangeraSetup.tsx'
 import { useTangeraLobby } from '@/games/tangera/hooks/useTangeraLobby.ts'
 import { canStart } from '@/games/tangera/logic/players.ts'
+import { holdScreenWakeLock } from '@/platform/wakeLock/browserWakeLock.ts'
+import { useWakeLock } from '@/platform/wakeLock/useWakeLock.ts'
 
 /** Tangera: Karten-Trinkspiel ohne Spotify. Setup und Runde wechseln sich ab, jede neue Runde mischt neu. */
 export function TangeraScreen({ signedIn, onLogout, onLeave }: GameScreenProps) {
@@ -11,6 +13,7 @@ export function TangeraScreen({ signedIn, onLogout, onLeave }: GameScreenProps) 
   const [run, setRun] = useState<number | null>(null)
   const leaveLabel = signedIn ? 'Zurück zum Hauptmenü' : 'Zurück zum Start'
   const logout = signedIn ? onLogout : undefined
+  useWakeLock(run !== null)
 
   if (run !== null) {
     return (
@@ -44,9 +47,11 @@ export function TangeraScreen({ signedIn, onLogout, onLeave }: GameScreenProps) 
       onSpicy={lobby.changeSpicy}
       onDecks={lobby.changeDecks}
       onStart={() => {
-        if (canStart(lobby.players)) {
-          setRun(0)
+        if (!canStart(lobby.players)) {
+          return
         }
+        holdScreenWakeLock()
+        setRun(0)
       }}
     />
   )
